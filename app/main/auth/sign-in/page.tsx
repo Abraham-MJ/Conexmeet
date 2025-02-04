@@ -79,7 +79,7 @@ export default function SignInScreen() {
             />
           </motion.div>
 
-          <motion.div
+          {/* <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{
@@ -97,9 +97,11 @@ export default function SignInScreen() {
                 alt="ConexMeet Logo"
                 className="h-10 w-10"
               />
-              <span>Iniciar sesión con Google</span>
+              <span className="font-latosans text-md">
+                Iniciar sesión con Google
+              </span>
             </button>
-          </motion.div>
+          </motion.div> */}
 
           <motion.form
             variants={formVariants}
@@ -108,7 +110,7 @@ export default function SignInScreen() {
             onSubmit={() => {}}
             className="mt-8 space-y-6"
           >
-            <motion.div variants={itemVariants}>
+            {/* <motion.div variants={itemVariants}>
               <input
                 type="email"
                 placeholder="Correo electrónico"
@@ -138,18 +140,18 @@ export default function SignInScreen() {
                   <LuEyeOff className="h-5 w-5" />
                 )}
               </button>
-            </motion.div>
+            </motion.div> */}
 
-            <motion.div variants={itemVariants}>
+            {/* <motion.div variants={itemVariants}>
               <button
                 type="submit"
                 className="w-full rounded-lg bg-[#41f3ff]/80 px-4 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:bg-[#41f3ff]/90 hover:shadow-xl hover:shadow-[#41f3ff]/20"
               >
                 Iniciar sesión
               </button>
-            </motion.div>
+            </motion.div> */}
 
-            <motion.div
+            {/* <motion.div
               variants={itemVariants}
               className="flex flex-col items-center justify-center gap-3 text-sm font-medium"
             >
@@ -165,7 +167,7 @@ export default function SignInScreen() {
               >
                 ¿No tienes cuenta?, Registrate
               </Link>
-            </motion.div>
+            </motion.div> */}
           </motion.form>
         </div>
       </motion.div>
