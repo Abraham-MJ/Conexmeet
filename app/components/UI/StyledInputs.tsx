@@ -32,7 +32,10 @@ const StyledInputs: React.FC<StyledInputProps> = ({
       variants={itemVariants}
     >
       {label && (
-        <label htmlFor={name} className="mb-1 font-medium text-gray-700">
+        <label
+          htmlFor={name}
+          className="font-latosans mb-1 font-medium text-gray-700"
+        >
           {label}
         </label>
       )}
@@ -46,8 +49,7 @@ const StyledInputs: React.FC<StyledInputProps> = ({
           placeholder={placeholder}
           onChange={handleChange}
           onFocus={onFocus}
-          required
-          className={`h-12 w-full rounded-lg border px-4 py-3 text-gray-700 outline-none backdrop-blur-sm transition-all duration-200 ${
+          className={`font-latosans h-12 w-full rounded-lg border px-4 py-3 text-gray-700 outline-none backdrop-blur-sm transition-all duration-200 ${
             error
               ? 'border-red-500 bg-red-50'
               : 'font-latosans border-gray-300 bg-white/50'

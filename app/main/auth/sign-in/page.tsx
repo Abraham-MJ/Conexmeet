@@ -1,22 +1,71 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 import { useForm } from '@/app/hooks/useForm';
+import useLogin from '@/app/hooks/api/useLogin';
 import ImageBrand from '@/public/images/conexmeet.png';
 import StyledLink from '@/app/components/UI/StyledLink';
 import StyledInputs from '@/app/components/UI/StyledInputs';
 import { formVariants, itemVariants } from '@/app/utils/animations';
 import StyledBottomGoogle from '@/app/components/UI/StyledBottomGoogle';
+import { loginSchema } from '@/app/utils/validations/auth';
+import {
+  EMAIL_ERROR,
+  PASSWORD_ERROR,
+  SESSION_ACTIVE,
+} from '@/app/environment/errors-code';
+import { redirect } from 'next/navigation';
 
 export default function SignInScreen() {
+  const { login, isLoading } = useLogin();
   const { credentials, errors, changeField, clearError, setFieldError } =
     useForm({
       email: '',
       password: '',
     });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const result = loginSchema.safeParse(credentials);
+
+    if (!result.success) {
+      Object.entries(result.error.format()).forEach(([field, error]) => {
+        const errorMessage = Array.isArray(error)
+          ? error[0]
+          : (error?._errors?.[0] ?? '');
+
+        if (errorMessage) {
+          setFieldError(field, errorMessage);
+        }
+      });
+
+      return;
+    }
+
+    const login_result = await login(credentials.email, credentials.password);
+
+    if (!login_result.success) {
+      switch (login_result.message) {
+        case EMAIL_ERROR:
+          setFieldError('email', EMAIL_ERROR);
+          break;
+        case PASSWORD_ERROR:
+          setFieldError('password', PASSWORD_ERROR);
+          break;
+        case SESSION_ACTIVE:
+          setFieldError('password', SESSION_ACTIVE);
+          break;
+        default:
+          break;
+      }
+    } else if (login_result.success) {
+      redirect('/main/dashboard');
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
@@ -41,6 +90,7 @@ export default function SignInScreen() {
           >
             <Image
               src={ImageBrand}
+              priority
               alt="ConexMeet Logo"
               className="h-auto w-56 md:drop-shadow-lg"
             />
@@ -52,7 +102,7 @@ export default function SignInScreen() {
             variants={formVariants}
             initial="hidden"
             animate="visible"
-            onSubmit={() => {}}
+            onSubmit={handleSubmit}
             className="mt-8 space-y-6"
           >
             <StyledInputs
@@ -78,9 +128,26 @@ export default function SignInScreen() {
               <button
                 type="submit"
                 aria-label="Iniciar sesión"
-                className="font-latosans w-full rounded-lg bg-[#41f3f0]/90 px-4 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:bg-[#41f3ff]/90 hover:shadow-xl hover:shadow-[#41f3ff]/20"
+                className="font-latosans mt-4 h-12 w-full rounded-lg bg-[#41f3f0]/90 px-4 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:bg-[#41f3ff]/90 hover:shadow-xl hover:shadow-[#41f3ff]/20"
               >
-                Iniciar sesión
+                {isLoading ? (
+                  <div className="font-latosans text-md flex items-center justify-center">
+                    Cargando
+                    {[1, 2, 3].map((index) => {
+                      return (
+                        <motion.span
+                          key={index}
+                          animate={{ opacity: [0, 1, 1, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.5 }}
+                        >
+                          .
+                        </motion.span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  'Iniciar sesión'
+                )}
               </button>
             </motion.div>
 
