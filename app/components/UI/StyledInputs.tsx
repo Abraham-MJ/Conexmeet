@@ -34,7 +34,7 @@ const StyledInputs: React.FC<StyledInputProps> = ({
       {label && (
         <label
           htmlFor={name}
-          className="font-latosans mb-1 font-medium text-gray-700"
+          className="font-latosans mb-1 text-sm font-medium text-gray-700"
         >
           {label}
         </label>

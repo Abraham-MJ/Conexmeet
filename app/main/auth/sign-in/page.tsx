@@ -57,7 +57,10 @@ export default function SignInScreen() {
           setFieldError('password', PASSWORD_ERROR);
           break;
         case SESSION_ACTIVE:
-          setFieldError('password', SESSION_ACTIVE);
+          setFieldError(
+            'password',
+            'Ya hay una sesión activa. Intente nuevamente',
+          );
           break;
         default:
           break;
@@ -103,7 +106,7 @@ export default function SignInScreen() {
             initial="hidden"
             animate="visible"
             onSubmit={handleSubmit}
-            className="mt-8 space-y-6"
+            className="mt-8 space-y-8"
           >
             <StyledInputs
               name="email"
@@ -111,12 +114,14 @@ export default function SignInScreen() {
               value={credentials.email}
               handleChange={changeField}
               error={errors.email}
+              label="Correo electrónico:"
               placeholder="Correo electrónico"
               onFocus={() => clearError('email')}
             />
             <StyledInputs
               name="password"
               type="password"
+              label="Contraseña:"
               value={credentials.password}
               handleChange={changeField}
               error={errors.password}
@@ -128,10 +133,10 @@ export default function SignInScreen() {
               <button
                 type="submit"
                 aria-label="Iniciar sesión"
-                className="font-latosans mt-4 h-12 w-full rounded-lg bg-[#41f3f0]/90 px-4 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:bg-[#41f3ff]/90 hover:shadow-xl hover:shadow-[#41f3ff]/20"
+                className="h-12 w-full rounded-lg bg-[#41f3f0]/90 px-4 py-3 font-latosans font-medium text-white shadow-lg transition-all duration-200 hover:bg-[#41f3ff]/90 hover:shadow-xl hover:shadow-[#41f3ff]/20"
               >
                 {isLoading ? (
-                  <div className="font-latosans text-md flex items-center justify-center">
+                  <div className="text-md flex items-center justify-center font-latosans">
                     Cargando
                     {[1, 2, 3].map((index) => {
                       return (
