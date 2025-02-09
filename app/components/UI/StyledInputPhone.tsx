@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { LuEye, LuEyeOff } from 'react-icons/lu';
 import { itemVariants } from '@/app/utils/animations';
+import { motion } from 'framer-motion';
+import React from 'react';
 
 interface StyledInputProps {
   type: string;
@@ -12,10 +11,10 @@ interface StyledInputProps {
   error?: string;
   placeholder: string;
   onFocus: () => void;
-  maxLength?: number;
+  code_value: string;
 }
 
-const StyledInputs: React.FC<StyledInputProps> = ({
+const StyledInputPhone: React.FC<StyledInputProps> = ({
   type,
   label,
   handleChange,
@@ -24,10 +23,8 @@ const StyledInputs: React.FC<StyledInputProps> = ({
   error,
   placeholder,
   onFocus,
-  maxLength,
+  code_value,
 }) => {
-  const [showPassword, setShowPassword] = useState(false);
-
   return (
     <motion.div
       className="relative flex h-[68px] flex-col"
@@ -41,42 +38,36 @@ const StyledInputs: React.FC<StyledInputProps> = ({
           {label}
         </label>
       )}
-
-      <div className="relative">
+      <div className="flex w-full flex-row">
         <input
-          maxLength={maxLength}
-          id={name}
-          name={name}
-          type={type === 'password' && showPassword ? 'text' : type}
-          value={value}
-          placeholder={placeholder}
-          onChange={handleChange}
-          autoComplete="current-password"
-          onFocus={onFocus}
-          className={`h-12 w-full rounded-lg border px-4 py-3 font-latosans text-gray-700 outline-none backdrop-blur-sm transition-all duration-200 ${
+          style={{ maxWidth: '20%' }}
+          disabled
+          value={code_value}
+          placeholder={'+57'}
+          className={`h-12 w-full rounded-s-lg border px-4 py-3 font-latosans text-gray-700 outline-none backdrop-blur-sm transition-all duration-200 ${
             error
               ? 'border-red-500 bg-red-50'
               : 'border-gray-300 bg-white/50 font-latosans'
           }`}
         />
-        {type === 'password' && (
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-all hover:text-gray-600"
-          >
-            {showPassword ? (
-              <LuEye className="h-5 w-5" />
-            ) : (
-              <LuEyeOff className="h-5 w-5" />
-            )}
-          </button>
-        )}
+        <input
+          id={name}
+          name={name}
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={handleChange}
+          onFocus={onFocus}
+          className={`h-12 w-full rounded-e-lg border px-4 py-3 font-latosans text-gray-700 outline-none backdrop-blur-sm transition-all duration-200 ${
+            error
+              ? 'border-red-500 bg-red-50'
+              : 'border-gray-300 bg-white/50 font-latosans'
+          }`}
+        />
       </div>
-
       {error && <p className="font-latosans text-sm text-red-500">{error}</p>}
     </motion.div>
   );
 };
 
-export default StyledInputs;
+export default StyledInputPhone;

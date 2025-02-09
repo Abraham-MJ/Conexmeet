@@ -1,11 +1,11 @@
 import { useState } from 'react';
 
 interface Errors {
-  [key: string]: string;
+  [key: string]: any;
 }
 
 interface Credentials {
-  [key: string]: string;
+  [key: string]: any;
 }
 
 export const useForm = (initialValues: Credentials) => {
@@ -13,8 +13,12 @@ export const useForm = (initialValues: Credentials) => {
   const [errors, setErrors] = useState<Errors>({});
 
   const changeField = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCredentials((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+
+    setCredentials((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const clearError = (field: string) => {
