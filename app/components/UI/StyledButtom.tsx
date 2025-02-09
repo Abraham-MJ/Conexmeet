@@ -13,7 +13,7 @@ const StyledButton = ({
 }: {
   text: string;
   isLoading: boolean;
-  onPress: () => void;
+  onPress: (...arg: any) => void;
   variant?:
     | 'default'
     | 'primary'

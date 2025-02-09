@@ -160,7 +160,10 @@ export default function SignInScreen() {
               variants={itemVariants}
               className="flex flex-col items-center justify-center gap-3 text-sm font-medium"
             >
-              <StyledLink text="¿Olvidaste tu contraseña?" href="" />
+              <StyledLink
+                text="¿Olvidaste tu contraseña?"
+                href="/main/auth/password-recovery"
+              />
               <StyledLink
                 text="¿No tienes cuenta?, Registrate"
                 href="/main/auth/sign-up"

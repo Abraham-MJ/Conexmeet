@@ -4,13 +4,13 @@ import { CheckCircle, XCircle } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import React, { Dispatch, SetStateAction, useEffect } from 'react';
 
-export const LoadingRegister = () => (
+export const LoadingRegister = ({ message }:{message:string}) => (
   <div className="relative">
     <div className="h-48 w-48 animate-spin rounded-full bg-gradient-to-r from-[#41f3ff] to-[#ff16ff]/80 p-[2px]">
       <div className="h-full w-full rounded-full bg-white"></div>
     </div>
     <div className="text-md absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 transform select-none text-center font-latosans font-semibold text-gray-400">
-      Registro en progreso...
+      {message}
     </div>
   </div>
 );
@@ -109,7 +109,7 @@ const SectionCongrats = ({ credentials, setCurrentStep }: any) => {
   if (isLoading) {
     return (
       <div className="flex h-72 max-h-72 flex-col items-center justify-center">
-        <LoadingRegister />
+        <LoadingRegister message="Registro en progreso..." />
       </div>
     );
   }

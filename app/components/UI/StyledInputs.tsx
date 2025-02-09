@@ -13,6 +13,7 @@ interface StyledInputProps {
   placeholder: string;
   onFocus: () => void;
   maxLength?: number;
+  disabled?: boolean;
 }
 
 const StyledInputs: React.FC<StyledInputProps> = ({
@@ -25,6 +26,7 @@ const StyledInputs: React.FC<StyledInputProps> = ({
   placeholder,
   onFocus,
   maxLength,
+  disabled,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -46,6 +48,7 @@ const StyledInputs: React.FC<StyledInputProps> = ({
         <input
           maxLength={maxLength}
           id={name}
+          disabled={disabled}
           name={name}
           type={type === 'password' && showPassword ? 'text' : type}
           value={value}
@@ -54,7 +57,9 @@ const StyledInputs: React.FC<StyledInputProps> = ({
           autoComplete="current-password"
           onFocus={onFocus}
           className={`h-12 w-full rounded-lg border px-4 py-3 font-latosans text-gray-700 outline-none backdrop-blur-sm transition-all duration-200 ${
-            error
+            disabled && 'border-gray-300 bg-gray-200/80'
+          } ${
+            error && !disabled
               ? 'border-red-500 bg-red-50'
               : 'border-gray-300 bg-white/50 font-latosans'
           }`}

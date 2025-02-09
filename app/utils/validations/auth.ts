@@ -88,3 +88,23 @@ export const verificationSchema = z.object({
     .max(4, 'El código debe tener 4 dígitos')
     .regex(/^\d+$/, 'El código es invalido'),
 });
+
+export const recoveryEmailSchema = z.object({
+  email: z.string().email('El correo electrónico no es válido'),
+});
+
+export const ForgotPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .regex(/[A-Z]/, 'Debe incluir al menos una letra mayúscula')
+    .regex(/[a-z]/, 'Debe incluir al menos una letra minúscula')
+    .regex(/\d/, 'Debe incluir al menos un número')
+    .regex(
+      /[@$!%*?&]/,
+      'Debe incluir al menos un carácter especial (@, $, !, %, *, ?, &)',
+    ),
+  confirm_password: z
+    .string()
+    .min(8, 'La confirmación de contraseña debe tener al menos 8 caracteres'),
+});
