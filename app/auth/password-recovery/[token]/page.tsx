@@ -93,7 +93,7 @@ export default function PasswordRecovery() {
                   bodyError="El token ya se venció o fue usado anteriormente. Inténtelo nuevamente."
                   footerText="Volver al inicio"
                   onPress={() => {
-                    redirect('/main/auth/password-recovery');
+                    redirect('/auth/password-recovery');
                   }}
                 />
               ) : success ? (
@@ -102,7 +102,7 @@ export default function PasswordRecovery() {
                   body="Su contraseña ha sido cambiada exitosamente"
                   footerText="Iniciar sesión"
                   onPress={() => {
-                    redirect('/main/auth/sign-in');
+                    redirect('/auth/sign-in');
                   }}
                 />
               ) : (
@@ -169,7 +169,7 @@ export default function PasswordRecovery() {
                     >
                       <StyledLink
                         text="Iniciar sesión"
-                        href="/main/auth/sign-in"
+                        href="/auth/sign-in"
                       />
                     </motion.div>
                   </motion.form>

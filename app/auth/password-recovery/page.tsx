@@ -119,7 +119,7 @@ export default function RecoveryPasswordScreen() {
               variants={itemVariants}
               className="flex flex-col items-center justify-center gap-3 text-sm font-medium"
             >
-              <StyledLink text="Iniciar sesión" href="/main/auth/sign-in" />
+              <StyledLink text="Iniciar sesión" href="/auth/sign-in" />
             </motion.div>
           </motion.form>
         </div>

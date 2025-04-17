@@ -1,30 +1,38 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(req: NextRequest) {
-  const token = req.cookies.get('auth_token')?.value;
+const PUBLIC_ROUTES = ['/auth'];
+const PROTECTED_ROUTES = ['/main'];
 
-  const publicRoutes = ['/main/auth/sign-in', '/main/auth/sign-up'];
-  const protectedRoutes = ['/main/dashboard'];
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth_token')?.value;
+  const { pathname } = request.nextUrl;
 
-  const isPublicRoute = publicRoutes.some((route) =>
-    req.nextUrl.pathname.startsWith(route),
-  );
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    req.nextUrl.pathname.startsWith(route),
-  );
-
-  if (token && isPublicRoute) {
-    return NextResponse.redirect(new URL('/main/dashboard', req.url));
+  if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
+    return NextResponse.next();
   }
 
-  if (isProtectedRoute && !token) {
-    return NextResponse.redirect(new URL('/main/auth/sign-in', req.url));
+  const isProtected = PROTECTED_ROUTES.some((route) =>
+    pathname.startsWith(route),
+  );
+
+  const isAuthRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+
+  if (isProtected && !token) {
+    return NextResponse.redirect(new URL('/auth/sign-in', request.url));
+  }
+
+  if (isAuthRoute && token && !pathname.includes('/logout')) {
+    return NextResponse.redirect(new URL('/main/video-roulette', request.url));
+  }
+
+  if (pathname === '/' && !token) {
+    return NextResponse.next();
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/main/dashboard/:path*', '/main/auth/:path*'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

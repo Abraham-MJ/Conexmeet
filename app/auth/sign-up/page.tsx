@@ -177,7 +177,7 @@ export default function SignUpScreen() {
                 className="flex flex-col items-center justify-center gap-3 text-sm font-medium"
               >
                 <StyledLink
-                  href="/main/auth/sign-in"
+                  href="/auth/sign-in"
                   text="¿Ya tienes cuenta?, Inicia sesión"
                   className="flex items-center justify-center text-center text-sm"
                 />

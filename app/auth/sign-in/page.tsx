@@ -66,7 +66,7 @@ export default function SignInScreen() {
           break;
       }
     } else if (login_result.success) {
-      redirect('/main/dashboard');
+      redirect('/main/video-roulette');
     }
   };
 
@@ -162,11 +162,11 @@ export default function SignInScreen() {
             >
               <StyledLink
                 text="¿Olvidaste tu contraseña?"
-                href="/main/auth/password-recovery"
+                href="/auth/password-recovery"
               />
               <StyledLink
                 text="¿No tienes cuenta?, Registrate"
-                href="/main/auth/sign-up"
+                href="/auth/sign-up"
               />
             </motion.div>
           </motion.form>

@@ -4,7 +4,7 @@ import { CheckCircle, XCircle } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import React, { Dispatch, SetStateAction, useEffect } from 'react';
 
-export const LoadingRegister = ({ message }:{message:string}) => (
+export const LoadingRegister = ({ message }: { message: string }) => (
   <div className="relative">
     <div className="h-48 w-48 animate-spin rounded-full bg-gradient-to-r from-[#41f3ff] to-[#ff16ff]/80 p-[2px]">
       <div className="h-full w-full rounded-full bg-white"></div>
@@ -41,7 +41,7 @@ export const AlertSuccess = ({
     {credentials.email === '' && credentials.password === '' && (
       <button
         onClick={() => {
-          redirect('/main/auth/sign-in');
+          redirect('/auth/sign-in');
         }}
         className="mt-6 inline-block rounded-md border border-transparent bg-green-600 px-6 py-3 text-base font-medium text-white transition duration-150 ease-in-out hover:bg-green-700"
       >
@@ -102,7 +102,7 @@ const SectionCongrats = ({ credentials, setCurrentStep }: any) => {
   const handleLogin = async () => {
     const login_result = await login(credentials.email, credentials.password);
     if (login_result.success) {
-      redirect('/main/dashboard');
+      redirect('/video-roulette');
     }
   };
 

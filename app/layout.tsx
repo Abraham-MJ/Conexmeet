@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Lato } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import './globals.css';
 
-const lato = Lato({
+const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['100', '300', '400', '700'],
-  preload: true,
-  variable: '--font-lato-sans',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
 });
 
 export const metadata: Metadata = {
@@ -16,12 +15,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body className={`${lato.variable} antialiased`}>{children}</body>
+    <html lang="es">
+      <body className={`${poppins.variable} antialiased`}>{children}</body>
     </html>
   );
 }

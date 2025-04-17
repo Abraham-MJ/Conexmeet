@@ -41,10 +41,15 @@ const useLogin = () => {
   };
 
   const logout = async () => {
-    const response = await fetch('/api/auth/logout');
+    try {
+      const response = await fetch('/api/auth/logout');
+      const data = await response.json();
 
-    const data = await response.json();
-    redirect('/');
+      window.location.href = '/auth/sign-in';
+    } catch (error) {
+      console.error('Error during logout:', error);
+      window.location.href = '/auth/sign-in';
+    }
   };
 
   return { login, isLoading, logout };
