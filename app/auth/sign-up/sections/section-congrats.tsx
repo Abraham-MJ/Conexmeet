@@ -1,4 +1,4 @@
-import { useRegisterUser } from '@/app/hooks/api/register';
+import { useRegisterUser } from '@/app/hooks/api/useRegister';
 import useLogin from '@/app/hooks/api/useLogin';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { redirect } from 'next/navigation';
