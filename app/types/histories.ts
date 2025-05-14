@@ -8,7 +8,7 @@ export interface User {
   profile_photo_path: string;
 }
 
-export interface History {
+export interface HistoryData {
   id: number;
   date_history: string;
   like: number;
