@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
@@ -17,15 +17,49 @@ import {
   PASSWORD_ERROR,
   SESSION_ACTIVE,
 } from '@/app/environment/errors-code';
-import { redirect } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export default function SignInScreen() {
-  const { login, isLoading } = useLogin();
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  const { login, isLoading, setIsLoading } = useLogin();
   const { credentials, errors, changeField, clearError, setFieldError } =
     useForm({
       email: '',
       password: '',
     });
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.email && !isLoading) {
+      setIsLoading(true);
+
+      const performConexMeetLogin = async () => {
+        try {
+          const response = await fetch('/api/auth/google-login', {
+            method: 'POST',
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            console.log(
+              'Cookie auth_token de ConexMeet establecida. Redirigiendo...',
+            );
+            router.push('/main/video-roulette');
+          } else {
+          }
+        } catch (error) {
+          console.error('Error llamando a /api/auth/google-login:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      performConexMeetLogin();
+    }
+  }, [status, session, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

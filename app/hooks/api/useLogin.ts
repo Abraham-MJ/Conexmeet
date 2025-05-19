@@ -1,7 +1,7 @@
 'use client';
 
-import { redirect } from 'next/navigation';
 import { useState } from 'react';
+import { signOut } from 'next-auth/react';
 
 interface LoginResponse {
   success: boolean;
@@ -45,14 +45,14 @@ const useLogin = () => {
       const response = await fetch('/api/auth/logout');
       const data = await response.json();
 
-      window.location.href = '/auth/sign-in';
+      await signOut({ redirect: true, callbackUrl: '/auth/sign-in' });
     } catch (error) {
       console.error('Error during logout:', error);
-      window.location.href = '/auth/sign-in';
+      await signOut({ redirect: true, callbackUrl: '/auth/sign-in' });
     }
   };
 
-  return { login, isLoading, logout };
+  return { login, isLoading, logout, setIsLoading };
 };
 
 export default useLogin;

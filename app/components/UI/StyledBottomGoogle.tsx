@@ -1,8 +1,15 @@
+'use client';
+
 import React from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { signIn } from 'next-auth/react';
 
 const StyledBottomGoogle = () => {
+  const handleGoogleSignIn = async () => {
+    await signIn('google', { callbackUrl: '/' });
+  };
+
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
@@ -11,16 +18,16 @@ const StyledBottomGoogle = () => {
       className="mt-4 border-b border-gray-300 pb-8"
     >
       <button
-        onClick={() => {}}
+        onClick={handleGoogleSignIn}
         className="flex h-12 w-full items-center justify-center space-x-2 rounded-lg border border-gray-300 bg-white px-4 py-3 font-medium text-gray-700 shadow-sm transition-colors duration-200 hover:bg-gray-50"
       >
         <Image
           src="/images/google-icon.webp"
-          alt="ConexMeet Logo"
-          width={40}
-          height={40}
+          alt="Google Icon"
+          width={24}
+          height={24}
         />
-        <span className="font-latosans text-md">Iniciar sesión con Google</span>
+        <span className="text-md font-latosans">Iniciar sesión con Google</span>
       </button>
     </motion.div>
   );
