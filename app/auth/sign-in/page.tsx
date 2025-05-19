@@ -44,16 +44,12 @@ export default function SignInScreen() {
           const data = await response.json();
 
           if (response.ok && data.success) {
-            console.log(
-              'Cookie auth_token de ConexMeet establecida. Redirigiendo...',
-            );
             router.push('/main/video-roulette');
           } else {
           }
+          setIsLoading(false);
         } catch (error) {
           console.error('Error llamando a /api/auth/google-login:', error);
-        } finally {
-          setIsLoading(false);
         }
       };
 
