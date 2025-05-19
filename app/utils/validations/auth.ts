@@ -13,7 +13,7 @@ export const loginSchema = z.object({
   password: z
     .string()
     .min(1, 'La contraseña es obligatoria')
-    .min(8, 'La contraseña debe tener al menos 8 caracteres'),
+    .min(6, 'La contraseña debe tener al menos 6 caracteres'),
 });
 
 export const StepOneSchema = z.object({

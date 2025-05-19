@@ -6,6 +6,7 @@ import { motion, useScroll } from 'framer-motion';
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../context/useClientContext';
 import { DollarSign, MessageCircle, Search, Users, Video } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
   const { scrollY } = useScroll();
@@ -14,6 +15,9 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
 
   const { state } = useUser();
   const pathname = usePathname();
+
+  const hiddenHeader = pathname.includes('/chat');
+
   const role = (state?.user?.gender as 'male' | 'female') ?? 'male';
 
   useEffect(() => {
@@ -34,7 +38,10 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
 
   return (
     <motion.nav
-      className="fixed bottom-0 left-0 z-50 flex w-full justify-around border-t border-gray-200 bg-white py-2"
+      className={cn(
+        'fixed bottom-0 left-0 z-50 flex w-full justify-around border-t border-gray-200 bg-white py-2',
+        hiddenHeader && 'hidden',
+      )}
       initial={{ y: 100 }}
       animate={{ y: isVisible ? 0 : 100 }}
       transition={{ duration: 0.3 }}

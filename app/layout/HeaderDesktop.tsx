@@ -8,6 +8,7 @@ import { motion, useScroll } from 'framer-motion';
 import { useUser } from '../context/useClientContext';
 import UserDropdown from '../components/shared/UserDropDown';
 import { MessageCircle, Video, Users, BarChart3, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
   const { state } = useUser();
@@ -17,6 +18,8 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
   const { scrollY } = useScroll();
   const [isVisible, setIsVisible] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
+
+  const hiddenHeader = pathname.includes('/chat');
 
   const { minutes, gender, sales } = state?.user || {};
 
@@ -41,7 +44,9 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
   if (isMobile) {
     return (
       <motion.header
-        className={`fixed top-0 z-[50] flex h-[80px] w-full items-center justify-between border-b bg-[#fffffff0] px-4 py-3 text-white backdrop-blur-md transition-all duration-300`}
+        className={cn(
+          'fixed top-0 z-[50] flex h-[80px] w-full items-center justify-between border-b bg-[#fffffff0] px-4 py-3 text-white backdrop-blur-md transition-all duration-300',
+        )}
         initial={{ y: 0 }}
         animate={{ y: isVisible ? 0 : -100 }}
         transition={{ duration: 0.3 }}
