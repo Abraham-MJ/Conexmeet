@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import useApi from '../useAPi';
 import { UserData } from '@/app/types/list-user';
@@ -38,8 +40,12 @@ export interface UseFeaturesDataReturn {
   };
 }
 
-const useFeatures = (): UseFeaturesDataReturn => {
-  const [activeTab, setActiveTab] = useState<TabName>('online');
+const useFeatures = ({
+  activeTabs,
+}: {
+  activeTabs: 'online' | 'stories' | 'contacts';
+}): UseFeaturesDataReturn => {
+  const [activeTab, setActiveTab] = useState<TabName>(activeTabs ?? 'online');
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
 
   const {

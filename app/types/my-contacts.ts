@@ -15,4 +15,5 @@ export interface ContactData {
   request_status: string;
   contact_status: string;
   user: ContactUser;
+  chat_id?: string;
 }

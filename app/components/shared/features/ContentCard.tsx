@@ -7,6 +7,8 @@ import { ContactData } from '@/app/types/my-contacts';
 import { LuMessageSquareShare } from 'react-icons/lu';
 import { UserData } from '@/app/types/list-user';
 import { TbPointFilled } from 'react-icons/tb';
+import AvatarImage from '../../UI/StyledAvatarImage';
+import { useRouter } from 'next/navigation';
 
 interface ContentStoriesProps {
   user: HistoryData;
@@ -171,15 +173,25 @@ export const ContentCardStories = React.memo(function ContentCardStories({
 });
 
 export function ContentCardContacts({ user }: ContentContactProps) {
+  const router = useRouter();
+  const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://avatar.iran.liara.run/`;
+
   return (
     <div className="group relative aspect-square overflow-hidden rounded-3xl bg-gray-100">
-      <img
-        src={user.user.profile_photo_path}
-        alt={user.user.name}
+      <AvatarImage
+        primarySrc={user.user.profile_photo_path}
+        defaultPlaceholderSrc={`https://avatar.iran.liara.run/`}
+        errorPlaceholderSrc={GENERIC_IMAGE_ERROR_PLACEHOLDER}
+        alt={user.user.profile_photo_path}
         className="h-full w-full object-cover"
       />
 
-      <div className="absolute right-4 top-2 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border p-2 font-medium transition-transform duration-300 ease-in-out hover:scale-105">
+      <div
+        onClick={() => {
+          router.push(`/main/chat/${user.chat_id}`);
+        }}
+        className="absolute right-4 top-2 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border bg-black/20 p-2 font-medium transition-transform duration-300 ease-in-out hover:scale-105"
+      >
         <LuMessageSquareShare className="h-6 w-6 text-white" />
       </div>
 

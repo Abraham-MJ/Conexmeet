@@ -1,10 +1,49 @@
-import { ContactData } from '@/app/types/my-contacts';
 import { NextRequest, NextResponse } from 'next/server';
 
-interface ApiContactsResponse {
+interface ContactUserDetail {
+  id: number;
+  name: string;
+  email: string;
+  profile_photo_path: string | null;
+}
+
+interface ExternalContactItem {
+  id: number;
+  name: string | null;
+  user_id: number;
+  contact_id: number;
+  created_at: string;
+  updated_at: string;
+  request_status: string;
+  contact_status: string;
+  user: ContactUserDetail;
+}
+
+interface ExternalContactsApiResponse {
   status: string;
   message: string;
-  data?: ContactData[];
+  data: ExternalContactItem[];
+}
+
+interface ExternalChatCreationData {
+  chat_id: number;
+}
+
+interface ExternalChatApiResponse {
+  status: string;
+  message: string;
+  data: ExternalChatCreationData;
+}
+
+export interface AugmentedContactItem extends ExternalContactItem {
+  chat_id: number | null;
+}
+
+interface ApiRouteSuccessResponse {
+  success: true;
+  status: string;
+  message: string;
+  data: AugmentedContactItem[];
 }
 
 export async function GET(request: NextRequest) {
@@ -13,92 +52,127 @@ export async function GET(request: NextRequest) {
 
     if (!authToken) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'No autorizado - Token no encontrado en cookies',
-        },
+        { success: false, message: 'Authentication token not found.' },
         { status: 401 },
       );
     }
 
-    const baseUrl = 'https://app.conexmeet.live/api/v1';
-    const endpoint = `${baseUrl}/my-contacts`;
+    const commonHeaders = {
+      Accept: 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    };
 
-    const headers = new Headers();
-    headers.append('Accept', 'application/json');
-    headers.append('Authorization', `Bearer ${authToken}`);
-
-    const response = await fetch(endpoint, {
+    const contactsApiUrl = 'https://app.conexmeet.live/api/v1/my-contacts';
+    const contactsResponse = await fetch(contactsApiUrl, {
       method: 'GET',
-      headers: headers,
+      headers: commonHeaders,
       cache: 'no-store',
     });
 
-    let responseDataFromApi: ApiContactsResponse;
-    try {
-      responseDataFromApi = await response.json();
-    } catch (e) {
-      if (!response.ok) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Error en la API externa: ${response.statusText || 'Respuesta no válida'}`,
-          },
-          { status: response.status },
-        );
-      }
+    if (!contactsResponse.ok) {
+      let errorMessage = `Error fetching contacts. Status: ${contactsResponse.status}`;
+
+      try {
+        const errorBody = await contactsResponse.json();
+        errorMessage = errorBody.message || errorMessage;
+      } catch (e) {}
+      return NextResponse.json(
+        { success: false, message: errorMessage },
+        { status: contactsResponse.status },
+      );
+    }
+
+    const externalContactsResult: ExternalContactsApiResponse =
+      await contactsResponse.json();
+
+    if (
+      externalContactsResult.status !== 'Success' ||
+      !Array.isArray(externalContactsResult.data)
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: 'La respuesta de la API externa no es un JSON válido.',
+          message: 'Unexpected format from contacts API or no data array.',
         },
         { status: 502 },
       );
     }
 
-    if (!response.ok) {
+    const augmentedContactsPromises = externalContactsResult.data.map(
+      async (contactItem) => {
+        let chatId: number | null = null;
+        try {
+          const chatIdApiUrl = `https://app.conexmeet.live/api/v1/chats/${String(contactItem.contact_id)}`;
+
+          const chatResponse = await fetch(chatIdApiUrl, {
+            method: 'POST',
+            headers: commonHeaders,
+          });
+
+          if (chatResponse.ok) {
+            const chatResult: ExternalChatApiResponse =
+              await chatResponse.json();
+
+            if (
+              chatResult.status === 'Success' &&
+              chatResult.data &&
+              typeof chatResult.data.chat_id === 'number'
+            ) {
+              chatId = chatResult.data.chat_id;
+            } else {
+              console.warn(
+                `Could not get chat_id for contact ${contactItem.contact_id}: ${chatResult.message || 'Status not Success or chat_id missing'}`,
+              );
+            }
+          } else {
+            console.warn(
+              `Failed to fetch chat_id for contact ${contactItem.contact_id}. Status: ${chatResponse.status}`,
+            );
+          }
+        } catch (error) {
+          console.error(
+            `Error fetching chat_id for contact ${contactItem.contact_id}:`,
+            error,
+          );
+        }
+        return {
+          ...contactItem,
+          chat_id: chatId,
+        };
+      },
+    );
+
+    const augmentedContacts: AugmentedContactItem[] = await Promise.all(
+      augmentedContactsPromises,
+    );
+
+    const successResponse: ApiRouteSuccessResponse = {
+      success: true,
+      status: 'Success',
+      message: 'Contacts with chat_id retrieved successfully.',
+      data: augmentedContacts,
+    };
+
+    return NextResponse.json(successResponse, { status: 200 });
+  } catch (error: any) {
+    console.error('Error in /api/my-contacts-with-chatid route:', error);
+    if (
+      error instanceof SyntaxError &&
+      error.message.toLowerCase().includes('json')
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            responseDataFromApi.message ||
-            'Error al obtener los contactos desde la API externa.',
-          errorDetails: responseDataFromApi,
+          message: 'Error parsing JSON response from an external service.',
         },
-        { status: response.status },
+        { status: 502 },
       );
     }
-
-    if (responseDataFromApi.status !== 'Success') {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            responseDataFromApi.message ||
-            'La API externa indicó un problema pero devolvió status 200.',
-          errorDetails: responseDataFromApi,
-        },
-        { status: 200 },
-      );
-    }
-
     return NextResponse.json(
       {
-        success: true,
-        message:
-          responseDataFromApi.message || 'Contactos obtenidos exitosamente.',
-        data: responseDataFromApi.data,
+        success: false,
+        message: 'Internal server error processing your request for contacts.',
       },
-      { status: 200 },
-    );
-  } catch (error) {
-    console.error('Error en la API Route (my-contacts):', error);
-    let errorMessage = 'Error interno del servidor al procesar la solicitud.';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      { success: false, message: errorMessage },
       { status: 500 },
     );
   }

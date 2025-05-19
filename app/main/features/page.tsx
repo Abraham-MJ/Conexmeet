@@ -45,7 +45,7 @@ const FeaturesScreen = () => {
     contacts,
     onSetPlayingVideoUrl,
     activeVideoUrl,
-  } = useFeatures();
+  } = useFeatures({ activeTabs: 'online' });
   const itemsTabs: ('online' | 'stories' | 'contacts')[] = [
     'online',
     'stories',

@@ -16,7 +16,7 @@ const baseRoutes = {
     videoChat: '/main/video-roulette',
     chats: '/main/chat',
     ranking: '/main/ranking',
-    contacts: '/main/host/contacts',
+    contacts: '/main/contacts',
   },
   male: {
     forYou: '/main/features',
