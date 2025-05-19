@@ -35,13 +35,13 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
             {conversation.user_info.name}
           </div>
           <div className="flex flex-col-reverse items-center gap-1">
-            {conversation.unread_messages_count > 0 && (
+            {/* {conversation.unread_messages_count > 0 && (
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#fc3d6b] p-1">
                 <span className="text-xs font-medium text-white">
                   {conversation.unread_messages_count}
                 </span>
               </div>
-            )}
+            )} */}
             <span className="ml-1 text-xs text-gray-400">
               {conversation.last_activity_at}
             </span>

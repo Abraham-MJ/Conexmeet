@@ -37,7 +37,7 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                   {message.time}
                 </span>
 
-                {message.sender === 'me' && (
+                {/* {message.sender === 'me' && (
                   <div className="absolute bottom-1 right-2 ml-1">
                     {message.read ? (
                       <IoCheckmarkDone className="h-4 w-4" />
@@ -45,7 +45,7 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                       <IoCheckmarkOutline className="h-4 w-4" />
                     )}
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           </div>
