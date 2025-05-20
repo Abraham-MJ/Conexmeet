@@ -111,6 +111,7 @@ const FeaturesScreen = () => {
                       activeVideoUrl={activeVideoUrl}
                       onSetPlayingVideoUrl={onSetPlayingVideoUrl}
                       user={user}
+                      stories={stories.data ?? []}
                     />
                   </motion.div>
                 ))}
