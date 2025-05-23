@@ -98,19 +98,10 @@ export const useVideoRouletteFemale = () => {
     }
   };
 
-  const handleVideoChat = async () => {
-    const gender = state?.user?.gender;
-
-    if (gender === 'male') {
-    } else if (gender === 'female') {
-    }
-  };
-
   return {
     histories,
     isLoadingHistories,
     error,
-    handleVideoChat,
     deleteHistoryById,
     isLoadingDelete,
     refreshHistories: fetchHistories,

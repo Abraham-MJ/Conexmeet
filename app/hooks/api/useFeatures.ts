@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import useApi from '../useAPi';
-import { UserData } from '@/app/types/list-user';
 import { ContactData } from '@/app/types/my-contacts';
 import { HistoryData } from '@/app/types/histories';
+import { UserInformation as FemaleWithStatus } from '@/app/types/streams';
+import { useAgoraContext } from '@/app/context/useAgoraContext';
 
 type TabName =
   | 'stories'
@@ -17,7 +18,6 @@ type TabName =
 export interface UseFeaturesDataReturn {
   activeTab: TabName;
   activeVideoUrl: string | null;
-  setActiveVideoUrl: (url: string | null) => void;
   onSetPlayingVideoUrl: (url: string | null) => void;
   handleTabChange: (tab: TabName) => void;
   stories: {
@@ -27,9 +27,9 @@ export interface UseFeaturesDataReturn {
     fetch: () => void;
   };
   online: {
-    data: UserData[] | null;
+    data: FemaleWithStatus[] | null;
     loading: boolean;
-    error: Error | null;
+    error: string | null;
     fetch: () => void;
   };
   contacts: {
@@ -48,19 +48,14 @@ const useFeatures = ({
   const [activeTab, setActiveTab] = useState<TabName>(activeTabs ?? 'online');
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
 
+  const { state: agoraState } = useAgoraContext();
+
   const {
     data: storiesData,
     loading: storiesLoading,
     error: storiesError,
     execute: fetchStories,
   } = useApi<HistoryData[]>('/api/histories', {}, false);
-
-  const {
-    data: onlineUsersData,
-    loading: onlineUsersLoading,
-    error: onlineUsersError,
-    execute: fetchOnlineUsers,
-  } = useApi<UserData[]>('/api/auth/get-list-female', {}, false);
 
   const {
     data: contactsData,
@@ -74,28 +69,20 @@ const useFeatures = ({
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'stories' && !storiesData && !storiesLoading) {
-      fetchStories();
-    } else if (
-      activeTab === 'online' &&
-      !onlineUsersData &&
-      !onlineUsersLoading
-    ) {
-      fetchOnlineUsers();
-    } else if (activeTab === 'contacts' && !contactsData && !contactsLoading) {
-      fetchContacts();
-    }
-  }, [activeTab, storiesData, onlineUsersData, contactsData]);
-
-  useEffect(() => {
     if (activeTab === 'stories') {
-      fetchStories();
-    } else if (activeTab === 'online') {
-      fetchOnlineUsers();
+      if (!storiesData && !storiesLoading) fetchStories();
     } else if (activeTab === 'contacts') {
-      fetchContacts();
+      if (!contactsData && !contactsLoading) fetchContacts();
     }
-  }, []);
+  }, [
+    activeTab,
+    storiesData,
+    storiesLoading,
+    fetchStories,
+    contactsData,
+    contactsLoading,
+    fetchContacts,
+  ]);
 
   const onSetPlayingVideoUrl = useCallback((url: string | null) => {
     setActiveVideoUrl(url);
@@ -105,7 +92,6 @@ const useFeatures = ({
     activeTab,
     handleTabChange,
     activeVideoUrl,
-    setActiveVideoUrl,
     onSetPlayingVideoUrl,
     stories: {
       data: storiesData,
@@ -114,10 +100,10 @@ const useFeatures = ({
       fetch: fetchStories,
     },
     online: {
-      data: onlineUsersData,
-      loading: onlineUsersLoading,
-      error: onlineUsersError,
-      fetch: fetchOnlineUsers,
+      data: agoraState.onlineFemalesList as FemaleWithStatus[] | null,
+      loading: agoraState.isLoadingOnlineFemales,
+      error: agoraState.onlineFemalesError,
+      fetch: () => {},
     },
     contacts: {
       data: contactsData,

@@ -10,9 +10,11 @@ import {
 } from '@/app/components/shared/features/ContentCard';
 import useFeatures from '@/app/hooks/api/useFeatures';
 import { HistoryData } from '@/app/types/histories';
-import { UserData } from '@/app/types/list-user';
 import { ContactData } from '@/app/types/my-contacts';
 import { TabNavigation } from '@/app/components/UI/StyledTabs';
+import { FemaleWithStatus } from '@/app/api/agora/host/route';
+import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
 
 const gridContainerVariants = {
   hidden: { opacity: 0 },
@@ -38,6 +40,12 @@ const cardItemVariants = {
 
 const FeaturesScreen = () => {
   const {
+    handleVideoChatMale,
+    loadingStatus,
+    state: agora,
+  } = useAgoraContext();
+
+  const {
     activeTab,
     handleTabChange,
     stories,
@@ -54,6 +62,12 @@ const FeaturesScreen = () => {
 
   return (
     <div className="w-full">
+      <StyledFloatAlert
+        message={loadingStatus.message}
+        isOpen={loadingStatus.isLoading}
+        animationDirection="top"
+        variant="loading"
+      />
       <TabNavigation
         activeTab={activeTab}
         handleTabChange={handleTabChange}
@@ -75,14 +89,30 @@ const FeaturesScreen = () => {
                 initial="hidden"
                 animate="visible"
               >
-                {online?.data?.map((user: UserData) => (
-                  <motion.div
-                    key={`online-${user.id}`}
-                    variants={cardItemVariants}
-                  >
-                    <ContentCardRooms user={user} />
-                  </motion.div>
-                ))}
+                {online?.data?.map((user: any) => {
+                  const normalizedUser: FemaleWithStatus = {
+                    ...user,
+                    user_id:
+                      typeof user.user_id === 'string'
+                        ? Number(user.user_id)
+                        : user.user_id,
+                  };
+                  return (
+                    <motion.div
+                      key={`online-${normalizedUser.user_id}`}
+                      variants={cardItemVariants}
+                    >
+                      <ContentCardRooms
+                        user={normalizedUser}
+                        initialCall={(host_id: string) => {
+                          handleVideoChatMale(host_id);
+                        }}
+                        isLoadingCall={loadingStatus.isLoading}
+                        rolUser={agora.localUser?.role ?? 'male'}
+                      />
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             )}
           </div>

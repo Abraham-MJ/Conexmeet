@@ -21,7 +21,22 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+
       keyframes: {
+        i6jD7: {
+          '0%': { opacity: '0', transform: 'translateX(-20px)' }, 
+          '100%': { opacity: '1', transform: 'translateX(0px)' },
+        },
+        message: {
+          '0%': {
+            transform: 'translateX(-20px)',
+            opacity: '0',
+          },
+          '100%': {
+            transform: 'translateX(0px)',
+            opacity: '1',
+          },
+        },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-5px)' },
@@ -74,6 +89,7 @@ export default {
         float1: 'float1 3s ease-in-out infinite',
         float2: 'float2 3.5s ease-in-out infinite 0.5s',
         float3: 'float3 4s ease-in-out infinite 1s',
+        chat_event_animation: 'i6jD7 .35s ease-in-out both',
       },
     },
   },

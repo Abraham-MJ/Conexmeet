@@ -2,9 +2,11 @@
 
 import { useUser } from '@/app/context/useClientContext';
 import { HistoryData } from '@/app/types/histories';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export const useVideoRouletteMale = () => {
+  const router = useRouter();
   const { state } = useUser();
 
   const [currentDate, setCurrentDate] = useState('');
@@ -61,13 +63,5 @@ export const useVideoRouletteMale = () => {
     getHistories();
   }, []);
 
-  const handleVideoChat = async () => {
-    const gender = state.user.gender;
-
-    if (gender === 'male') {
-    } else if (gender === 'female') {
-    }
-  };
-
-  return { histories, isLoading, error, currentDate, handleVideoChat };
+  return { histories, isLoading, error, currentDate };
 };
