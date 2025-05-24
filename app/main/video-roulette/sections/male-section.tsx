@@ -2,8 +2,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useVideoRouletteMale } from '@/app/hooks/api/useVideoRouletteMale';
 import { HistoryData } from '@/app/types/histories';
 import { Camera, Play, Video } from 'lucide-react';
+import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
 
 const MaleViewVideo = () => {
+  const { handleVideoChatMale, loadingStatus } = useAgoraContext();
   const { currentDate, histories } = useVideoRouletteMale();
 
   const [currentStory, setCurrentStory] = useState<HistoryData | null>(null);
@@ -35,6 +41,12 @@ const MaleViewVideo = () => {
 
   return (
     <div className="relative flex h-full items-center justify-center">
+      <StyledFloatAlert
+        message={loadingStatus.message}
+        isOpen={loadingStatus.isLoading}
+        animationDirection="top"
+        variant="loading"
+      />
       {currentStory?.user?.profile_photo_path && (
         <img
           src={currentStory.user.profile_photo_path}
@@ -81,13 +93,39 @@ const MaleViewVideo = () => {
           <h2 className="mb-10 text-3xl font-bold text-white">
             con mujeres número 1
           </h2>
-          <button
-            onClick={() => {}}
-            className="mb-6 flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 py-4 text-lg font-medium text-white transition-all hover:bg-blue-700"
+
+          <Button
+            className={cn(
+              'mb-6 w-full rounded-xl bg-blue-600 py-7 text-lg font-medium transition-all duration-300 hover:bg-blue-700',
+            )}
+            disabled={loadingStatus.isLoading}
+            onClick={() => handleVideoChatMale()}
           >
-            <Video className="h-5 w-5" />
-            Entrar al video chat
-          </button>
+            {loadingStatus.isLoading ? (
+              <div className="text-md flex items-center justify-center font-latosans">
+                Cargando
+                {[1, 2, 3].map((index) => {
+                  return (
+                    <motion.span
+                      key={index}
+                      animate={{ opacity: [0, 1, 1, 0] }}
+                      transition={{ repeat: Infinity, duration: 1.5 }}
+                    >
+                      .
+                    </motion.span>
+                  );
+                })}
+              </div>
+            ) : (
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <Video
+                  className={cn('h-5 w-5 transition-transform duration-300')}
+                />
+                Entrar al video chat
+              </span>
+            )}
+          </Button>
+
           <p className="flex items-center justify-center gap-2 text-sm text-white/70">
             <Camera className="h-4 w-4" />
             Activa tu cámara para empezar la búsqueda

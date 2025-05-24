@@ -9,14 +9,23 @@ import { useUser } from '@/app/context/useClientContext';
 import { useVideoRouletteFemale } from '@/app/hooks/api/useVideoRouletteFemale';
 import PlayStoriesView from './play-stories';
 import AddStoriesView from './add-stories';
+import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
 
 const FemaleViewVideo = () => {
+  const { handleVideoChatFemale, loadingStatus } = useAgoraContext();
   const { state: user } = useUser();
   const { histories, deleteHistoryById, isLoadingDelete } =
     useVideoRouletteFemale();
 
   return (
     <div className="relative h-full">
+      <StyledFloatAlert
+        message={loadingStatus.message}
+        isOpen={loadingStatus.isLoading}
+        animationDirection="top"
+        variant="loading"
+      />
       <div className="flex h-full flex-col md:flex-row">
         <div className="relative h-full flex-1">
           <div className="flex h-full flex-col items-center">
@@ -64,15 +73,34 @@ const FemaleViewVideo = () => {
                 className={cn(
                   'w-full rounded-xl bg-[#de2c7c] py-7 text-lg font-medium transition-all duration-300 hover:bg-[#de2c7c]/80',
                 )}
-                disabled={false}
-                onClick={() => {}}
+                disabled={loadingStatus.isLoading}
+                onClick={handleVideoChatFemale}
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <Video
-                    className={cn('h-5 w-5 transition-transform duration-300')}
-                  />
-                  Video chat
-                </span>
+                {loadingStatus.isLoading ? (
+                  <div className="text-md flex items-center justify-center font-latosans">
+                    Cargando
+                    {[1, 2, 3].map((index) => {
+                      return (
+                        <motion.span
+                          key={index}
+                          animate={{ opacity: [0, 1, 1, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.5 }}
+                        >
+                          .
+                        </motion.span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    <Video
+                      className={cn(
+                        'h-5 w-5 transition-transform duration-300',
+                      )}
+                    />
+                    Video chat
+                  </span>
+                )}
               </Button>
               <div className="mt-5 flex items-center justify-center gap-2 text-sm font-light text-gray-500">
                 <Camera className="h-4 w-4" />
