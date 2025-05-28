@@ -1,12 +1,8 @@
-interface GetRequest {
-  url: string;
-}
-
 interface RtmTokenResponse {
   rtmToken: string;
 }
 
-export async function GET(request: GetRequest): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const uid: string | null = searchParams.get('uid');
 
@@ -18,18 +14,37 @@ export async function GET(request: GetRequest): Promise<Response> {
   }
 
   try {
-    const response: Response = await fetch(
+    const responseFromAgoraService: Response = await fetch(
       `https://agora-tokens-lr9i.onrender.com/rtm/${uid}`,
     );
-    const data: RtmTokenResponse = await response.json();
+
+    if (!responseFromAgoraService.ok) {
+      const errorData = await responseFromAgoraService.text();
+      console.error(
+        `Error desde el servicio de Agora: ${responseFromAgoraService.status}`,
+        errorData,
+      );
+      return new Response(
+        JSON.stringify({
+          error: `Error del servicio de tokens: ${responseFromAgoraService.status}`,
+        }),
+        {
+          status: responseFromAgoraService.status,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const data: RtmTokenResponse = await responseFromAgoraService.json();
 
     return new Response(JSON.stringify({ rtmToken: data.rtmToken }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    console.error('Error interno al intentar obtener token RTM:', error);
     return new Response(
-      JSON.stringify({ error: 'Error al obtener token RTM' }),
+      JSON.stringify({ error: 'Error interno al obtener token RTM' }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
