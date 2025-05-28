@@ -5,12 +5,13 @@ import { FaHeart, FaPause, FaPlay } from 'react-icons/fa';
 import { HistoryData } from '@/app/types/histories';
 import { ContactData } from '@/app/types/my-contacts';
 import { LuMessageSquareShare } from 'react-icons/lu';
-import { UserData } from '@/app/types/list-user';
 import { TbPointFilled } from 'react-icons/tb';
 import AvatarImage from '../../UI/StyledAvatarImage';
 import { useRouter } from 'next/navigation';
 import { FiArrowUpRight } from 'react-icons/fi';
 import ModalStories from '../modals/ModalStories';
+import { FemaleWithStatus } from '@/app/api/agora/host/route';
+import { cn } from '@/lib/utils';
 
 interface ContentStoriesProps {
   user: HistoryData;
@@ -24,7 +25,10 @@ interface ContentContactProps {
 }
 
 interface ContentRoomsProps {
-  user: UserData;
+  user: FemaleWithStatus;
+  initialCall: (host_id: string) => void;
+  isLoadingCall: boolean;
+  rolUser: 'admin' | 'male' | 'female';
 }
 
 export const ContentCardStories = React.memo(function ContentCardStories({
@@ -208,7 +212,7 @@ export function ContentCardContacts({ user }: ContentContactProps) {
         defaultPlaceholderSrc={`https://avatar.iran.liara.run/`}
         errorPlaceholderSrc={GENERIC_IMAGE_ERROR_PLACEHOLDER}
         alt={user.user.profile_photo_path}
-        className="h-full w-full object-cover"
+        className="h-full w-full object-cover transition-transform duration-300 ease-in-out hover:scale-105"
       />
 
       <div
@@ -229,18 +233,85 @@ export function ContentCardContacts({ user }: ContentContactProps) {
   );
 }
 
-export function ContentCardRooms({ user }: ContentRoomsProps) {
+export function ContentCardRooms({
+  user,
+  initialCall,
+  isLoadingCall,
+  rolUser,
+}: ContentRoomsProps) {
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://avatar.iran.liara.run/`;
+
   return (
-    <div className="group relative aspect-square cursor-pointer overflow-hidden rounded-3xl bg-current shadow-lg transition-transform duration-300 ease-in-out hover:scale-105">
-      <div className="absolute left-4 top-4 z-10 flex items-center rounded-full bg-black/30 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-        <TbPointFilled className="h-6 w-6 text-green-500" />
-        Disponible
+    <div
+      className={cn(
+        'group relative aspect-square overflow-hidden rounded-3xl bg-current shadow-lg',
+        user.status === 'available_call' && 'cursor-pointer',
+      )}
+      onClick={() => {
+        if (
+          user.status === 'available_call' &&
+          user.host_id !== null &&
+          !isLoadingCall &&
+          rolUser !== 'admin'
+        ) {
+          setSelectedCard(String(user.user_id));
+          initialCall(user.host_id);
+        } else if (
+          user.status === 'available_call' ||
+          (user.status === 'in_call' &&
+            user.host_id !== null &&
+            !isLoadingCall &&
+            rolUser === 'admin')
+        ) {
+          setSelectedCard(String(user.user_id));
+          initialCall(user?.host_id ?? '');
+        }
+      }}
+    >
+      {isLoadingCall && selectedCard === String(user.user_id) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-100 transition-all duration-300">
+          <div className="h-24 w-24 animate-spin rounded-full border-4 border-b-transparent border-l-transparent border-r-[#ff00ff] border-t-[#ff00ff]" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/images/logo.png"
+              alt="Conexmeet"
+              className="h-auto w-16"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="absolute left-3 top-3 z-10 flex items-center rounded-full bg-black/5 px-2 text-xs text-white backdrop-blur-xl">
+        {user.status === 'online' ? (
+          <>
+            <TbPointFilled className="h-8 w-8 text-green-500" />
+            Online
+          </>
+        ) : user.status === 'available_call' ? (
+          <>
+            <TbPointFilled className="h-8 w-8 text-yellow-500" />
+            Available for call
+          </>
+        ) : user.status === 'in_call' ? (
+          <>
+            <TbPointFilled className="h-8 w-8 text-red-500" />
+            On call with another user
+          </>
+        ) : (
+          <>
+            <TbPointFilled className="h-8 w-8 text-gray-500" />
+            Offline
+          </>
+        )}
       </div>
 
-      <img
-        src={user.profile_photo_path}
-        alt={user.name}
-        className="h-full w-full object-cover"
+      <AvatarImage
+        primarySrc={user.avatar}
+        defaultPlaceholderSrc={`https://avatar.iran.liara.run/`}
+        errorPlaceholderSrc={GENERIC_IMAGE_ERROR_PLACEHOLDER}
+        alt={user.avatar ?? 'User avatar'}
+        className="h-full w-full object-cover transition-transform duration-300 ease-in-out hover:scale-105"
       />
 
       <div
@@ -248,7 +319,7 @@ export function ContentCardRooms({ user }: ContentRoomsProps) {
       >
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-semibold text-white shadow-sm">
-            {user.name}
+            {user.user_name}
           </p>
         </div>
       </div>
