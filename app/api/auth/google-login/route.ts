@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { cookies } from 'next/headers';
+import { authOptions } from '@/lib/auth';
 
 interface ConexMeetLoginResponseData {
   access_token: string;
