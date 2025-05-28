@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   request: Request,
-  { params }: { params: { token?: string } },
+  { params }: { params: { token: string } },
 ) {
   const { token } = params;
 
   if (!token) {
     return NextResponse.json(
-      { error: 'Token no proporcionado' },
+      { error: 'Token no proporcionado o inválido' },
       { status: 400 },
     );
   }
@@ -23,15 +23,19 @@ export async function GET(
     );
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Error al obtener los datos' },
-        { status: response.status },
-      );
+      let errorBody = {
+        error: 'Error al obtener los datos del servicio externo',
+      };
+      try {
+        errorBody = await response.json();
+      } catch (e) {}
+      return NextResponse.json(errorBody, { status: response.status });
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
+    console.error('Error interno del servidor en recovery-password:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 },
