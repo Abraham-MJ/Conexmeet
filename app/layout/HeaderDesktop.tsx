@@ -9,8 +9,11 @@ import { useUser } from '../context/useClientContext';
 import UserDropdown from '../components/shared/UserDropDown';
 import { MessageCircle, Video, Users, BarChart3, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ModalPackage from '../components/shared/modals/ModalPackage';
 
 const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const { state } = useUser();
   const pathname = usePathname();
   const isMobile = useMobile();
@@ -82,7 +85,9 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
               </span>
             </div>
           ) : (
-            <div className="cursor-pointer rounded-full border bg-[#00000014] px-4 py-1 text-sm text-[#181a21]">
+            <div className="cursor-pointer rounded-full border bg-[#00000014] px-4 py-1 text-sm text-[#181a21]" onClick={() => {
+              setIsOpen(true)
+            }}>
               Recharge
             </div>
           )}
@@ -169,6 +174,12 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
 
         <UserDropdown />
       </div>
+      <ModalPackage
+        isOpen={isOpen}
+        onClose={() => {
+          setIsOpen(false);
+        }}
+      />
     </header>
   );
 };

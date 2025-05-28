@@ -7,8 +7,11 @@ import React, { useEffect, useState } from 'react';
 import { useUser } from '../context/useClientContext';
 import { DollarSign, MessageCircle, Search, Users, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ModalPackage from '../components/shared/modals/ModalPackage';
 
 const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const { scrollY } = useScroll();
   const [isVisible, setIsVisible] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
@@ -97,7 +100,12 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
         </div>
       </Link>
 
-      <div className="flex flex-col items-center px-3 py-2">
+      <div
+        className="flex flex-col items-center px-3 py-2"
+        onClick={() => {
+          setIsOpen(true);
+        }}
+      >
         <div className="relative">
           <DollarSign size={24} className="text-gray-500" />
         </div>
@@ -125,6 +133,13 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
         </div>
         <span className="mt-1 text-xs">Chats</span>
       </Link>
+
+      <ModalPackage
+        isOpen={isOpen}
+        onClose={() => {
+          setIsOpen(false);
+        }}
+      />
     </motion.nav>
   );
 };

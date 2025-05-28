@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useMobile } from '@/app/hooks/useMobile';
@@ -107,13 +108,13 @@ export default function StyledModal({
         return {
           width,
           height,
-          maxHeight: '100vh',
+          maxHeight: '96vh',
         };
       case 'right':
         return {
           width,
           height,
-          maxHeight: '100vh',
+          maxHeight: '96vh',
         };
       case 'center':
       default:
@@ -126,7 +127,7 @@ export default function StyledModal({
     }
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -139,7 +140,7 @@ export default function StyledModal({
           />
 
           <motion.div
-            className={`z-50 flex flex-col overflow-hidden rounded-3xl bg-white shadow-xl ${
+            className={`z-50 flex flex-col overflow-hidden rounded-3xl shadow-xl ${
               isMobile
                 ? 'fixed bottom-0 left-0 right-0 rounded-b-none rounded-t-2xl'
                 : position === 'left'
@@ -156,16 +157,9 @@ export default function StyledModal({
               type: 'spring',
               damping: 30,
               stiffness: 300,
-
               duration: isMobile ? 0.3 : undefined,
             }}
           >
-            {isMobile && (
-              <div className="flex w-full justify-center pb-1 pt-2">
-                <div className="h-1 w-10 rounded-full bg-gray-300"></div>
-              </div>
-            )}
-
             <div
               className={cn(
                 'flex items-center justify-between',
@@ -197,4 +191,10 @@ export default function StyledModal({
       )}
     </AnimatePresence>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+
+  return null;
 }
