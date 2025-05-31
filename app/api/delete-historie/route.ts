@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-interface Context {
-  params: {
-    historyId: string;
-  };
-}
-
-export async function DELETE(request: NextRequest, context: Context) {
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const historyId = searchParams.get('historyId');
+  
   try {
-    const { historyId } = context.params;
 
     if (!historyId) {
       return NextResponse.json(
@@ -51,7 +47,7 @@ export async function DELETE(request: NextRequest, context: Context) {
           (response.ok
             ? 'Operación completada.'
             : 'Error desde el servicio externo.');
-      } catch (e) {
+      } catch {
         const textResponse = await response.text();
         apiResponseMessage =
           textResponse ||
@@ -80,10 +76,10 @@ export async function DELETE(request: NextRequest, context: Context) {
       },
       { status: 200 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(
-      `Error en la ruta API DELETE /api/histories/${context?.params?.historyId}:`,
-      error.message,
+      `Error en la ruta API DELETE /api/histories/${historyId}:`,
+      error instanceof Error ? error.message : error,
     );
 
     if (error instanceof SyntaxError) {

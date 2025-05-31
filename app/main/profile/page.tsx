@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import ModalUpdateProfile from '@/app/components/shared/modals/ModalUpdateProfile';
 import { useUser } from '@/app/context/useClientContext';
 import { AtSign, Check, Copy, Edit3, Link, Mail, Share2 } from 'lucide-react';
@@ -13,9 +15,11 @@ const ProfileScreen = () => {
 
   const copyToClipboard = async (link_referral: string) => {
     try {
-      await navigator.clipboard.writeText(link_referral);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (typeof window !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(link_referral);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
     } catch (err) {
       console.error('Error al copiar:', err);
     }

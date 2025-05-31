@@ -55,7 +55,7 @@ export interface ChatContextType {
   sendTypingStopped: (peerRtmUid: string) => void;
   sendUserInactiveInChatStatus: (peerRtmUid: string) => void;
   sendUserActiveInChatStatus: (peerRtmUid: string) => void;
-  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  scrollContainerRef: React.RefObject<HTMLDivElement>;
 }
 
 export interface ProcessedChatData {

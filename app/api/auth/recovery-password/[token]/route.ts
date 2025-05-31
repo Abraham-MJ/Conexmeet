@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { token: string } },
+  context: { params: Promise<{ token: string }> },
 ) {
-  const token = context.params.token;
+  const params = await context.params;
+  const token = params.token;
 
   if (!token) {
     return NextResponse.json(
@@ -28,7 +29,7 @@ export async function GET(
       };
       try {
         errorBody = await response.json();
-      } catch (e) {}
+      } catch {}
       return NextResponse.json(errorBody, { status: response.status });
     }
 
