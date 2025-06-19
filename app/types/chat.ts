@@ -50,7 +50,6 @@ export interface ChatContextType {
   ) => Promise<void>;
   sendMessageRequest: (data: SendMessageTypes) => Promise<any>;
   isLoggedIn?: boolean;
-  rtmConnectionError?: any;
   sendTypingStarted: (peerRtmUid: string) => void;
   sendTypingStopped: (peerRtmUid: string) => void;
   sendUserInactiveInChatStatus: (peerRtmUid: string) => void;

@@ -20,7 +20,7 @@ import {
   State,
 } from '../types/chat';
 import { useUser } from './useClientContext';
-import { useChatAgora } from '../hooks/useChatAgora';
+import { useAgoraContext } from './useAgoraContext';
 
 const initialState: State = {
   conversations: [],
@@ -136,6 +136,8 @@ function reducer(state: State, action: Action): State {
 export function ChatProvider({ children }: { children: ReactNode }) {
   const params = useParams();
   const { state: userState } = useUser();
+  const { state: agoraState } = useAgoraContext();
+  const { rtmClient, isRtmLoggedIn: isLoggedIn } = agoraState;
   const [state, dispatch] = useReducer(reducer, initialState);
 
   let activeChatId: string | null = null;
@@ -150,8 +152,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevChatIdRef = useRef<string | null>(activeChatId);
 
-  const { rtmClient, isLoggedIn, login, error, isSdkLoaded } = useChatAgora();
-
   useEffect(() => {
     const scrollToBottom = () => {
       if (scrollContainerRef.current) {
@@ -161,18 +161,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
     scrollToBottom();
   }, [state.messagesByConversationId, activeChatId]);
-
-  useEffect(() => {
-    if (
-      userState.user?.id &&
-      rtmClient &&
-      isSdkLoaded &&
-      !isLoggedIn &&
-      !error
-    ) {
-      login();
-    }
-  }, [userState.user?.id, rtmClient, isSdkLoaded, isLoggedIn, login, error]);
 
   const getUserIdFromChat = useCallback(
     (chatIdParam: string | null | undefined) => {
@@ -375,7 +363,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sendTypingStarted = useCallback(
     async (peerRtmUid: string) => {
-      if (rtmClient && isLoggedIn && isSdkLoaded && userState.user?.id) {
+      if (rtmClient && isLoggedIn && userState.user?.id) {
         const payload: RtmMessagePayload = {
           messageType: 'TYPING_STARTED',
           senderUid: userState.user.id.toString(),
@@ -389,12 +377,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         } catch (err) {}
       }
     },
-    [rtmClient, isLoggedIn, isSdkLoaded, userState.user?.id],
+    [rtmClient, isLoggedIn, userState.user?.id],
   );
 
   const sendTypingStopped = useCallback(
     async (peerRtmUid: string) => {
-      if (rtmClient && isLoggedIn && isSdkLoaded && userState.user?.id) {
+      if (rtmClient && isLoggedIn && userState.user?.id) {
         const payload: RtmMessagePayload = {
           messageType: 'TYPING_STOPPED',
           senderUid: userState.user.id.toString(),
@@ -408,12 +396,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         } catch (err) {}
       }
     },
-    [rtmClient, isLoggedIn, isSdkLoaded, userState.user?.id],
+    [rtmClient, isLoggedIn, userState.user?.id],
   );
 
   const sendUserActiveInChatStatus = useCallback(
     async (peerRtmUid: string) => {
-      if (rtmClient && isLoggedIn && isSdkLoaded && userState.user?.id) {
+      if (rtmClient && isLoggedIn && userState.user?.id) {
         const payload: RtmMessagePayload = {
           messageType: 'USER_ACTIVE_IN_CHAT',
           senderUid: userState.user.id.toString(),
@@ -427,12 +415,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         } catch (err) {}
       }
     },
-    [rtmClient, isLoggedIn, isSdkLoaded, userState.user?.id],
+    [rtmClient, isLoggedIn, userState.user?.id],
   );
 
   const sendUserInactiveInChatStatus = useCallback(
     async (peerRtmUid: string) => {
-      if (rtmClient && isLoggedIn && isSdkLoaded && userState.user?.id) {
+      if (rtmClient && isLoggedIn && userState.user?.id) {
         const payload: RtmMessagePayload = {
           messageType: 'USER_INACTIVE_IN_CHAT',
           senderUid: userState.user.id.toString(),
@@ -446,7 +434,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         } catch (err) {}
       }
     },
-    [rtmClient, isLoggedIn, isSdkLoaded, userState.user?.id],
+    [rtmClient, isLoggedIn, userState.user?.id],
   );
 
   const sendMessageRequest = async (paramsMessage: SendMessageTypes) => {
@@ -470,7 +458,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       payload: { conversationId: String(room_id), message: localMessage },
     });
 
-    if (rtmClient && isLoggedIn && isSdkLoaded) {
+    if (rtmClient && isLoggedIn) {
       const rtmPayload: RtmMessagePayload = {
         messageType: 'CHAT_MESSAGE',
         text: message,
@@ -558,7 +546,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     loadMessagesForConversation,
     sendMessageRequest,
     isLoggedIn,
-    rtmConnectionError: error,
     sendTypingStarted,
     sendTypingStopped,
     sendUserInactiveInChatStatus,
