@@ -5,6 +5,12 @@ import HeaderMobile from './HeaderMobile';
 import HeaderDesktop from './HeaderDesktop';
 import { cn } from '@/lib/utils';
 import { useAgoraContext } from '../context/useAgoraContext';
+import ModalPermission from '../components/shared/modals/ModalPermission';
+import ModalRejectPermission from '../components/shared/modals/ModalRejectPermission';
+import ModalNotChannel from '../components/shared/modals/ModalNotChannel';
+import ModalChannelBusy from '../components/shared/modals/ModalChannelBusy';
+import ModalInsufficientMinutes from '../components/shared/modals/ModalInsufficientMinutes';
+import ModalCallEndedFemaleSummary from '../components/shared/modals/ModalCallEndedFemaleSummary';
 
 const baseRoutes = {
   female: {
@@ -98,6 +104,12 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
       >
         {children}
       </main>
+      <ModalPermission />
+      <ModalRejectPermission />
+      <ModalNotChannel />
+      <ModalChannelBusy />
+      <ModalInsufficientMinutes />
+      <ModalCallEndedFemaleSummary />
     </>
   );
 };

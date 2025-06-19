@@ -44,6 +44,10 @@ export enum AgoraActionType {
   SET_REQUESTING_MEDIA_PERMISSIONS = 'SET_REQUESTING_MEDIA_PERMISSIONS',
   SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE = 'SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE',
   REMOTE_HOST_ENDED_CALL = 'REMOTE_HOST_ENDED_CALL',
+  SET_SHOW_MEDIA_PERMISSIONS_MODAL = 'SET_SHOW_MEDIA_PERMISSIONS_MODAL',
+  SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL = 'SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL',
+  SET_SHOW_CHANNEL_IS_BUSY_MODAL = 'SET_SHOW_CHANNEL_IS_BUSY_MODAL',
+  SET_SHOW_UNEXPECTED_ERROR_MODAL = 'SET_SHOW_UNEXPECTED_ERROR_MODAL',
 }
 
 export interface LoadingStatus {
@@ -74,6 +78,7 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   type: 'channel' | 'self';
+  translatedText?: string;
 }
 
 export interface AgoraState {
@@ -108,11 +113,15 @@ export interface AgoraState {
   isRequestingMediaPermissions: boolean;
   showNoChannelsAvailableModalForMale: boolean;
   hostEndedCallInfo: { ended: boolean; message?: string } | null;
+  showMediaPermissionsModal: boolean;
+  showMediaPermissionsDeniedModal: boolean;
+  showChannelIsBusyModal: boolean;
+  showUnexpectedErrorModal: boolean;
 }
 
 interface RemoteHostEndedCallAction {
   type: AgoraActionType.REMOTE_HOST_ENDED_CALL;
-  payload?: { message?: string };
+  payload: { message?: string; ended?: boolean } | null;
 }
 
 interface SetAppIdAction {
@@ -299,6 +308,26 @@ interface SetCurrentCallHostRtcUidAction {
   payload: string | number | null;
 }
 
+interface SetShowMediaPermissionsModalAction {
+  type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL;
+  payload: boolean;
+}
+
+interface SetShowMediaPermissionsDeniedModalAction {
+  type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL;
+  payload: boolean;
+}
+
+interface SetShowChannelIsBusyModalAction {
+  type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL;
+  payload: boolean;
+}
+
+interface SetShowUnexpectedErrorModalAction {
+  type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL;
+  payload: boolean;
+}
+
 export type AgoraAction =
   | SetAppIdAction
   | SetLocalUserProfileAction
@@ -335,4 +364,8 @@ export type AgoraAction =
   | SetCurrentCallHostRtcUidAction
   | SetRequestingMediaPermissionsAction
   | SetShowNoChannelsAvailableModalForMaleAction
-  | RemoteHostEndedCallAction;
+  | RemoteHostEndedCallAction
+  | SetShowMediaPermissionsModalAction
+  | SetShowMediaPermissionsDeniedModalAction
+  | SetShowChannelIsBusyModalAction
+  | SetShowUnexpectedErrorModalAction;

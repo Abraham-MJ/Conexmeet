@@ -162,17 +162,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     scrollToBottom();
   }, [state.messagesByConversationId, activeChatId]);
 
-  // useEffect(() => {
-  //   if (
-  //     userState.user?.id &&
-  //     rtmClient &&
-  //     isSdkLoaded &&
-  //     !isLoggedIn &&
-  //     !error
-  //   ) {
-  //     login();
-  //   }
-  // }, [userState.user?.id, rtmClient, isSdkLoaded, isLoggedIn, login, error]);
+  useEffect(() => {
+    if (
+      userState.user?.id &&
+      rtmClient &&
+      isSdkLoaded &&
+      !isLoggedIn &&
+      !error
+    ) {
+      login();
+    }
+  }, [userState.user?.id, rtmClient, isSdkLoaded, isLoggedIn, login, error]);
 
   const getUserIdFromChat = useCallback(
     (chatIdParam: string | null | undefined) => {

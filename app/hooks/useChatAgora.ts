@@ -34,20 +34,20 @@ export const useChatAgora = () => {
         !AgoraRTMLibRef.current &&
         agora.appID
       ) {
-        // try {
-        //   const sdkModule = await import('agora-rtm-sdk');
-        //   AgoraRTMLibRef.current = sdkModule.default as unknown as AgoraRTMType;
-        //   if (AgoraRTMLibRef.current && !clientRef.current) {
-        //     const client = AgoraRTMLibRef.current.createInstance(agora.appID, {
-        //       logFilter: AgoraRTMLibRef.current.LOG_FILTER_ERROR,
-        //     });
-        //     clientRef.current = client;
-        //     setIsSdkLoaded(true);
-        //   }
-        // } catch (e) {
-        //   console.error('Error cargando o inicializando Agora RTM:', e);
-        //   setError(new Error('Fallo al cargar el SDK de RTM.'));
-        // }
+        try {
+          const sdkModule = await import('agora-rtm-sdk');
+          AgoraRTMLibRef.current = sdkModule.default as unknown as AgoraRTMType;
+          if (AgoraRTMLibRef.current && !clientRef.current) {
+            const client = AgoraRTMLibRef.current.createInstance(agora.appID, {
+              logFilter: AgoraRTMLibRef.current.LOG_FILTER_ERROR,
+            });
+            clientRef.current = client;
+            setIsSdkLoaded(true);
+          }
+        } catch (e) {
+          console.error('Error cargando o inicializando Agora RTM:', e);
+          setError(new Error('Fallo al cargar el SDK de RTM.'));
+        }
       }
     };
 
@@ -57,74 +57,68 @@ export const useChatAgora = () => {
   }, [agora.appID]);
 
   const login = useCallback(async () => {
-    // if (!clientRef.current) {
-    //   setError(
-    //     new Error(
-    //       'Cliente RTM no está inicializado. SDK no cargado o AppID faltante.',
-    //     ),
-    //   );
-    //   return;
-    // }
-    // if (!user.user.id) {
-    //   setError(new Error('RTM UID del usuario no proporcionado.'));
-    //   return;
-    // }
-    // if (isLoggedIn) {
-    //   console.log('[useChatAgora] Usuario ya está logueado en RTM.');
-    //   return;
-    // }
-    // setError(null);
-    // try {
-    //   const token = await getTokenRtm(user.user.id.toString());
-    //   console.log(
-    //     `[useChatAgora] Token RTM obtenido para UID ${user.user.id}:`,
-    //     token ? 'Sí' : 'No',
-    //   );
-    //   await clientRef.current.login({
-    //     uid: user.user.id.toString(),
-    //     token: token ?? undefined,
-    //   } as any);
-    //   setIsLoggedIn(true);
-    // } catch (loginError) {
-    //   console.error(
-    //     `[useChatAgora] FALLO LOGIN RTM para UID: ${user.user.id}`,
-    //     loginError,
-    //   );
-    //   setError(loginError);
-    //   setIsLoggedIn(false);
-    // }
+    if (!clientRef.current) {
+      setError(
+        new Error(
+          'Cliente RTM no está inicializado. SDK no cargado o AppID faltante.',
+        ),
+      );
+      return;
+    }
+    if (!user.user.id) {
+      setError(new Error('RTM UID del usuario no proporcionado.'));
+      return;
+    }
+    if (isLoggedIn) {
+      return;
+    }
+    setError(null);
+    try {
+      const token = await getTokenRtm(user.user.id.toString());
+
+      await clientRef.current.login({
+        uid: user.user.id.toString(),
+        token: token ?? undefined,
+      } as any);
+      setIsLoggedIn(true);
+    } catch (loginError) {
+      console.error(
+        `[useChatAgora] FALLO LOGIN RTM para UID: ${user.user.id}`,
+        loginError,
+      );
+      setError(loginError);
+      setIsLoggedIn(false);
+    }
   }, [getTokenRtm, isLoggedIn, user.user.id, isSdkLoaded]);
 
   const logout = useCallback(async () => {
-    // if (!clientRef.current || !isLoggedIn) {
-    //   return;
-    // }
-    // try {
-    //   await clientRef.current.logout();
-    //   setIsLoggedIn(false);
-    // } catch (logoutError) {
-    //   console.error('[useChatAgora] Error durante logout de RTM:', logoutError);
-    //   setError(logoutError);
-    // }
+    if (!clientRef.current || !isLoggedIn) {
+      return;
+    }
+    try {
+      await clientRef.current.logout();
+      setIsLoggedIn(false);
+    } catch (logoutError) {
+      console.error('[useChatAgora] Error durante logout de RTM:', logoutError);
+      setError(logoutError);
+    }
   }, [isLoggedIn, user.user.id]);
 
   useEffect(() => {
-    // const clientInstance = clientRef.current;
-    // return () => {
-    //   if (clientInstance) {
-    //     clientInstance
-    //       .logout()
-    //       .then(() =>
-    //         console.log('[useChatAgora] Logout en desmontaje completado.'),
-    //       )
-    //       .catch((err) =>
-    //         console.error(
-    //           '[useChatAgora] Error en logout durante desmontaje:',
-    //           err,
-    //         ),
-    //       );
-    //   }
-    // };
+    const clientInstance = clientRef.current;
+    return () => {
+      if (clientInstance) {
+        clientInstance
+          .logout()
+          .then(() => {})
+          .catch((err) =>
+            console.error(
+              '[useChatAgora] Error en logout durante desmontaje:',
+              err,
+            ),
+          );
+      }
+    };
   }, []);
 
   return {

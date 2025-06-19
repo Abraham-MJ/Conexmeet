@@ -9,8 +9,10 @@ import { FiVideo, FiVideoOff } from 'react-icons/fi';
 import { IoMicOutline, IoMicOffOutline } from 'react-icons/io5';
 import DisplayVideoView from '../sections/DisplayVideoView';
 import { useMobile } from '@/app/hooks/useMobile';
+import { useUser } from '@/app/context/useClientContext';
 
 const PageStreamVideo = () => {
+  const { state: user } = useUser();
   const isMobile = useMobile(1024);
 
   const {
@@ -19,8 +21,8 @@ const PageStreamVideo = () => {
     toggleLocalAudio,
     toggleLocalVideo,
     handleLeaveCall,
+    callTimer,
   } = useAgoraContext();
-  
 
   return (
     <div className="fixed left-0 top-0 z-[50] h-screen w-full bg-[#2c2c2c]">
@@ -48,11 +50,13 @@ const PageStreamVideo = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="relative box-border flex h-10 min-w-[90px] items-center justify-center rounded-[20px] bg-[#ffffff29] text-white backdrop-blur-md transition-colors duration-300 ease-in-out">
-                    <div className="flex items-center p-2 text-center">
-                      <span className="text-sm font-medium">10:00</span>
+                  {user.user.gender === 'female' && (
+                    <div className="relative box-border flex h-10 min-w-[90px] items-center justify-center rounded-[20px] bg-[#ffffff29] text-white backdrop-blur-md transition-colors duration-300 ease-in-out">
+                      <div className="flex items-center p-2 text-center">
+                        <span className="text-sm font-medium">{callTimer}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 

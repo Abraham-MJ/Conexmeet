@@ -17,9 +17,9 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       <AgoraProvider>
-        <ChatProvider>
-          <RenderChildren children={children} />
-        </ChatProvider>
+        {/* <ChatProvider> */}
+        <RenderChildren children={children} />
+        {/* </ChatProvider> */}
       </AgoraProvider>
     </>
   );
