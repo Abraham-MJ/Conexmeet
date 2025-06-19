@@ -178,7 +178,8 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     isRtmLoggedIn,
     agoraBackend,
     initializeRtmClient,
-    state.remoteUsers,
+    state,
+    broadcastLocalFemaleStatusUpdate,
   );
 
   const {

@@ -3,6 +3,7 @@ import { RtmClient, RtmChannel } from 'agora-rtm-sdk';
 import {
   AgoraAction,
   AgoraActionType,
+  AgoraState,
   ChatMessage,
   UserInformation,
 } from '@/app/types/streams';
@@ -17,7 +18,10 @@ export const useAgoraCallChannel = (
   isRtmLoggedIn: boolean,
   agoraBackend: ReturnType<typeof useAgoraServer>,
   initializeRtmClient: (loadingMessage?: string) => Promise<RtmClient | null>,
-  remoteUsers: UserInformation[] | null,
+  state: AgoraState,
+  broadcastLocalFemaleStatusUpdate: (
+    statusInfo: Partial<UserInformation>,
+  ) => Promise<void>,
 ) => {
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
@@ -26,7 +30,7 @@ export const useAgoraCallChannel = (
 
   const waitForUserProfile = useCallback((uidToWaitFor: string | number) => {
     const stringUid = String(uidToWaitFor);
-    if (remoteUsers?.find((u) => String(u.rtcUid) === stringUid)) {
+    if (state.remoteUsers?.find((u) => String(u.rtcUid) === stringUid)) {
       return Promise.resolve();
     }
 
@@ -122,6 +126,19 @@ export const useAgoraCallChannel = (
                   resolve();
                 }
                 pendingProfilePromisesRef.current.delete(stringUid);
+              }
+
+              if (
+                state.localUser?.role === 'female' &&
+                remoteUserProfile.role === 'male' &&
+                (state.localUser.in_call !== 1 ||
+                  state.localUser.status !== 'in_call')
+              ) {
+                broadcastLocalFemaleStatusUpdate({
+                  in_call: 1,
+                  status: 'in_call',
+                  host_id: state.channelName,
+                });
               }
             } else if (receivedMsg.type === 'CHAT_MESSAGE') {
               const newChatMessage: ChatMessage = {
