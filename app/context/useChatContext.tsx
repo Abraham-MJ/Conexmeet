@@ -222,6 +222,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               const newMessage: MessageContent = {
                 id: Number(payload.originalId),
                 text: payload.text,
+                translate: payload.translatedText,
                 sender: 'them',
                 time: new Date(payload.timestamp).toLocaleTimeString([], {
                   hour: '2-digit',
@@ -442,9 +443,30 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     if (!userState.user?.id) throw new Error('User not found');
 
+    let originalText = message;
+    let translatedText: string | undefined = undefined;
+
+    try {
+      const translateResponse = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: message }),
+      });
+      const translateResult = await translateResponse.json();
+
+      if (translateResponse.ok && translateResult.translatedText) {
+        translatedText = translateResult.translatedText;
+      } else {
+        console.warn('Translation failed:', translateResult.error);
+      }
+    } catch (error) {
+      console.error('Error calling translation API:', error);
+    }
+
     const localMessage: MessageContent = {
       id: Date.now() + Math.random(),
-      text: message,
+      text: originalText,
+      translate: translatedText,
       sender: 'me',
       time: new Date().toLocaleTimeString([], {
         hour: '2-digit',
@@ -461,26 +483,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (rtmClient && isLoggedIn) {
       const rtmPayload: RtmMessagePayload = {
         messageType: 'CHAT_MESSAGE',
-        text: message,
+        text: originalText,
+        translatedText: translatedText,
         originalId: Date.now() + Math.random(),
         senderUid: userState.user.id.toString(),
         timestamp: new Date().toISOString(),
         room_id: String(room_id),
       };
-
       try {
         await rtmClient.sendMessageToPeer(
           { text: JSON.stringify(rtmPayload) },
           remote_id,
         );
-      } catch (rtmSendError) {}
+      } catch (rtmSendError) {
+        console.error('RTM send error:', rtmSendError);
+      }
     }
 
     sendTypingStopped(String(remote_id));
 
-    const bodyForApi: any = {
+    const bodyForApi = {
       user_id: remote_id,
-      message: message,
+      message: originalText,
+      translate: translatedText,
       type: type,
       room_id: String(room_id),
     };

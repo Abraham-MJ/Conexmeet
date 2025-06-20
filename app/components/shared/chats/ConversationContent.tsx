@@ -1,7 +1,10 @@
 'use client';
 
 import type { MessageContent } from '@/app/types/chat';
+import { cn } from '@/lib/utils';
 import type React from 'react';
+import { useState } from 'react';
+import { BsTranslate } from 'react-icons/bs';
 import { IoCheckmarkDone, IoCheckmarkOutline } from 'react-icons/io5';
 
 interface MessageContentProps {
@@ -9,43 +12,101 @@ interface MessageContentProps {
 }
 
 const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
+  const [translateText, setTranslateText] = useState<number | null>(null);
+  const [translatingId, setTranslatingId] = useState<number | null>(null);
+
+  const handleTranslateToggle = (id: number) => {
+    setTranslatingId(id);
+    setTimeout(() => {
+      if (translateText === id) {
+        setTranslateText(null);
+      } else {
+        setTranslateText(id);
+      }
+      setTranslatingId(null);
+    }, 500);
+  };
+
   return (
     <div className={`h-full space-y-3 overflow-y-auto pb-24`}>
-      {messages.map((message) => (
-        <div
-          key={message.id}
-          className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
-        >
-          <div className="min-w-[25%] max-w-[70%]">
-            <div
-              className={`relative rounded-xl py-2 pl-3 ${
-                message.sender === 'me'
-                  ? 'bg-[#5466ff] pr-16 text-white'
-                  : 'bg-[#f6f6f8] pr-9 text-gray-800'
-              }`}
-            >
-              <p className="text-[15px]">{message.text}</p>
-              <div className={`flex w-full items-center justify-between`}>
-                <span
-                  className={`absolute bottom-1 text-[10px] ${message.sender === 'me' ? 'right-7 text-indigo-200' : 'right-2 text-gray-400'}`}
-                >
-                  {message.time}
-                </span>
+      {messages.map((message) => {
+        const isMyMessage = message.sender === 'me';
 
-                {message.sender === 'me' && (
-                  <div className="absolute bottom-1 right-2 ml-1">
-                    {message.read ? (
-                      <IoCheckmarkDone className="h-4 w-4" />
-                    ) : (
-                      <IoCheckmarkOutline className="h-4 w-4" />
-                    )}
-                  </div>
-                )}
+        const bubbleClasses = isMyMessage
+          ? 'bg-[#5466ff] text-white rounded-l-xl rounded-br-xl'
+          : 'bg-[#f6f6f8] text-gray-800 rounded-r-xl rounded-bl-xl shadow-sm';
+
+        const metadataClasses = isMyMessage
+          ? 'text-indigo-200/80'
+          : 'text-gray-400';
+
+        return (
+          <div
+            key={message.id}
+            className={`flex items-end ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={cn(
+                'flex max-w-[512px] flex-col gap-1',
+                message.sender !== 'me' &&
+                  message.translate !== null &&
+                  message.translate !== '' &&
+                  message.translate !== undefined
+                  ? 'cursor-pointer'
+                  : 'cursor-default',
+              )}
+              onClick={() => {
+                if (
+                  message.translate !== null &&
+                  message.translate !== '' &&
+                  message.translate !== undefined
+                ) {
+                  handleTranslateToggle(message.id);
+                }
+              }}
+            >
+              <div
+                className={`grid grid-cols-[1fr_auto] items-end gap-x-3 p-3 transition-all duration-300 ${bubbleClasses}`}
+              >
+                <p className="text-[15px] [grid-column:1]">
+                  {translatingId === message.id ? (
+                    <span className="italic">Traduciendo...</span>
+                  ) : (
+                    <>
+                      {translateText === message.id
+                        ? message.translate
+                        : message.text}
+                    </>
+                  )}
+                </p>
+
+                <div className="flex items-center gap-1 [grid-column:2]">
+                  <span className={`text-[11px] ${metadataClasses}`}>
+                    {message.time}
+                  </span>
+                  {isMyMessage ? (
+                    <div className={metadataClasses}>
+                      {message.read ? (
+                        <IoCheckmarkDone className="h-4 w-4" />
+                      ) : (
+                        <IoCheckmarkOutline className="h-4 w-4" />
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {message.translate !== null &&
+                      message.translate !== '' &&
+                      message.translate !== undefined ? (
+                        <BsTranslate className="ml-2 h-4 w-4 text-blue-400" />
+                      ) : null}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

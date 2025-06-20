@@ -6,6 +6,7 @@ interface Message {
   sender: 'me' | 'them';
   time: string;
   read?: boolean;
+  translate?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
           text: msg.body,
           sender: senderType,
           time: formattedTime,
+          translate: msg.body_traslate || '',
         };
 
         if (senderType === 'me') {

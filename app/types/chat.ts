@@ -110,6 +110,7 @@ export interface MessageContent {
   time: string;
   read?: boolean;
   room_id?: string;
+  translate?: string;
 }
 
 export interface SendMessageTypes {
@@ -133,6 +134,7 @@ export interface RtmMessagePayload {
   senderUid: string;
   timestamp: string;
   room_id?: string;
+  translatedText?: string;
 }
 
 export interface SelectedImage {
