@@ -111,6 +111,7 @@ export interface MessageContent {
   read?: boolean;
   room_id?: string;
   translate?: string;
+  created_at?: string;
 }
 
 export interface SendMessageTypes {

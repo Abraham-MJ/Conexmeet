@@ -229,6 +229,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                   minute: '2-digit',
                 }),
                 read: false,
+                created_at: payload.timestamp,
               };
               dispatch({
                 type: 'ADD_MESSAGE_LOCALLY',
@@ -472,6 +473,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         hour: '2-digit',
         minute: '2-digit',
       }),
+      created_at: new Date().toISOString(),
       read: false,
     };
 

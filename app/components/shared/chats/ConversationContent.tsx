@@ -1,11 +1,17 @@
 'use client';
 
 import type { MessageContent } from '@/app/types/chat';
+import { formatDateSeparator } from '@/lib/group-date';
 import { cn } from '@/lib/utils';
+import { isSameDay } from 'date-fns';
 import type React from 'react';
 import { useState } from 'react';
 import { BsTranslate } from 'react-icons/bs';
 import { IoCheckmarkDone, IoCheckmarkOutline } from 'react-icons/io5';
+
+type RenderItem =
+  | MessageContent
+  | { type: 'date-separator'; dateString: string; id: string };
 
 interface MessageContentProps {
   messages: MessageContent[];
@@ -27,9 +33,34 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
     }, 500);
   };
 
+  const itemsToRender: RenderItem[] = [];
+  let lastDate: Date | null = null;
+
+  messages.forEach((message) => {
+    if (!message.created_at) {
+      itemsToRender.push(message);
+      return;
+    }
+
+    const currentDate = new Date(message.created_at);
+
+    if (!lastDate || !isSameDay(currentDate, lastDate)) {
+      const dateString = formatDateSeparator(currentDate);
+      itemsToRender.push({
+        type: 'date-separator',
+        dateString: dateString,
+        id: `date-${currentDate.toISOString()}`,
+      });
+    }
+
+    itemsToRender.push(message);
+    lastDate = currentDate;
+  });
+
   return (
-    <div className={`h-full space-y-3 overflow-y-auto pb-24`}>
-      {messages.map((message) => {
+    <div className={`h-full space-y-3 overflow-y-auto px-2 pb-24`}>
+      {itemsToRender.map((item) => {
+        const message = item as MessageContent;
         const isMyMessage = message.sender === 'me';
 
         const bubbleClasses = isMyMessage
@@ -39,6 +70,16 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
         const metadataClasses = isMyMessage
           ? 'text-indigo-200/80'
           : 'text-gray-400';
+
+        if ('type' in item && item.type === 'date-separator') {
+          return (
+            <div key={item.id} className="my-20 flex justify-center">
+              <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-600">
+                {item.dateString}
+              </span>
+            </div>
+          );
+        }
 
         return (
           <div
