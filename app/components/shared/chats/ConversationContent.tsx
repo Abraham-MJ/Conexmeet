@@ -1,6 +1,5 @@
 'use client';
 
-import { useUser } from '@/app/context/useClientContext';
 import type { MessageContent } from '@/app/types/chat';
 import type React from 'react';
 import { IoCheckmarkDone, IoCheckmarkOutline } from 'react-icons/io5';
@@ -10,12 +9,8 @@ interface MessageContentProps {
 }
 
 const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
-  const { state: user } = useUser();
-
   return (
-    <div
-      className={`h-full space-y-3 overflow-y-auto pb-24`}
-    >
+    <div className={`h-full space-y-3 overflow-y-auto pb-24`}>
       {messages.map((message) => (
         <div
           key={message.id}
@@ -37,7 +32,7 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                   {message.time}
                 </span>
 
-                {/* {message.sender === 'me' && (
+                {message.sender === 'me' && (
                   <div className="absolute bottom-1 right-2 ml-1">
                     {message.read ? (
                       <IoCheckmarkDone className="h-4 w-4" />
@@ -45,7 +40,7 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                       <IoCheckmarkOutline className="h-4 w-4" />
                     )}
                   </div>
-                )} */}
+                )}
               </div>
             </div>
           </div>

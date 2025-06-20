@@ -149,7 +149,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const prevChatIdRef = useRef<string | null>(activeChatId);
 
   useEffect(() => {
