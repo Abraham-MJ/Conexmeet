@@ -28,9 +28,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
 
-    const clientSecretFromUrl = new URLSearchParams(window.location.search).get(
-      'payment_intent_client_secret',
-    );
+    const clientSecretFromUrl = typeof window !== 'undefined' 
+      ? new URLSearchParams(window.location.search).get('payment_intent_client_secret')
+      : null;
 
     if (!clientSecretFromUrl) {
       return;

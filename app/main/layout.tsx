@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { UserProvider } from '@/app/context/useClientContext';
 import LayoutWrapper from '../layout/LayoutWrapper';
 import { Suspense } from 'react';

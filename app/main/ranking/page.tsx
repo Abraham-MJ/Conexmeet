@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { TabNavigation } from '@/app/components/UI/StyledTabs';
 import { useRanking } from '@/app/hooks/api/useRanking';
 import React, { useCallback, useEffect, useState } from 'react';

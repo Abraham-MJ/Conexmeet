@@ -314,7 +314,7 @@ export function useUpdateProfile({
   ]);
 
   return {
-    credentials,
+    credentials: credentials as { name: string; email: string },
     formErrors,
     changeFormField,
     clearFormFieldError,
