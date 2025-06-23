@@ -8,6 +8,7 @@ import { useUser } from '../context/useClientContext';
 import { DollarSign, MessageCircle, Search, Users, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ModalPackage from '../components/shared/modals/ModalPackage';
+import { useChat } from '../context/useChatContext';
 
 const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +18,8 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
   const [lastScrollY, setLastScrollY] = useState<number>(0);
 
   const { state } = useUser();
+  const { state: chat } = useChat();
+
   const pathname = usePathname();
 
   const hiddenHeader = pathname.includes('/chat');
@@ -127,9 +130,11 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
                 : 'text-gray-500'
             }
           />
-          <span className="absolute -right-2 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-            3
-          </span>
+          {chat.totalUnreadCount > 0 && (
+            <span className="absolute -right-1 -top-[6px] flex items-center justify-center rounded-2xl bg-red-500 px-2 py-[2px] text-[10px] text-white">
+              {chat.totalUnreadCount}
+            </span>
+          )}
         </div>
         <span className="mt-1 text-xs">Chats</span>
       </Link>

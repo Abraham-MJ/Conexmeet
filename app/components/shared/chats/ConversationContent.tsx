@@ -88,7 +88,7 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
           >
             <div
               className={cn(
-                'flex max-w-[512px] flex-col gap-1',
+                'flex max-w-[512px] select-none flex-col gap-1',
                 message.sender !== 'me' &&
                   message.translate !== null &&
                   message.translate !== '' &&
@@ -100,7 +100,8 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                 if (
                   message.translate !== null &&
                   message.translate !== '' &&
-                  message.translate !== undefined
+                  message.translate !== undefined &&
+                  message.sender !== 'me'
                 ) {
                   handleTranslateToggle(message.id);
                 }

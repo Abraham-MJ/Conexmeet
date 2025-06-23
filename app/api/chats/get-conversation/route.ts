@@ -89,12 +89,8 @@ export async function POST(request: NextRequest) {
           time: formattedTime,
           translate: msg.body_traslate || '',
           created_at: msg.created_at,
+          read: msg.read_at !== null ? true : false,
         };
-
-        if (senderType === 'me') {
-          messageObject.read =
-            msg.read_at !== null && msg.read_at !== undefined;
-        }
 
         return messageObject;
       },

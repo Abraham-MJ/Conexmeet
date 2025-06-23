@@ -135,8 +135,9 @@ export const SkeletonLoadingMessages = () => {
       <div className="max-h-1/2 flex-1 overflow-y-auto bg-white p-4">
         <div className="mx-auto flex max-w-[850px] flex-col space-y-4">
           <div className={`h-full space-y-3 overflow-y-auto pb-24`}>
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <div
+                key={`key-${index}-${message.type}`}
                 className={`flex ${message.type === 'me' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className="min-w-[40%] max-w-[70%]">
@@ -169,6 +170,7 @@ export const SkeletonChatLoading = () => {
             {loadingItems.map((_) => {
               return (
                 <div
+                  key={_}
                   className={`flex cursor-pointer select-none items-center border-b px-4 py-3 hover:bg-gray-50`}
                 >
                   <div className="h-12 w-12 flex-shrink-0 animate-pulse overflow-hidden rounded-full bg-gray-300"></div>
@@ -206,8 +208,9 @@ export const SkeletonChatLoading = () => {
         <div className="max-h-1/2 flex-1 overflow-y-auto bg-white p-4">
           <div className="mx-auto flex max-w-[850px] flex-col space-y-4">
             <div className={`h-full space-y-3 overflow-y-auto pb-24`}>
-              {messages.map((message) => (
+              {messages.map((message, index) => (
                 <div
+                  key={`key-${index}-${message.type}`}
                   className={`flex ${message.type === 'me' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className="min-w-[40%] max-w-[70%]">

@@ -10,18 +10,19 @@ import UserDropdown from '../components/shared/UserDropDown';
 import { MessageCircle, Video, Users, BarChart3, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ModalPackage from '../components/shared/modals/ModalPackage';
+import { useChat } from '../context/useChatContext';
 
 const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const { state } = useUser();
+  const { state: chat } = useChat();
   const pathname = usePathname();
   const isMobile = useMobile();
 
   const { scrollY } = useScroll();
   const [isVisible, setIsVisible] = useState<boolean>(true);
   const [lastScrollY, setLastScrollY] = useState<number>(0);
-
   const hiddenHeader = pathname.includes('/chat');
 
   const { minutes, gender, sales } = state?.user || {};
@@ -85,9 +86,12 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
               </span>
             </div>
           ) : (
-            <div className="cursor-pointer rounded-full border bg-[#00000014] px-4 py-1 text-sm text-[#181a21]" onClick={() => {
-              setIsOpen(true)
-            }}>
+            <div
+              className="cursor-pointer rounded-full border bg-[#00000014] px-4 py-1 text-sm text-[#181a21]"
+              onClick={() => {
+                setIsOpen(true);
+              }}
+            >
               Recharge
             </div>
           )}
@@ -126,19 +130,26 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
             </span>
           </Link>
 
-          <Link
-            href={routes[role].chats}
-            className={`flex flex-col items-center transition ${
-              isActive(routes[role].chats)
-                ? 'opacity-100'
-                : 'opacity-60 hover:opacity-100'
-            }`}
-          >
-            <MessageCircle size={20} className="text-black" />
-            <span className="mt-1 text-sm font-medium text-[#181a21]">
-              Chats
-            </span>
-          </Link>
+          <div className="relative">
+            <Link
+              href={routes[role].chats}
+              className={`flex flex-col items-center transition ${
+                isActive(routes[role].chats)
+                  ? 'opacity-100'
+                  : 'opacity-60 hover:opacity-100'
+              }`}
+            >
+              <MessageCircle size={20} className="text-black" />
+              <span className="mt-1 text-sm font-medium text-[#181a21]">
+                Chats
+              </span>
+            </Link>
+            {chat.totalUnreadCount > 0 && (
+              <span className="absolute -right-1 -top-[6px] flex items-center justify-center rounded-2xl bg-red-500 px-2 py-[2px] text-[10px] text-white">
+                {chat.totalUnreadCount}
+              </span>
+            )}
+          </div>
 
           {role === 'female' && (
             <>

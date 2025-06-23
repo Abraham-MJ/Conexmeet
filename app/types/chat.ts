@@ -27,6 +27,27 @@ export type Action =
   | {
       type: 'SET_PEER_ONLINE_STATUS';
       payload: { conversationId: string | number; isOnline: boolean };
+    }
+  | {
+      type: 'MARK_MY_RECEIVED_MESSAGES_AS_READ_LOCALLY';
+      payload: { conversationId: string | number };
+    }
+  | {
+      type: 'MARK_MY_SENT_MESSAGES_AS_READ_BY_PEER_LOCALLY';
+      payload: { conversationId: string | number; peerId: string };
+    }
+  | {
+      type: 'SET_UNREAD_COUNT_FOR_CONVERSATION';
+      payload: { conversationId: string | number; count: number };
+    }
+  | {
+      type: 'INCREMENT_UNREAD_COUNT';
+      payload: { conversationId: string | number };
+    }
+  | { type: 'RESET_UNREAD_COUNT'; payload: { conversationId: string | number } }
+  | {
+      type: 'SET_INITIAL_UNREAD_COUNTS';
+      payload: Record<string | number, number>;
     };
 
 export interface State {
@@ -39,6 +60,8 @@ export interface State {
   messagesError: Record<string | number, string | null>;
   typingStatusByConversationId: Record<string | number, boolean>;
   peerOnlineInChatStatus: Record<string | number, boolean>;
+  unreadCountByConversationId: Record<string | number, number>;
+  totalUnreadCount: number;
 }
 
 export interface ChatContextType {
@@ -55,6 +78,7 @@ export interface ChatContextType {
   sendUserInactiveInChatStatus: (peerRtmUid: string) => void;
   sendUserActiveInChatStatus: (peerRtmUid: string) => void;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  markMessagesAsRead: (conversationId: string | number) => Promise<void>;
 }
 
 export interface ProcessedChatData {
@@ -129,13 +153,15 @@ export interface RtmMessagePayload {
     | 'TYPING_STARTED'
     | 'TYPING_STOPPED'
     | 'USER_ACTIVE_IN_CHAT'
-    | 'USER_INACTIVE_IN_CHAT';
+    | 'USER_INACTIVE_IN_CHAT'
+    | 'READ_RECEIPT';
   text?: string;
   originalId?: string | number;
   senderUid: string;
   timestamp: string;
   room_id?: string;
   translatedText?: string;
+  readUpToMessageId?: string | number;
 }
 
 export interface SelectedImage {

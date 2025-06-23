@@ -15,6 +15,7 @@ import {
   Action,
   ChatContextType,
   MessageContent,
+  ProcessedChatData,
   RtmMessagePayload,
   SendMessageTypes,
   State,
@@ -32,11 +33,16 @@ const initialState: State = {
   user_active: null,
   typingStatusByConversationId: {},
   peerOnlineInChatStatus: {},
+  unreadCountByConversationId: {},
+  totalUnreadCount: 0,
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 function reducer(state: State, action: Action): State {
+  let newUnreadCountByConversationId: Record<string | number, number>;
+  let newTotalUnreadCount: number;
+
   switch (action.type) {
     case 'FETCH_CONVERSATIONS_START':
       return {
@@ -128,6 +134,101 @@ function reducer(state: State, action: Action): State {
           [action.payload.conversationId]: action.payload.isTyping,
         },
       };
+    case 'MARK_MY_RECEIVED_MESSAGES_AS_READ_LOCALLY': {
+      const { conversationId } = action.payload;
+      const currentMessages =
+        state.messagesByConversationId[conversationId] || [];
+
+      const updatedMessages = currentMessages.map((msg) => {
+        if (msg.sender === 'them' && !msg.read) {
+          return { ...msg, read: true };
+        }
+        return msg;
+      });
+
+      return {
+        ...state,
+        messagesByConversationId: {
+          ...state.messagesByConversationId,
+          [conversationId]: updatedMessages,
+        },
+      };
+    }
+    case 'MARK_MY_SENT_MESSAGES_AS_READ_BY_PEER_LOCALLY': {
+      const { conversationId } = action.payload;
+      const currentMessages =
+        state.messagesByConversationId[conversationId] || [];
+
+      const updatedMessages = currentMessages.map((msg) => {
+        if (msg.sender === 'me' && !msg.read) {
+          return { ...msg, read: true };
+        }
+        return msg;
+      });
+
+      return {
+        ...state,
+        messagesByConversationId: {
+          ...state.messagesByConversationId,
+          [conversationId]: updatedMessages,
+        },
+      };
+    }
+    case 'SET_INITIAL_UNREAD_COUNTS':
+      newUnreadCountByConversationId = { ...action.payload };
+      newTotalUnreadCount = Object.values(
+        newUnreadCountByConversationId,
+      ).reduce((sum, count) => sum + count, 0);
+      return {
+        ...state,
+        unreadCountByConversationId: newUnreadCountByConversationId,
+        totalUnreadCount: newTotalUnreadCount,
+      };
+
+    case 'SET_UNREAD_COUNT_FOR_CONVERSATION':
+      newUnreadCountByConversationId = {
+        ...state.unreadCountByConversationId,
+        [action.payload.conversationId]: action.payload.count,
+      };
+      newTotalUnreadCount = Object.values(
+        newUnreadCountByConversationId,
+      ).reduce((sum, count) => sum + count, 0);
+      return {
+        ...state,
+        unreadCountByConversationId: newUnreadCountByConversationId,
+        totalUnreadCount: newTotalUnreadCount,
+      };
+
+    case 'INCREMENT_UNREAD_COUNT': {
+      const currentCount =
+        state.unreadCountByConversationId[action.payload.conversationId] || 0;
+      newUnreadCountByConversationId = {
+        ...state.unreadCountByConversationId,
+        [action.payload.conversationId]: currentCount + 1,
+      };
+      newTotalUnreadCount = state.totalUnreadCount + 1;
+      return {
+        ...state,
+        unreadCountByConversationId: newUnreadCountByConversationId,
+        totalUnreadCount: newTotalUnreadCount,
+      };
+    }
+
+    case 'RESET_UNREAD_COUNT': {
+      const currentCount =
+        state.unreadCountByConversationId[action.payload.conversationId] || 0;
+      newUnreadCountByConversationId = {
+        ...state.unreadCountByConversationId,
+        [action.payload.conversationId]: 0,
+      };
+      newTotalUnreadCount = state.totalUnreadCount - currentCount;
+      if (newTotalUnreadCount < 0) newTotalUnreadCount = 0;
+      return {
+        ...state,
+        unreadCountByConversationId: newUnreadCountByConversationId,
+        totalUnreadCount: newTotalUnreadCount,
+      };
+    }
     default:
       return state;
   }
@@ -139,6 +240,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { state: agoraState } = useAgoraContext();
   const { rtmClient, isRtmLoggedIn: isLoggedIn } = agoraState;
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  const markedChatsRef = useRef<Set<string | number>>(new Set());
 
   let activeChatId: string | null = null;
   if (params?.chat_id) {
@@ -172,34 +275,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     },
     [state.conversations],
   );
-
-  useEffect(() => {
-    const previousChatIdString = prevChatIdRef.current;
-
-    if (previousChatIdString !== activeChatId) {
-      const previousUserId = getUserIdFromChat(previousChatIdString);
-      if (previousUserId) {
-        sendUserInactiveInChatStatus(previousUserId);
-      }
-    }
-
-    if (activeChatId) {
-      loadMessagesForConversation(activeChatId);
-      const currentPeerUserId = getUserIdFromChat(activeChatId);
-      if (currentPeerUserId) {
-        sendUserActiveInChatStatus(currentPeerUserId);
-      }
-    }
-
-    prevChatIdRef.current = activeChatId;
-
-    return () => {
-      const userIdOnCleanup = getUserIdFromChat(activeChatId);
-      if (userIdOnCleanup) {
-        sendUserInactiveInChatStatus(userIdOnCleanup);
-      }
-    };
-  }, [activeChatId, getUserIdFromChat]);
 
   useEffect(() => {
     if (rtmClient && isLoggedIn && userState.user?.id) {
@@ -240,6 +315,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                   message: newMessage,
                 },
               });
+
+              const messageConvId = payload.room_id
+                ? payload.room_id.toString()
+                : peerId;
+              if (messageConvId !== activeChatId) {
+                dispatch({
+                  type: 'INCREMENT_UNREAD_COUNT',
+                  payload: { conversationId: messageConvId },
+                });
+              }
               break;
             case 'TYPING_STARTED':
               dispatch({
@@ -273,10 +358,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 payload: { conversationId: peerId, isTyping: false },
               });
               break;
+            case 'READ_RECEIPT': {
+              const { room_id, senderUid } = payload;
+              const conversationId = room_id ? room_id.toString() : senderUid;
+              dispatch({
+                type: 'MARK_MY_SENT_MESSAGES_AS_READ_BY_PEER_LOCALLY',
+                payload: {
+                  conversationId: conversationId,
+                  peerId: senderUid,
+                },
+              });
+              break;
+            }
             default:
               return;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('Error parsing RTM message payload:', e);
+        }
       };
 
       rtmClient.on('MessageFromPeer', handleFullMessageFromPeer);
@@ -287,7 +386,108 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       };
     }
-  }, [rtmClient, isLoggedIn, userState.user?.id, dispatch]);
+  }, [rtmClient, isLoggedIn, userState.user?.id, dispatch, activeChatId]);
+
+  const markMessagesAsRead = useCallback(
+    async (conversationId: string | number) => {
+      if (!userState.user?.id) return;
+      const convIdStr = String(conversationId);
+
+      const messagesInActiveChat =
+        state.messagesByConversationId[conversationId];
+
+      if (!messagesInActiveChat) {
+        return;
+      }
+
+      const unreadMessagesFromPeer = messagesInActiveChat.filter(
+        (msg) => msg.sender === 'them' && !msg.read,
+      );
+
+      if (unreadMessagesFromPeer.length === 0) {
+        if (!markedChatsRef.current.has(convIdStr)) {
+          markedChatsRef.current.add(convIdStr);
+        } else {
+        }
+        return;
+      }
+
+      markedChatsRef.current.delete(convIdStr);
+
+      const latestUnreadMessageId = Math.max(
+        ...unreadMessagesFromPeer.map((msg) => Number(msg.id)),
+      );
+
+      try {
+        const response = await fetch('/api/chats/read-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: convIdStr,
+            message_ids: [latestUnreadMessageId],
+          }),
+        });
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          markedChatsRef.current.add(convIdStr);
+
+          dispatch({
+            type: 'MARK_MY_RECEIVED_MESSAGES_AS_READ_LOCALLY',
+            payload: { conversationId: convIdStr },
+          });
+
+          dispatch({
+            type: 'RESET_UNREAD_COUNT',
+            payload: { conversationId: convIdStr },
+          });
+
+          if (rtmClient && isLoggedIn && userState.user?.id) {
+            const peerRtmUid = getUserIdFromChat(convIdStr);
+            if (peerRtmUid) {
+              const payload: RtmMessagePayload = {
+                messageType: 'READ_RECEIPT',
+                senderUid: userState.user.id.toString(),
+                timestamp: new Date().toISOString(),
+                room_id: convIdStr,
+                readUpToMessageId: latestUnreadMessageId,
+              };
+              try {
+                await rtmClient.sendMessageToPeer(
+                  { text: JSON.stringify(payload) },
+                  peerRtmUid.toString(),
+                );
+              } catch (rtmSendError) {
+                console.error(
+                  'markMessagesAsRead: Error sending READ_RECEIPT by RTM:',
+                  rtmSendError,
+                );
+              }
+            }
+          }
+        } else {
+          console.error(
+            `markMessagesAsRead: Error marking messages as read in backend:`,
+            result.message || 'Error desconocido',
+          );
+        }
+      } catch (error) {
+        console.error(
+          'markMessagesAsRead: Error calling API to mark messages as read:',
+          error,
+        );
+      }
+    },
+    [
+      rtmClient,
+      isLoggedIn,
+      userState.user?.id,
+      state.messagesByConversationId,
+      getUserIdFromChat,
+      dispatch,
+      markedChatsRef,
+    ],
+  );
 
   const loadChatList = useCallback(async () => {
     if (!userState.user?.id) return;
@@ -301,9 +501,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         throw new Error(result.message || 'Error al cargar la lista de chats.');
       }
       dispatch({ type: 'FETCH_CONVERSATIONS_SUCCESS', payload: result.data });
+
+      const initialUnreadCounts: Record<string | number, number> = {};
+      result.data.forEach((chat: ProcessedChatData) => {
+        initialUnreadCounts[chat.chat_id] = chat.unread_messages_count;
+      });
+
+      dispatch({
+        type: 'SET_INITIAL_UNREAD_COUNTS',
+        payload: initialUnreadCounts,
+      });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Error desconocido.';
+      console.error(
+        'loadChatList: Error fetching conversations:',
+        errorMessage,
+      );
       dispatch({ type: 'FETCH_CONVERSATIONS_FAILURE', payload: errorMessage });
     }
   }, [userState.user?.id, dispatch]);
@@ -351,6 +565,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           );
         }
       } catch (error: any) {
+        console.error(
+          'loadMessagesForConversation: Error fetching messages:',
+          error,
+        );
         dispatch({
           type: 'FETCH_MESSAGES_FAILURE',
           payload: {
@@ -428,12 +646,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           senderUid: userState.user.id.toString(),
           timestamp: new Date().toISOString(),
         };
-        try {
-          await rtmClient.sendMessageToPeer(
-            { text: JSON.stringify(payload) },
-            peerRtmUid.toString(),
-          );
-        } catch (err) {}
+
+        await rtmClient.sendMessageToPeer(
+          { text: JSON.stringify(payload) },
+          peerRtmUid.toString(),
+        );
       }
     },
     [rtmClient, isLoggedIn, userState.user?.id],
@@ -492,14 +709,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         timestamp: new Date().toISOString(),
         room_id: String(room_id),
       };
-      try {
-        await rtmClient.sendMessageToPeer(
-          { text: JSON.stringify(rtmPayload) },
-          remote_id,
-        );
-      } catch (rtmSendError) {
-        console.error('RTM send error:', rtmSendError);
-      }
+      await rtmClient.sendMessageToPeer(
+        { text: JSON.stringify(rtmPayload) },
+        remote_id,
+      );
     }
 
     sendTypingStopped(String(remote_id));
@@ -566,6 +779,56 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     sendUserInactiveInChatStatus,
   ]);
 
+  useEffect(() => {
+    if (prevChatIdRef.current && prevChatIdRef.current !== activeChatId) {
+      markedChatsRef.current.delete(prevChatIdRef.current);
+    }
+  }, [activeChatId]);
+
+  useEffect(() => {
+    if (activeChatId && state.messagesByConversationId[activeChatId]) {
+      const timer = setTimeout(() => {
+        markMessagesAsRead(activeChatId);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [activeChatId, state.messagesByConversationId, markMessagesAsRead]);
+
+  useEffect(() => {
+    const previousChatIdString = prevChatIdRef.current;
+
+    if (previousChatIdString !== activeChatId) {
+      const previousUserId = getUserIdFromChat(previousChatIdString);
+      if (previousUserId) {
+        sendUserInactiveInChatStatus(previousUserId);
+      }
+    }
+
+    if (activeChatId) {
+      loadMessagesForConversation(activeChatId);
+      const currentPeerUserId = getUserIdFromChat(activeChatId);
+      if (currentPeerUserId) {
+        sendUserActiveInChatStatus(currentPeerUserId);
+      }
+    }
+
+    prevChatIdRef.current = activeChatId;
+
+    return () => {
+      const userIdOnCleanup = getUserIdFromChat(activeChatId);
+      if (userIdOnCleanup) {
+        sendUserInactiveInChatStatus(userIdOnCleanup);
+      }
+    };
+  }, [
+    activeChatId,
+    getUserIdFromChat,
+    loadMessagesForConversation,
+    sendUserActiveInChatStatus,
+    sendUserInactiveInChatStatus,
+  ]);
+
   const contextValue: ChatContextType = {
     state,
     dispatch,
@@ -578,6 +841,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     sendUserInactiveInChatStatus,
     sendUserActiveInChatStatus,
     scrollContainerRef,
+    markMessagesAsRead,
   };
 
   return (
