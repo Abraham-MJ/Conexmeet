@@ -121,7 +121,7 @@ export const SkeletonLoadingMessagesList = () => {
 export const SkeletonLoadingMessages = () => {
   return (
     <div className="flex h-screen w-full flex-col lg:flex">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 h-[61px]">
         <div className="flex items-center">
           <div className="h-12 w-12 flex-shrink-0 animate-pulse overflow-hidden rounded-full bg-gray-300"></div>
           <div className="ml-3">
@@ -130,7 +130,7 @@ export const SkeletonLoadingMessages = () => {
             </span>
           </div>
         </div>
-        <div className="h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+        <div className="h-10 w-10 animate-pulse rounded-full bg-gray-300"></div>
       </div>
       <div className="max-h-1/2 flex-1 overflow-y-auto bg-white p-4">
         <div className="mx-auto flex max-w-[850px] flex-col space-y-4">
@@ -163,9 +163,6 @@ export const SkeletonChatLoading = () => {
     <div className="h-full w-full overflow-hidden lg:grid lg:grid-cols-[360px_1fr]">
       <div className="overflow-hidden lg:grid lg:grid-cols-[360px_1fr]">
         <div className="h-full w-full border-r bg-white">
-          <div className="sticky top-0 border-b bg-white p-4">
-            <h2 className="text-xl font-semibold">Messages</h2>
-          </div>
           <div className="h-[calc(100vh-141px)] w-full overflow-auto">
             {loadingItems.map((_) => {
               return (
@@ -181,7 +178,7 @@ export const SkeletonChatLoading = () => {
                       </div>
                       <div className="flex flex-col-reverse items-center gap-1">
                         <span className="ml-1 text-xs text-gray-400">
-                          <div className="h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+                          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-300"></div>
                         </span>
                       </div>
                     </div>
@@ -203,7 +200,7 @@ export const SkeletonChatLoading = () => {
               </span>
             </div>
           </div>
-          <div className="h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-300"></div>
         </div>
         <div className="max-h-1/2 flex-1 overflow-y-auto bg-white p-4">
           <div className="mx-auto flex max-w-[850px] flex-col space-y-4">

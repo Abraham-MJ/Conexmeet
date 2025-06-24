@@ -36,7 +36,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   return (
     <>
       {sortedConversations.map((conversation, index) => {
-        const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://via.placeholder.com/150/CCCCCC/FFFFFF?Text=${encodeURIComponent(conversation.user_info.name || 'Usuario')}`;
+        const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png`;
         return (
           <>
             <ConversationItem

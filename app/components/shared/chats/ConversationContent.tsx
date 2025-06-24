@@ -58,14 +58,14 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
   });
 
   return (
-    <div className={`h-full space-y-3 overflow-y-auto px-2 pb-24`}>
+    <div className={`h-full space-y-2 px-4`}>
       {itemsToRender.map((item) => {
         const message = item as MessageContent;
         const isMyMessage = message.sender === 'me';
 
         const bubbleClasses = isMyMessage
           ? 'bg-[#5466ff] text-white rounded-l-xl rounded-br-xl'
-          : 'bg-[#f6f6f8] text-gray-800 rounded-r-xl rounded-bl-xl shadow-sm';
+          : 'bg-[#F1F1F1] text-gray-800 rounded-r-xl rounded-bl-xl shadow-sm';
 
         const metadataClasses = isMyMessage
           ? 'text-indigo-200/80'
@@ -73,8 +73,8 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
 
         if ('type' in item && item.type === 'date-separator') {
           return (
-            <div key={item.id} className="my-20 flex justify-center">
-              <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-600">
+            <div key={item.id} className="flex justify-center py-10">
+              <span className="rounded-full text-sm text-gray-600">
                 {item.dateString}
               </span>
             </div>
@@ -129,9 +129,9 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                   {isMyMessage ? (
                     <div className={metadataClasses}>
                       {message.read ? (
-                        <IoCheckmarkDone className="h-4 w-4" />
+                        <IoCheckmarkDone className="h-4 w-4 text-white" />
                       ) : (
-                        <IoCheckmarkOutline className="h-4 w-4" />
+                        <IoCheckmarkOutline className="h-4 w-4 text-white" />
                       )}
                     </div>
                   ) : (
@@ -139,7 +139,7 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                       {message.translate !== null &&
                       message.translate !== '' &&
                       message.translate !== undefined ? (
-                        <BsTranslate className="ml-2 h-4 w-4 text-blue-400" />
+                        <BsTranslate className="ml-1 h-[14px] w-[14px] text-blue-400" />
                       ) : null}
                     </>
                   )}

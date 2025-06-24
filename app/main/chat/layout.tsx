@@ -3,13 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useChat } from '@/app/context/useChatContext';
 import ConversationList from '@/app/components/shared/chats/ConversationList';
-import { BsSearchHeart } from 'react-icons/bs';
 import { useParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import {
-  SkeletonChatLoading,
-  SkeletonLoadingMessagesList,
-} from '@/app/components/loading/chats-skeleton';
+import { SkeletonChatLoading } from '@/app/components/loading/chats-skeleton';
+import { MessageSquareOff } from 'lucide-react';
+import { useMobile } from '@/app/hooks/useMobile';
 
 export default function ChatsLayout({
   children,
@@ -18,40 +16,21 @@ export default function ChatsLayout({
 }) {
   const { chat_id } = useParams<{ chat_id: string }>();
   const { state, loadChatList } = useChat();
+  const isMobile = useMobile(1024);
 
   const [viewConversation, setViewConversation] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const checkIfMobile = () => {
-        if (window.innerWidth < 1024 && chat_id?.[0] !== undefined) {
-          setViewConversation(false);
-        } else {
-          setViewConversation(true);
-        }
-      };
-
-      checkIfMobile();
-
-      window.addEventListener('resize', checkIfMobile);
-
-      return () => {
-        window.removeEventListener('resize', checkIfMobile);
-      };
+    if (isMobile && chat_id?.[0] !== undefined) {
+      setViewConversation(false);
+    } else {
+      setViewConversation(true);
     }
   }, [chat_id]);
 
   useEffect(() => {
     loadChatList();
   }, []);
-
-  if (
-    chat_id?.[0] !== undefined &&
-    state.isLoadingConversations &&
-    state.isLoadingMessages
-  ) {
-    return <SkeletonChatLoading />;
-  }
 
   return (
     <div className="h-full w-full overflow-hidden lg:grid lg:grid-cols-[360px_1fr]">
@@ -67,24 +46,25 @@ export default function ChatsLayout({
           </div>
           <div className="h-[calc(100vh-141px)] w-full overflow-auto">
             {state.isLoadingConversations ? (
-              <SkeletonLoadingMessagesList />
+              <SkeletonChatLoading />
             ) : (
               <>
                 {state.conversations.length > 0 ? (
                   <ConversationList conversations={state.conversations} />
                 ) : (
-                  <div className="mx-auto mt-5 flex w-10/12 flex-col items-center justify-center">
-                    <div className="mb-2 rounded-full border bg-gray-300 p-3">
-                      <BsSearchHeart className="h-10 w-10 text-gray-500" />
+                  <div className="flex h-full w-full flex-col items-center justify-center">
+                    <div className="flex h-screen flex-col">
+                      <div className="flex flex-col items-center justify-center rounded-lg bg-white p-10">
+                        <MessageSquareOff className="mb-6 h-16 w-16 text-gray-400" />
+                        <span className="mb-2 text-xl font-semibold text-gray-700">
+                          Tu lista de chats está vacía
+                        </span>
+                        <span className="text-center text-sm text-gray-500">
+                          Parece que aún no tienes ninguna conversación.
+                          ¡Comienza una nueva para verla aquí!
+                        </span>
+                      </div>
                     </div>
-
-                    <span className="text-center text-sm text-gray-500">
-                      You still have no recent messages. Go to contacts and
-                      start a conversation
-                    </span>
-                    <span className="mt-2 cursor-pointer select-none text-sm text-[#ff00ff] underline">
-                      Contacts
-                    </span>
                   </div>
                 )}
               </>

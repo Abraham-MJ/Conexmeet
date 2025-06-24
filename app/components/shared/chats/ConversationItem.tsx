@@ -34,7 +34,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
         <AvatarImage
           primarySrc={conversation.user_info.profile_photo_path}
-          defaultPlaceholderSrc={`https://avatar.iran.liara.run/username?username=${encodeURIComponent(conversation.user_info.name || 'Usuario')}`}
+          defaultPlaceholderSrc={`https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png`}
           errorPlaceholderSrc={genericErrorPlaceholder}
           alt={conversation.user_info.name}
           className="h-full w-full object-cover"
@@ -47,8 +47,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           </div>
           <div className="flex flex-col-reverse items-center gap-1">
             {state.unreadCountByConversationId[conversation.chat_id] > 0 && (
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#fc3d6b] p-1">
-                <span className="text-xs font-medium text-white">
+              <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff0000] px-1">
+                <span className="text-xs font-semibold text-white">
                   {state.unreadCountByConversationId[conversation.chat_id]}
                 </span>
               </div>

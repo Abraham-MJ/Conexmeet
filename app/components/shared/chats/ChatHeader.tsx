@@ -5,12 +5,12 @@ import { ChatUserExternal } from '@/app/types/chat';
 import React, { useEffect, useState } from 'react';
 import { IoIosArrowBack } from 'react-icons/io';
 import AvatarImage from '../../UI/StyledAvatarImage';
-import StyledDropDown from '../../UI/StyledDropDown';
 import useFeatures from '@/app/hooks/api/useFeatures';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
 import { UserInformation } from '@/app/types/streams';
 import { IoVideocamOffOutline, IoVideocamOutline } from 'react-icons/io5';
 import ModalChannelNotFound from '../modals/ModalChannelNotFound';
+import { cn } from '@/lib/utils';
 
 interface ChatHeaderProps {
   user: ChatUserExternal;
@@ -32,8 +32,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const { online } = useFeatures({ activeTabs: 'online' });
   const { handleVideoChatMale } = useAgoraContext();
 
-  const isMobile = useMobile();
-  const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://via.placeholder.com/150/CCCCCC/FFFFFF?Text=${encodeURIComponent(user.name || 'Usuario')}`;
+  const isMobile = useMobile(1024);
+  const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png`;
 
   useEffect(() => {
     const checkIfChannel = () => {
@@ -44,21 +44,25 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   }, [online.data]);
 
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
+    <div className="sticky top-0 z-10 flex min-h-[61px] items-center justify-between border-b bg-white px-4">
       <div className="flex items-center">
         {isMobile && (
           <button
+            className="mr-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border py-1 text-gray-500 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-gray-100"
             onClick={onBack}
-            className="mr-2 rounded-full p-2 text-gray-500 transition-all duration-300 hover:bg-gray-100"
-            aria-label="Back to conversations"
           >
-            <IoIosArrowBack size={20} />
+            <IoIosArrowBack size={22} />
           </button>
         )}
-        <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
+        <div
+          className={cn(
+            'overflow-hidden rounded-full bg-gray-200',
+            isMobile ? 'h-10 w-10' : 'h-12 w-12',
+          )}
+        >
           <AvatarImage
             primarySrc={user?.profile_photo_path}
-            defaultPlaceholderSrc={`https://avatar.iran.liara.run/username?username=${encodeURIComponent(user?.name || 'Usuario')}`}
+            defaultPlaceholderSrc={`https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png`}
             errorPlaceholderSrc={GENERIC_IMAGE_ERROR_PLACEHOLDER}
             alt={user?.name}
             className="h-full w-full object-cover"
@@ -110,20 +114,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
             <IoVideocamOffOutline className="h-6 w-6 text-white" />
           </button>
         ) : null}
-        <StyledDropDown
-          items={[
-            {
-              id: '1',
-              title: 'Reportar',
-              onClick: () => {},
-            },
-            {
-              id: '2',
-              title: 'Borrar chats',
-              onClick: () => {},
-            },
-          ]}
-        />
       </div>
       <ModalChannelNotFound
         isOpen={isOpen}

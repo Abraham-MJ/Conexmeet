@@ -1,7 +1,6 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
@@ -14,12 +13,13 @@ import { TbMessageSearch } from 'react-icons/tb';
 import { SkeletonLoadingMessages } from '@/app/components/loading/chats-skeleton';
 import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useMobile } from '@/app/hooks/useMobile';
 
 const ChatScreen = () => {
   const router = useRouter();
 
   const { chat_id } = useParams<{ chat_id: string }>();
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useMobile(1024);
 
   const {
     state,
@@ -39,26 +39,6 @@ const ChatScreen = () => {
     name: '',
     profile_photo_path: '',
   };
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const checkIfMobile = () => {
-        if (window.innerWidth < 1024) {
-          setIsMobile(true);
-        } else {
-          setIsMobile(false);
-        }
-      };
-
-      checkIfMobile();
-
-      window.addEventListener('resize', checkIfMobile);
-
-      return () => {
-        window.removeEventListener('resize', checkIfMobile);
-      };
-    }
-  }, []);
 
   return (
     <>
@@ -88,27 +68,27 @@ const ChatScreen = () => {
               />
 
               <div
-                className="max-h-1/2 flex-1 overflow-y-auto bg-white p-4"
-                ref={scrollContainerRef}
+                className="h-[80%] overflow-y-auto bg-white p-4"
+                ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
               >
-                <div className="mx-auto flex max-w-[850px] flex-col space-y-4">
+                <div className="mx-auto flex max-w-[900px] flex-col space-y-4">
                   <ConversationContent
                     messages={state.messagesByConversationId[chat_id] || []}
                   />
                 </div>
               </div>
 
-              <div
-                className={cn(
-                  'sticky bottom-0 z-10 bg-white',
-                  isMobile ? 'px-2' : 'px-4',
-                )}
-              >
-                <div className="mx-auto h-[128px] max-w-[900px]">
+              <div className={cn('z-10 bg-white', isMobile ? '' : 'px-4')}>
+                <div
+                  className={cn(
+                    'mx-auto max-w-[900px]',
+                    isMobile ? 'h-[140px]' : 'h-[200px]',
+                  )}
+                >
                   <div
                     className={cn(
-                      'flex flex-col bg-white shadow-[0_4px_8px_#0000000d,0_7px_40px_#00000008]',
-                      isMobile ? 'fixed bottom-0 w-full' : 'rounded-[32px]',
+                      'flex flex-col bg-white shadow-[0_0px_16px_#0000000d,0_7px_40px_#00000008]',
+                      isMobile ? 'rounded-full' : 'rounded-full',
                     )}
                   >
                     <WhriteMessage
