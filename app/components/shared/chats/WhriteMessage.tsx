@@ -10,7 +10,6 @@ import { useParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { SelectedImage, WhriteMessageProps } from '@/app/types/chat';
 
-const MAX_FILES = 3;
 const TYPING_TIMEOUT_DURATION = 2000;
 
 const WhriteMessage: React.FC<WhriteMessageProps> = ({
@@ -67,27 +66,16 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
   };
 
   const performSendMessage = useCallback(() => {
-    if (newMessage.trim() === '' && selectedImages.length === 0) {
+    if (newMessage.trim() === '') {
       return;
     }
-    if (!chat_id) {
-      console.error(
-        'WhriteMessage: chatIdFromParams (usado como room_id para onSendMessage) es indefinido.',
-      );
-      return;
-    }
-    if (!userState.user?.id) {
-      console.error(
-        'WhriteMessage: userState.user.id (remitente) es indefinido.',
-      );
-      return;
-    }
+
     onSendMessage({
-      file: null,
+      file: selectedImages.length > 0 ? selectedImages[0].file : null,
       message: newMessage.trim(),
       room_id: chat_id,
       translate: '',
-      type: 'chat',
+      type: selectedImages.length > 0 ? 'image' : 'chat',
       user_id: remote_id.toString(),
     });
 
@@ -153,27 +141,10 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-
-    const newImages: SelectedImage[] = [];
-    const currentImageCount = selectedImages.length;
-    let WritableFiles = Array.from(files);
-
-    if (currentImageCount + WritableFiles.length > MAX_FILES) {
-      WritableFiles = WritableFiles.slice(0, MAX_FILES - currentImageCount);
-    }
-
-    WritableFiles.forEach((file) => {
-      if (file.type.startsWith('image/')) {
-        const imageId = Date.now().toString() + Math.random().toString();
-        const previewUrl = URL.createObjectURL(file);
-        newImages.push({ id: imageId, file, previewUrl });
-      } else {
-      }
-    });
-
-    if (newImages.length > 0) {
-      setSelectedImages((prevImages) => [...prevImages, ...newImages]);
-    }
+    const file = Array.from(files);
+    const imageId = Date.now().toString() + Math.random().toString();
+    const previewUrl = URL.createObjectURL(file[0]);
+    setSelectedImages([{ id: imageId, previewUrl, file: file[0] }]);
 
     if (event.target) {
       event.target.value = '';
@@ -195,10 +166,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
   const canSendMessage = newMessage.trim() !== '' || selectedImages.length > 0;
 
   return (
-    <>
-      {/* {userState.user?.gender === 'male' && selectedImages.length === 0 && (
-        <RewardsList />
-      )} */}
+    <div className="w-full">
       <input
         type="file"
         ref={fileInputRef}
@@ -289,7 +257,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

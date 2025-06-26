@@ -23,8 +23,12 @@ export default {
       },
 
       keyframes: {
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
         i6jD7: {
-          '0%': { opacity: '0', transform: 'translateX(-20px)' }, 
+          '0%': { opacity: '0', transform: 'translateX(-20px)' },
           '100%': { opacity: '1', transform: 'translateX(0px)' },
         },
         message: {
@@ -80,6 +84,18 @@ export default {
             opacity: '0',
           },
         },
+        'bounce-dots': {
+          '0%, 80%, 100%': { transform: 'translateY(0)' },
+          '20%': { transform: 'translateY(-3px)' },
+        },
+        spin: {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(360deg)' },
+        },
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
       },
       animation: {
         float: 'float 3s ease-in-out infinite',
@@ -90,6 +106,10 @@ export default {
         float2: 'float2 3.5s ease-in-out infinite 0.5s',
         float3: 'float3 4s ease-in-out infinite 1s',
         chat_event_animation: 'i6jD7 .35s ease-in-out both',
+        shimmer: 'shimmer 2s linear infinite',
+        'bounce-dots': 'bounce-dots 1.2s infinite ease-in-out',
+        spin: 'spin 1s linear infinite',
+        'fade-in': 'fade-in 0.5s ease-in-out',
       },
     },
   },

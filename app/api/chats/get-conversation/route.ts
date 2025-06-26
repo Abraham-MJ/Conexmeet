@@ -8,6 +8,8 @@ interface Message {
   read?: boolean;
   translate?: boolean;
   created_at?: string;
+  file_url?: string | null;
+  type: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -90,6 +92,8 @@ export async function POST(request: NextRequest) {
           translate: msg.body_traslate || '',
           created_at: msg.created_at,
           read: msg.read_at !== null ? true : false,
+          type: msg.type,
+          file_url: msg.file_url,
         };
 
         return messageObject;

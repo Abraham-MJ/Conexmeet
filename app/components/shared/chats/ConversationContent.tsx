@@ -1,13 +1,19 @@
 'use client';
 
-import type { MessageContent } from '@/app/types/chat';
+import type { Message, MessageContent } from '@/app/types/chat';
 import { formatDateSeparator } from '@/lib/group-date';
 import { cn } from '@/lib/utils';
 import { isSameDay } from 'date-fns';
 import type React from 'react';
 import { useState } from 'react';
-import { BsTranslate } from 'react-icons/bs';
-import { IoCheckmarkDone, IoCheckmarkOutline } from 'react-icons/io5';
+import ModalGallery from '../modals/ModalGallery';
+import {
+  Check,
+  CheckCheck,
+  Languages,
+  LoaderCircle,
+  Undo2,
+} from 'lucide-react';
 
 type RenderItem =
   | MessageContent
@@ -20,15 +26,20 @@ interface MessageContentProps {
 const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
   const [translateText, setTranslateText] = useState<number | null>(null);
   const [translatingId, setTranslatingId] = useState<number | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string>('');
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleTranslateToggle = (id: number) => {
     setTranslatingId(id);
+    setIsTranslating(true);
     setTimeout(() => {
       if (translateText === id) {
         setTranslateText(null);
       } else {
         setTranslateText(id);
       }
+      setIsTranslating(false);
       setTranslatingId(null);
     }, 500);
   };
@@ -57,6 +68,18 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
     lastDate = currentDate;
   });
 
+  const getImageFileUrls = (messages: MessageContent[]): string[] => {
+    return messages.reduce((acc: string[], message) => {
+      if (message.type === 'image' && message.file_url) {
+        acc.push(message.file_url);
+      }
+      return acc;
+    }, []);
+  };
+
+  const imageUrls = getImageFileUrls(messages);
+  const indexOfOpenedImage = imageUrls.indexOf(previewImage);
+
   return (
     <div className={`h-full space-y-2 px-4`}>
       {itemsToRender.map((item) => {
@@ -64,91 +87,107 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
         const isMyMessage = message.sender === 'me';
 
         const bubbleClasses = isMyMessage
-          ? 'bg-[#5466ff] text-white rounded-l-xl rounded-br-xl'
-          : 'bg-[#F1F1F1] text-gray-800 rounded-r-xl rounded-bl-xl shadow-sm';
+          ? 'bg-[#fc3d6b] text-white self-end rounded-br-none'
+          : 'bg-gray-200  self-start rounded-bl-none';
 
-        const metadataClasses = isMyMessage
-          ? 'text-indigo-200/80'
-          : 'text-gray-400';
+        const StatusTick = () => {
+          return message.read === true ? (
+            <CheckCheck className="text-brand-foreground h-4 w-4" />
+          ) : (
+            <Check className="text-brand-foreground/70 h-4 w-4" />
+          );
+        };
 
         if ('type' in item && item.type === 'date-separator') {
+          const dateItem = item as {
+            type: 'date-separator';
+            dateString: string;
+            id: string;
+          };
           return (
-            <div key={item.id} className="flex justify-center py-10">
-              <span className="rounded-full text-sm text-gray-600">
-                {item.dateString}
-              </span>
+            <div
+              className="my-4 flex items-center justify-center"
+              key={dateItem.dateString}
+            >
+              <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500 dark:bg-gray-800">
+                {dateItem.dateString}
+              </div>
             </div>
           );
         }
 
         return (
           <div
-            key={message.id}
-            className={`flex items-end ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+            className={cn(
+              'group flex items-center gap-2',
+              isMyMessage ? 'justify-end' : 'justify-start',
+            )}
+            key={item.id}
           >
+            {!isMyMessage && (
+              <button
+                onClick={() => {
+                  handleTranslateToggle(message.id);
+                }}
+                className="rounded-full p-1.5 opacity-0 transition-opacity hover:bg-gray-200 group-hover:opacity-100"
+              >
+                {isTranslating ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : translatingId === message.id ? (
+                  <Undo2 className="h-4 w-4" />
+                ) : (
+                  <Languages className="h-4 w-4" />
+                )}
+              </button>
+            )}
+
             <div
               className={cn(
-                'flex max-w-[512px] select-none flex-col gap-1',
-                message.sender !== 'me' &&
-                  message.translate !== null &&
-                  message.translate !== '' &&
-                  message.translate !== undefined
-                  ? 'cursor-pointer'
-                  : 'cursor-default',
+                'max-w-xs rounded-xl md:max-w-md',
+                message.file_url ? 'p-2' : 'p-3',
+                bubbleClasses,
               )}
-              onClick={() => {
-                if (
-                  message.translate !== null &&
-                  message.translate !== '' &&
-                  message.translate !== undefined &&
-                  message.sender !== 'me'
-                ) {
-                  handleTranslateToggle(message.id);
-                }
-              }}
             >
-              <div
-                className={`grid grid-cols-[1fr_auto] items-end gap-x-3 p-3 transition-all duration-300 ${bubbleClasses}`}
-              >
-                <p className="text-[15px] [grid-column:1]">
-                  {translatingId === message.id ? (
-                    <span className="italic">Traduciendo...</span>
-                  ) : (
-                    <>
-                      {translateText === message.id
-                        ? message.translate
-                        : message.text}
-                    </>
+              {message.file_url && (
+                <img
+                  onClick={() => {
+                    setPreviewImage(message.file_url ?? '');
+                    setIsOpen(true);
+                  }}
+                  src={message.file_url}
+                  alt={message.text || 'Imagen enviada'}
+                  className="h-auto w-full cursor-pointer rounded-lg"
+                />
+              )}
+              {message.text && (
+                <p
+                  className={cn(
+                    'break-words text-sm',
+                    message.file_url ? 'mt-2' : '',
                   )}
+                >
+                  {translateText === message.id
+                    ? message.translate
+                    : message.text}
                 </p>
-
-                <div className="flex items-center gap-1 [grid-column:2]">
-                  <span className={`text-[11px] ${metadataClasses}`}>
-                    {message.time}
-                  </span>
-                  {isMyMessage ? (
-                    <div className={metadataClasses}>
-                      {message.read ? (
-                        <IoCheckmarkDone className="h-4 w-4 text-white" />
-                      ) : (
-                        <IoCheckmarkOutline className="h-4 w-4 text-white" />
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      {message.translate !== null &&
-                      message.translate !== '' &&
-                      message.translate !== undefined ? (
-                        <BsTranslate className="ml-1 h-[14px] w-[14px] text-blue-400" />
-                      ) : null}
-                    </>
-                  )}
-                </div>
+              )}
+              <div className="mt-1 flex items-center justify-end gap-1">
+                <span className="text-xs opacity-70">{message.time}</span>
+                {isMyMessage && <StatusTick />}
               </div>
             </div>
           </div>
         );
       })}
+      {isOpen && (
+        <ModalGallery
+          onClose={() => {
+            setIsOpen(false);
+          }}
+          images={imageUrls}
+          initialIndex={indexOfOpenedImage}
+        />
+      )}
     </div>
   );
 };

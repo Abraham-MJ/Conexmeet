@@ -305,6 +305,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 }),
                 read: false,
                 created_at: payload.timestamp,
+                file_url: payload.file_url,
+                type: payload.type,
               };
               dispatch({
                 type: 'ADD_MESSAGE_LOCALLY',
@@ -657,7 +659,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const sendMessageRequest = async (paramsMessage: SendMessageTypes) => {
-    const { room_id, message, type, user_id: remote_id } = paramsMessage;
+    const { room_id, message, type, user_id: remote_id, file } = paramsMessage;
 
     if (!userState.user?.id) throw new Error('User not found');
 
@@ -681,67 +683,85 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.error('Error calling translation API:', error);
     }
 
-    const localMessage: MessageContent = {
-      id: Date.now() + Math.random(),
-      text: originalText,
-      translate: translatedText,
-      sender: 'me',
-      time: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      created_at: new Date().toISOString(),
-      read: false,
-    };
-
-    dispatch({
-      type: 'ADD_MESSAGE_LOCALLY',
-      payload: { conversationId: String(room_id), message: localMessage },
-    });
-
-    if (rtmClient && isLoggedIn) {
-      const rtmPayload: RtmMessagePayload = {
-        messageType: 'CHAT_MESSAGE',
-        text: originalText,
-        translatedText: translatedText,
-        originalId: Date.now() + Math.random(),
-        senderUid: userState.user.id.toString(),
-        timestamp: new Date().toISOString(),
-        room_id: String(room_id),
-      };
-      await rtmClient.sendMessageToPeer(
-        { text: JSON.stringify(rtmPayload) },
-        remote_id,
-      );
-    }
-
     sendTypingStopped(String(remote_id));
 
-    const bodyForApi = {
-      user_id: remote_id,
-      message: originalText,
-      translate: translatedText,
-      type: type,
-      room_id: String(room_id),
-    };
+    const formData = new FormData();
+    formData.append('user_id', remote_id);
+    formData.append('body', originalText);
+    formData.append('body_traslate', translatedText ?? '');
+    formData.append('type', type);
+
+    if (file instanceof File) {
+      formData.append('file', file);
+    }
 
     try {
-      const response = await fetch(`/api/chats/send-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyForApi),
+      const response = await fetch(
+        `https://app.conexmeet.live/api/v1/send-message/${room_id}`,
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${userState.user.token}`,
+            'Cache-Control': 'no-cache',
+          },
+          body: formData,
+        },
+      );
+
+      const data = await response.json();
+
+      const localMessage: MessageContent = {
+        id: Date.now() + Math.random(),
+        text: originalText,
+        translate: translatedText,
+        sender: 'me',
+        time: new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        created_at: new Date().toISOString(),
+        read: false,
+        file_url: data.data.file_url,
+        type: data.data.type,
+      };
+
+      dispatch({
+        type: 'ADD_MESSAGE_LOCALLY',
+        payload: { conversationId: String(room_id), message: localMessage },
       });
-      const result = await response.json();
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(
-          result.message ||
-            'Error desconocido al persistir el mensaje en el backend.',
+
+      if (rtmClient && isLoggedIn) {
+        const rtmPayload: RtmMessagePayload = {
+          messageType: 'CHAT_MESSAGE',
+          text: originalText,
+          translatedText: translatedText,
+          originalId: Date.now() + Math.random(),
+          senderUid: userState.user.id.toString(),
+          timestamp: new Date().toISOString(),
+          room_id: String(room_id),
+          file_url: data.data.file_url,
+          type: data.data.type,
+        };
+        await rtmClient.sendMessageToPeer(
+          { text: JSON.stringify(rtmPayload) },
+          remote_id,
         );
       }
     } catch (error) {
-      throw error;
+      console.error(
+        'Error en la conexión o procesamiento de la solicitud directa:',
+        error,
+      );
+      return Promise.reject({
+        success: false,
+        message:
+          'Error de red o interno del cliente al contactar la API externa.',
+        error:
+          typeof error === 'object' && error !== null && 'message' in error
+            ? (error as { message: string }).message
+            : String(error),
+      });
     }
   };
 

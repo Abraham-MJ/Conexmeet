@@ -1,30 +1,52 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useChat } from '@/app/context/useChatContext';
 import ConversationList from '@/app/components/shared/chats/ConversationList';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { SkeletonChatLoading } from '@/app/components/loading/chats-skeleton';
-import { MessageSquareOff } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useMobile } from '@/app/hooks/useMobile';
+import { ProcessedChatData } from '@/app/types/chat';
+import { IoIosArrowBack } from 'react-icons/io';
+
+const filterConversationsByName = (
+  conversations: ProcessedChatData[],
+  searchTerm: string,
+): ProcessedChatData[] => {
+  const lowerCaseSearchTerm = searchTerm.toLowerCase().trim();
+
+  if (!lowerCaseSearchTerm) {
+    return conversations;
+  }
+
+  return conversations.filter((conversation) => {
+    const userName = conversation.user_info.name;
+    return userName.toLowerCase().includes(lowerCaseSearchTerm);
+  });
+};
 
 export default function ChatsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
   const { chat_id } = useParams<{ chat_id: string }>();
   const { state, loadChatList } = useChat();
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
   const isMobile = useMobile(1024);
 
   const [viewConversation, setViewConversation] = useState(false);
 
   useEffect(() => {
-    if (isMobile && chat_id?.[0] !== undefined) {
-      setViewConversation(false);
-    } else {
+    if (chat_id?.[0] !== undefined && isMobile) {
       setViewConversation(true);
+    } else {
+      setViewConversation(false);
     }
   }, [chat_id]);
 
@@ -32,47 +54,65 @@ export default function ChatsLayout({
     loadChatList();
   }, []);
 
+  const filteredConversations = useMemo(() => {
+    return filterConversationsByName(state.conversations, searchQuery);
+  }, [state.conversations, searchQuery]);
+
   return (
-    <div className="h-full w-full overflow-hidden lg:grid lg:grid-cols-[360px_1fr]">
-      <div className="overflow-hidden lg:grid lg:grid-cols-[360px_1fr]">
-        <div
-          className={cn(
-            'h-full w-full border-r bg-white',
-            viewConversation ? 'flex flex-col' : 'hidden',
-          )}
-        >
-          <div className="sticky top-0 border-b bg-white p-4">
-            <h2 className="text-xl font-semibold">Messages</h2>
+    <div className="flex h-full">
+      <aside
+        className={cn(
+          'h-full w-full flex-col lg:flex lg:w-full lg:max-w-md lg:border-r lg:border-gray-200',
+          viewConversation ? 'hidden' : 'flex',
+        )}
+      >
+        <div className="flex h-full w-full flex-col bg-white">
+          <div className="flex-shrink-0 border-b border-gray-200 p-4">
+            <div className="flex items-center">
+              {isMobile && (
+                <button
+                  className="mr-4 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border text-gray-500 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-gray-100"
+                  onClick={() => {
+                    router.push('/main/video-roulette');
+                  }}
+                >
+                  <IoIosArrowBack size={22} />
+                </button>
+              )}
+              <h2 className="text-2xl font-semibold text-gray-900">Messages</h2>
+            </div>
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar en chats..."
+                className="focus:ring-brand h-10 w-full rounded-lg border border-gray-300 bg-gray-50 py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-0"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="h-[calc(100vh-141px)] w-full overflow-auto">
-            {state.isLoadingConversations ? (
-              <SkeletonChatLoading />
-            ) : (
-              <>
-                {state.conversations.length > 0 ? (
-                  <ConversationList conversations={state.conversations} />
-                ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center">
-                    <div className="flex h-screen flex-col">
-                      <div className="flex flex-col items-center justify-center rounded-lg bg-white p-10">
-                        <MessageSquareOff className="mb-6 h-16 w-16 text-gray-400" />
-                        <span className="mb-2 text-xl font-semibold text-gray-700">
-                          Tu lista de chats está vacía
-                        </span>
-                        <span className="text-center text-sm text-gray-500">
-                          Parece que aún no tienes ninguna conversación.
-                          ¡Comienza una nueva para verla aquí!
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-2">
+              {state.isLoadingConversations ? (
+                <SkeletonChatLoading />
+              ) : (
+                <ConversationList conversations={filteredConversations} />
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <div className={cn('h-full w-full')}>{children}</div>
+      </aside>
+
+      <section
+        className={cn(
+          'h-full w-full flex-1 flex-col lg:flex',
+          !viewConversation ? 'hidden' : 'flex',
+        )}
+      >
+        <div className={cn('h-full w-full')}>{children}</div>
+      </section>
     </div>
   );
 }

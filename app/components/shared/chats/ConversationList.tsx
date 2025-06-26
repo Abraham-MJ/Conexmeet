@@ -34,20 +34,18 @@ const ConversationList: React.FC<ConversationListProps> = ({
   }, [conversations, unreadCountByConversationId]);
 
   return (
-    <>
+    <div>
       {sortedConversations.map((conversation, index) => {
         const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png`;
         return (
-          <>
-            <ConversationItem
-              key={`key-${conversation?.chat_id}-${index}`}
-              conversation={conversation}
-              genericErrorPlaceholder={GENERIC_IMAGE_ERROR_PLACEHOLDER}
-            />
-          </>
+          <ConversationItem
+            key={`key-${conversation?.chat_id}-${index}-${unreadCountByConversationId[conversation.chat_id]}`}
+            conversation={conversation}
+            genericErrorPlaceholder={GENERIC_IMAGE_ERROR_PLACEHOLDER}
+          />
         );
       })}
-    </>
+    </div>
   );
 };
 

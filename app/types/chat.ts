@@ -86,6 +86,7 @@ export interface ProcessedChatData {
   user_info: ChatUserExternal;
   unread_messages_count: number;
   last_activity_at: string;
+  last_message_content?: string;
 }
 
 export interface ChatUserExternal {
@@ -136,6 +137,8 @@ export interface MessageContent {
   room_id?: string;
   translate?: string;
   created_at?: string;
+  type?: string;
+  file_url?: string;
 }
 
 export interface SendMessageTypes {
@@ -162,6 +165,8 @@ export interface RtmMessagePayload {
   room_id?: string;
   translatedText?: string;
   readUpToMessageId?: string | number;
+  type?: string;
+  file_url?: string;
 }
 
 export interface SelectedImage {

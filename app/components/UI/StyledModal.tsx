@@ -140,7 +140,7 @@ export default function StyledModal({
           />
 
           <motion.div
-            className={`z-50 flex flex-col overflow-hidden rounded-3xl shadow-xl ${
+            className={`z-50 flex flex-col overflow-hidden rounded-3xl ${
               isMobile
                 ? 'fixed bottom-0 left-0 right-0 rounded-b-none rounded-t-2xl'
                 : position === 'left'

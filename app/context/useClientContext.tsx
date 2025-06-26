@@ -93,7 +93,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
           if (responseData && responseData.data && responseData.data.user) {
             dispatch({
               type: 'FETCH_USER_SUCCESS',
-              payload: responseData.data.user,
+              payload: {
+                ...responseData.data.user,
+                token: responseData.data.access_token,
+              },
             });
           } else {
             dispatch({
