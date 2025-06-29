@@ -10,7 +10,9 @@ import {
   UserInformation,
 } from '@/app/types/streams';
 import { useAgoraServer } from './useAgoraServer';
-import { LOG_PREFIX_FEMALE, LOG_PREFIX_PROVIDER } from '@/lib/constants';
+import { LOG_PREFIX_PROVIDER } from '@/lib/constants';
+
+AgoraRTC.setLogLevel(4);
 
 export const useAgoraRtc = (
   dispatch: React.Dispatch<AgoraAction>,
@@ -77,6 +79,9 @@ export const useAgoraRtc = (
       currentRtcClient.on(
         'user-unpublished',
         (remoteUserUnpublishing, mediaType) => {
+          console.log(
+            `[Female Client - RTC Event] User Unpublished: UID ${remoteUserUnpublishing.uid}, Media Type: ${mediaType}`,
+          );
           if (mediaType !== 'audio' && mediaType !== 'video') return;
           dispatch({
             type: AgoraActionType.UPDATE_REMOTE_USER_TRACK_STATE,
@@ -104,6 +109,9 @@ export const useAgoraRtc = (
                 !remoteUserAfterUpdate.hasAudio &&
                 !remoteUserAfterUpdate.hasVideo
               ) {
+                console.log(
+                  `[Female Client - RTC Event] Male UID ${remoteUserUnpublishing.uid} unpublished all tracks. Broadcasting female status update to available_call.`,
+                );
                 broadcastLocalFemaleStatusUpdate({
                   in_call: 0,
                   status: 'available_call',
@@ -115,6 +123,9 @@ export const useAgoraRtc = (
       );
 
       currentRtcClient.on('user-left', (remoteUserLeaving) => {
+        console.log(
+          `[Female Client - RTC Event] User Left: UID ${remoteUserLeaving.uid}`,
+        );
         const currentRemoteUsers = remoteUsersRef.current;
         const userWhoLeft = currentRemoteUsers.find(
           (u) => u.rtcUid === String(remoteUserLeaving.uid),
@@ -127,18 +138,13 @@ export const useAgoraRtc = (
 
         if (localUser?.role === 'female') {
           if (userWhoLeft?.role === 'male') {
-            setTimeout(() => {
-              const remainingActiveMales = remoteUsersRef.current.filter(
-                (u) => u.role === 'male' && (u.hasAudio || u.hasVideo),
-              );
-
-              if (remainingActiveMales.length === 0) {
-                broadcastLocalFemaleStatusUpdate({
-                  in_call: 0,
-                  status: 'available_call',
-                });
-              }
-            }, 0);
+            console.log(
+              `[Female Client - RTC Event] Male UID ${remoteUserLeaving.uid} left. Broadcasting female status update to available_call.`,
+            );
+            broadcastLocalFemaleStatusUpdate({
+              in_call: 0,
+              status: 'available_call',
+            });
           }
         }
       });

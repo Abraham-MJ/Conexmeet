@@ -47,6 +47,10 @@ export const useAgoraLobby = (
         ({ text }: any, senderId: string) => {
           try {
             const receivedMsg = JSON.parse(text ?? '');
+            console.log(
+              `[Lobby Client] Received RTM ChannelMessage from ${senderId}:`,
+              receivedMsg,
+            );
 
             if (receivedMsg.type === 'FEMALE_FULL_STATUS_UPDATE') {
               const updatedFemale = receivedMsg.payload as UserInformation;
@@ -54,6 +58,11 @@ export const useAgoraLobby = (
                 type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
                 payload: updatedFemale,
               });
+              console.log(
+                '[Lobby Client] Dispatched UPDATE_ONE_FEMALE_IN_LIST with payload:',
+                receivedMsg.payload,
+              );
+
               setOnlineFemalesList((prevList) => {
                 const existingIndex = prevList.findIndex(
                   (f) => f.rtmUid === updatedFemale.rtmUid,
@@ -154,6 +163,11 @@ export const useAgoraLobby = (
           payload: payloadToSend,
         };
         try {
+          console.log(
+            '[Female Client] Intentando actualizar el backend y el lobby con el estado de la female:',
+            statusUpdatePayload,
+          );
+
           await lobbyRtmChannel.sendMessage({
             text: JSON.stringify(rtmMessage),
           });
