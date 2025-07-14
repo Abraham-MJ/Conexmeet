@@ -599,6 +599,7 @@ export const useCallFlows = (
             reason: disconnectReason,
             duration: callDuration,
             earnings: callEarnings,
+            host_id: currentChannel,
           },
         });
         dispatch({
@@ -646,9 +647,12 @@ export const useCallFlows = (
         if (isRtmChannelJoined) {
           try {
             const summaryPayload: FemaleCallSummaryInfo = {
-              reason: disconnectReason,
+              reason: hostEndedCallInfo?.ended
+                ? 'Finalizada por ti'
+                : disconnectReason,
               duration: callDuration,
               earnings: callEarnings,
+              host_id: currentChannel,
             };
             await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
             console.log(
@@ -668,6 +672,10 @@ export const useCallFlows = (
             console.log(
               `[Male] Llamando a closeMaleChannel para user ${localUser.user_id}, channel ${currentChannel}, room ${current_room_id}`,
             );
+            if (!hostEndedCallInfo?.ended) {
+              await agoraBackend.closeChannel(currentChannel, 'waiting');
+            }
+
             await agoraBackend.closeMaleChannel(
               localUser.user_id,
               currentChannel,

@@ -91,34 +91,6 @@ export const useAgoraRtc = (
               isPublishing: false,
             },
           });
-
-          const currentRemoteUsers = remoteUsersRef.current;
-
-          if (localUser?.role === 'female' && mediaType === 'video') {
-            const userWhoUnpublished = currentRemoteUsers.find(
-              (u) => u.rtcUid === String(remoteUserUnpublishing.uid),
-            );
-
-            if (userWhoUnpublished?.role === 'male') {
-              const remoteUserAfterUpdate = currentRemoteUsers.find(
-                (u) => u.rtcUid === String(remoteUserUnpublishing.uid),
-              );
-
-              if (
-                remoteUserAfterUpdate &&
-                !remoteUserAfterUpdate.hasAudio &&
-                !remoteUserAfterUpdate.hasVideo
-              ) {
-                console.log(
-                  `[Female Client - RTC Event] Male UID ${remoteUserUnpublishing.uid} unpublished all tracks. Broadcasting female status update to available_call.`,
-                );
-                broadcastLocalFemaleStatusUpdate({
-                  in_call: 0,
-                  status: 'available_call',
-                });
-              }
-            }
-          }
         },
       );
 
@@ -126,27 +98,11 @@ export const useAgoraRtc = (
         console.log(
           `[Female Client - RTC Event] User Left: UID ${remoteUserLeaving.uid}`,
         );
-        const currentRemoteUsers = remoteUsersRef.current;
-        const userWhoLeft = currentRemoteUsers.find(
-          (u) => u.rtcUid === String(remoteUserLeaving.uid),
-        );
 
         dispatch({
           type: AgoraActionType.REMOVE_REMOTE_USER,
           payload: { rtcUid: String(remoteUserLeaving.uid) },
         });
-
-        if (localUser?.role === 'female') {
-          if (userWhoLeft?.role === 'male') {
-            console.log(
-              `[Female Client - RTC Event] Male UID ${remoteUserLeaving.uid} left. Broadcasting female status update to available_call.`,
-            );
-            broadcastLocalFemaleStatusUpdate({
-              in_call: 0,
-              status: 'available_call',
-            });
-          }
-        }
       });
     },
     [dispatch, localUser, broadcastLocalFemaleStatusUpdate],

@@ -224,6 +224,15 @@ export const useAgoraCallChannel = (
                   `[Female Client] Recibido resumen de llamada del male:`,
                   summaryPayload,
                 );
+                
+                if (summaryPayload.reason !== 'Finalizada por ti') {
+                  broadcastLocalFemaleStatusUpdate({
+                    in_call: 0,
+                    status: 'available_call',
+                    host_id: summaryPayload.host_id,
+                    is_active: 1,
+                  });
+                }
 
                 dispatch({
                   type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,

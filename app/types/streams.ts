@@ -71,6 +71,7 @@ export interface FemaleCallSummaryInfo {
     | 'Desconexión inesperada';
   duration: string;
   earnings: number | string | null;
+  host_id: string | null;
 }
 
 export interface UserInformation {
