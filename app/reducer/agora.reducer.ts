@@ -48,6 +48,9 @@ export const initialState: AgoraState = {
   maleInitialMinutesInCall: null,
   maleGiftMinutesSpent: 0,
   showMinutesExhaustedModal: false,
+  showFemaleCallEndedModal: false,
+  callSummaryInfo: null,
+  femaleTotalPointsEarnedInCall: 0,
 };
 
 export function agoraReducer(
@@ -144,6 +147,7 @@ export function agoraReducer(
         maleInitialMinutesInCall: null,
         maleGiftMinutesSpent: 0,
         showInsufficientMinutesModal: false,
+        femaleTotalPointsEarnedInCall: 0,
       };
 
     case AgoraActionType.RTM_SETUP_START:
@@ -204,6 +208,9 @@ export function agoraReducer(
         rtmChannel: null,
         isRtmChannelJoined: false,
         current_room_id: null,
+        showFemaleCallEndedModal: false,
+        callSummaryInfo: null,
+        femaleTotalPointsEarnedInCall: 0,
       };
 
     case AgoraActionType.RTM_LOGOUT_LEAVE_CHANNEL:
@@ -461,9 +468,19 @@ export function agoraReducer(
         ...state,
         maleGiftMinutesSpent: state.maleGiftMinutesSpent + action.payload,
       };
-    case AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL: // <-- NUEVO CASO
+    case AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL:
       return { ...state, showMinutesExhaustedModal: action.payload };
+    case AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL:
+      return { ...state, showFemaleCallEndedModal: action.payload };
 
+    case AgoraActionType.SET_FEMALE_CALL_ENDED_INFO:
+      return { ...state, callSummaryInfo: action.payload };
+    case AgoraActionType.ADD_FEMALE_POINTS_EARNED:
+      return {
+        ...state,
+        femaleTotalPointsEarnedInCall:
+          state.femaleTotalPointsEarnedInCall + action.payload,
+      };
     default:
       return state;
   }

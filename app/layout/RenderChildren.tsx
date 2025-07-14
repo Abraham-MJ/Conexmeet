@@ -107,12 +107,12 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
       >
         {children}
       </main>
+      <ModalCallEndedFemaleSummary />
       <ModalPermission />
       <ModalRejectPermission />
       <ModalNotChannel />
       <ModalChannelBusy />
       <ModalInsufficientMinutes />
-      <ModalCallEndedFemaleSummary />
       <ModalMinutesExhausted />
     </>
   );

@@ -10,6 +10,7 @@ import { createHost } from '@/lib/generate-token';
 import {
   AgoraAction,
   AgoraActionType,
+  FemaleCallSummaryInfo,
   UserInformation,
 } from '@/app/types/streams';
 import {
@@ -44,6 +45,19 @@ interface CallOrchestratorFunctions {
   waitForUserProfile: (uidToWaitFor: string | number) => Promise<void>;
 }
 
+const getBalance = (
+  item: { minutes: number; seconds: number },
+  points: number,
+) => {
+  const { minutes, seconds } = item;
+
+  let totalMinutes = minutes + seconds / 60;
+  totalMinutes += points / 10;
+  let result = totalMinutes * 0.096;
+
+  return seconds < 15 ? 0 : parseFloat(result.toFixed(2));
+};
+
 export const useCallFlows = (
   router: ReturnType<typeof useRouter>,
   dispatch: React.Dispatch<AgoraAction>,
@@ -68,6 +82,7 @@ export const useCallFlows = (
   callTimer: string,
   maleInitialMinutesInCall: number | null,
   maleGiftMinutesSpent: number,
+  femaleTotalPointsEarnedInCall: number,
 ) => {
   const { handleGetInformation, state: user } = useUser();
 
@@ -560,10 +575,37 @@ export const useCallFlows = (
       return;
     }
 
-    const isHostEndedCall = !!hostEndedCallInfo?.ended;
+    hasTriggeredOutOfMinutesRef.current = true;
+
+    let disconnectReason: FemaleCallSummaryInfo['reason'] =
+      'Desconexión inesperada';
+    let callDuration: string = callTimer;
+    let callEarnings: number | string | null = null;
 
     try {
       if (currentUser.role === 'female' && currentChannel) {
+        disconnectReason = 'Finalizada por ti';
+        const [minutesStr, secondsStr] = callTimer.split(':');
+        const parsedMinutes = parseInt(minutesStr, 10);
+        const parsedSeconds = parseInt(secondsStr, 10);
+        callEarnings = getBalance(
+          { minutes: parsedMinutes, seconds: parsedSeconds },
+          femaleTotalPointsEarnedInCall,
+        );
+
+        dispatch({
+          type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+          payload: {
+            reason: disconnectReason,
+            duration: callDuration,
+            earnings: callEarnings,
+          },
+        });
+        dispatch({
+          type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+          payload: true,
+        });
+
         await sendCallSignal('HOST_ENDED_CALL', {
           channelName: currentChannel,
         });
@@ -576,30 +618,68 @@ export const useCallFlows = (
         });
         await agoraBackend.closeChannel(currentChannel, 'finished');
       } else if (currentUser.role === 'male' && currentChannel) {
-        if (!current_room_id) {
-          console.warn(
-            '[handleLeaveCall - Male] No se encontró el ID de la sala (current_room_id) para cerrar en el backend.',
-          );
+        const [minutesStr, secondsStr] = callTimer.split(':');
+        const parsedMinutes = parseInt(minutesStr, 10);
+        const parsedSeconds = parseInt(secondsStr, 10);
+        const totalElapsedSeconds = parsedMinutes * 60 + parsedSeconds;
+
+        const initialMinutesInSeconds = (maleInitialMinutesInCall || 0) * 60;
+        const giftMinutesSpentInSeconds = maleGiftMinutesSpent * 60;
+
+        if (
+          initialMinutesInSeconds -
+            totalElapsedSeconds -
+            giftMinutesSpentInSeconds <=
+            0 &&
+          maleInitialMinutesInCall !== null
+        ) {
+          disconnectReason = 'Saldo agotado';
         } else {
+          disconnectReason = 'Usuario finalizó la llamada';
+        }
+
+        callEarnings = getBalance(
+          { minutes: parsedMinutes, seconds: parsedSeconds },
+          femaleTotalPointsEarnedInCall,
+        );
+
+        if (isRtmChannelJoined) {
           try {
-            await (agoraBackend as any).closeMaleChannel(
-              currentUser.user_id,
-              currentChannel || '',
-              current_room_id || '',
-            );
+            const summaryPayload: FemaleCallSummaryInfo = {
+              reason: disconnectReason,
+              duration: callDuration,
+              earnings: callEarnings,
+            };
+            await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
             console.log(
-              `[handleLeaveCall - Male] Notificado backend para cerrar sala ${current_room_id}.`,
+              '[Male] Señal MALE_CALL_SUMMARY_SIGNAL enviada a la female:',
+              summaryPayload,
             );
-          } catch (apiError) {
+          } catch (error) {
             console.error(
-              '[handleLeaveCall - Male] Error al llamar a closeMaleChannel:',
-              apiError,
+              '[Male] Error enviando MALE_CALL_SUMMARY_SIGNAL:',
+              error,
             );
           }
         }
 
-        if (!isHostEndedCall) {
-          await agoraBackend.closeChannel(currentChannel, 'waiting');
+        if (localUser.user_id && currentChannel && current_room_id) {
+          try {
+            console.log(
+              `[Male] Llamando a closeMaleChannel para user ${localUser.user_id}, channel ${currentChannel}, room ${current_room_id}`,
+            );
+            await agoraBackend.closeMaleChannel(
+              localUser.user_id,
+              currentChannel,
+              current_room_id,
+            );
+            console.log('[Male] Canal cerrado en el backend.');
+          } catch (error) {
+            console.error(
+              '[Male] Error al cerrar el canal en el backend:',
+              error,
+            );
+          }
         }
       }
 
@@ -624,12 +704,12 @@ export const useCallFlows = (
     localUser,
     currentChannelName,
     agoraBackend,
-    leaveRtcChannel,
-    leaveCallChannel,
-    broadcastLocalFemaleStatusUpdate,
-    sendCallSignal,
-    hostEndedCallInfo,
     current_room_id,
+    callTimer,
+    maleInitialMinutesInCall,
+    maleGiftMinutesSpent,
+    femaleTotalPointsEarnedInCall,
+    isRtmChannelJoined,
     handleGetInformation,
   ]);
 

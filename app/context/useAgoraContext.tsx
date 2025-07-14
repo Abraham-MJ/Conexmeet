@@ -57,10 +57,12 @@ const AgoraContext = createContext<{
     gifId: string | number,
     giftCostInMinutes: number,
     gift_image: string,
+    giftPoints: number,
   ) => Promise<
     | { success: boolean; message?: string; cost_in_minutes: number }
     | { success: boolean; message: string }
   >;
+  closeFemaleCallEndedSummaryModal: () => void;
 }>({
   state: initialState,
   dispatch: () => undefined,
@@ -88,6 +90,7 @@ const AgoraContext = createContext<{
       message: 'Not implemented',
       cost_in_minutes: 0,
     }),
+  closeFemaleCallEndedSummaryModal: () => {},
 });
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
@@ -223,6 +226,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state,
     broadcastLocalFemaleStatusUpdate,
     callTimer,
+    state.femaleTotalPointsEarnedInCall,
   );
 
   const {
@@ -256,6 +260,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     callTimer,
     state.maleInitialMinutesInCall,
     state.maleGiftMinutesSpent,
+    state.femaleTotalPointsEarnedInCall,
   );
 
   useEffect(() => {
@@ -336,6 +341,17 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     });
   }, [dispatch]);
 
+  const closeFemaleCallEndedSummaryModal = useCallback(() => {
+    dispatch({
+      type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+      payload: false,
+    });
+    dispatch({
+      type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+      payload: null,
+    });
+  }, [dispatch]);
+
   return (
     <AgoraContext.Provider
       value={{
@@ -360,6 +376,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         closeInsufficientMinutesModal,
         closeMinutesExhaustedModal,
         sendGift,
+        closeFemaleCallEndedSummaryModal,
       }}
     >
       {children}

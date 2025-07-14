@@ -156,6 +156,7 @@ const PageStreamVideo = () => {
                                       items.id,
                                       items.minutes,
                                       items.image,
+                                      items.points,
                                     );
                                   }}
                                   key={index}

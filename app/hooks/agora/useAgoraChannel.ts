@@ -5,6 +5,7 @@ import {
   AgoraActionType,
   AgoraState,
   ChatMessage,
+  FemaleCallSummaryInfo,
   UserInformation,
 } from '@/app/types/streams';
 import { useAgoraServer } from './useAgoraServer';
@@ -23,6 +24,7 @@ export const useAgoraCallChannel = (
     statusInfo: Partial<UserInformation>,
   ) => Promise<void>,
   callTimer: string,
+  femaleTotalPointsEarnedInCall: number,
 ) => {
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
@@ -177,13 +179,13 @@ export const useAgoraCallChannel = (
               let messageType: 'channel-gift' | 'self-gift';
 
               if (localUser?.rtmUid === giftData.sender_rtm_uid) {
-                messageText = `Has enviado un regalo a ${giftData.receiver_name}! (${giftData.cost_in_minutes} min)`;
+                messageText = `Has enviado un ${giftData.gift_name} a ${giftData.receiver_name}!`;
                 messageType = 'self-gift';
               } else if (localUser?.rtmUid === giftData.receiver_rtm_uid) {
-                messageText = `${giftData.sender_name} te ha enviado un ${giftData.gift_name}! (${giftData.cost_in_minutes} min)`;
+                messageText = `${giftData.sender_name} te ha enviado un ${giftData.gift_name}!`;
                 messageType = 'channel-gift';
               } else {
-                messageText = `${giftData.sender_name} ha enviado un ${giftData.gift_name} a ${giftData.receiver_name}! (${giftData.cost_in_minutes} min)`;
+                messageText = `${giftData.sender_name} ha enviado un ${giftData.gift_name} a ${giftData.receiver_name}!`;
                 messageType = 'channel-gift';
               }
 
@@ -193,7 +195,7 @@ export const useAgoraCallChannel = (
                 text: messageText,
                 timestamp: Date.now(),
                 type: messageType,
-                gift_image: giftData.gift_image || '',
+                gift_image: giftData.gift_image_url,
               };
 
               setChatMessages((prevMessages) => [
@@ -204,7 +206,34 @@ export const useAgoraCallChannel = (
                 type: AgoraActionType.ADD_CHAT_MESSAGE,
                 payload: newGiftMessage,
               });
-              console.log('[RTM Listener] Regalo procesado:', newGiftMessage);
+
+              if (
+                localUser?.role === 'female' &&
+                localUser.rtmUid === giftData.receiver_rtm_uid
+              ) {
+                dispatch({
+                  type: AgoraActionType.ADD_FEMALE_POINTS_EARNED,
+                  payload: giftData.gift_points,
+                });
+              }
+            } else if (receivedMsg.type === 'MALE_CALL_SUMMARY_SIGNAL') {
+              if (localUser?.role === 'female') {
+                const summaryPayload =
+                  receivedMsg.payload as FemaleCallSummaryInfo;
+                console.log(
+                  `[Female Client] Recibido resumen de llamada del male:`,
+                  summaryPayload,
+                );
+
+                dispatch({
+                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+                  payload: summaryPayload,
+                });
+                dispatch({
+                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+                  payload: true,
+                });
+              }
             }
           } catch (e) {
             console.error(
@@ -227,6 +256,7 @@ export const useAgoraCallChannel = (
       state.localUser,
       state.channelName,
       broadcastLocalFemaleStatusUpdate,
+      femaleTotalPointsEarnedInCall,
     ],
   );
 
@@ -412,6 +442,7 @@ export const useAgoraCallChannel = (
       gifId: string | number,
       giftCostInMinutes: number,
       gift_image: string,
+      giftPoints: number,
     ) => {
       if (
         !localUser ||
@@ -508,6 +539,11 @@ export const useAgoraCallChannel = (
             payload: giftCostInMinutes,
           });
 
+          dispatch({
+            type: AgoraActionType.ADD_FEMALE_POINTS_EARNED,
+            payload: giftPoints,
+          });
+
           const selfGiftMessage: ChatMessage = {
             rtmUid: String(localUser.rtmUid),
             user_name: localUser.user_name || 'Tú',
@@ -533,6 +569,7 @@ export const useAgoraCallChannel = (
               gift_name: 'Regalo especial',
               cost_in_minutes: giftCostInMinutes,
               gift_image: gift_image,
+              gift_points: giftPoints,
             },
           };
           await rtmChannel?.sendMessage({

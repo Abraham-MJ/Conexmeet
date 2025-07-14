@@ -53,11 +53,24 @@ export enum AgoraActionType {
   SET_MALE_INITIAL_MINUTES_IN_CALL = 'SET_MALE_INITIAL_MINUTES_IN_CALL',
   ADD_MALE_GIFT_MINUTES_SPENT = 'ADD_MALE_GIFT_MINUTES_SPENT',
   SET_SHOW_MINUTES_EXHAUSTED_MODAL = 'SET_SHOW_MINUTES_EXHAUSTED_MODAL',
+  SET_FEMALE_CALL_ENDED_MODAL = 'SET_FEMALE_CALL_ENDED_MODAL',
+  SET_FEMALE_CALL_ENDED_INFO = 'SET_FEMALE_CALL_ENDED_INFO',
+  ADD_FEMALE_POINTS_EARNED = 'ADD_FEMALE_POINTS_EARNED',
 }
 
 export interface LoadingStatus {
   message: string;
   isLoading: boolean;
+}
+
+export interface FemaleCallSummaryInfo {
+  reason:
+    | 'Finalizada por ti'
+    | 'Usuario finalizó la llamada'
+    | 'Saldo agotado'
+    | 'Desconexión inesperada';
+  duration: string;
+  earnings: number | string | null;
 }
 
 export interface UserInformation {
@@ -128,6 +141,9 @@ export interface AgoraState {
   maleInitialMinutesInCall: number | null;
   maleGiftMinutesSpent: number;
   showMinutesExhaustedModal: boolean;
+  showFemaleCallEndedModal: boolean;
+  callSummaryInfo: FemaleCallSummaryInfo | null;
+  femaleTotalPointsEarnedInCall: number;
 }
 
 interface RemoteHostEndedCallAction {
@@ -364,6 +380,21 @@ interface AddMaleGiftMinutesSpentAction {
   payload: number;
 }
 
+interface SetFemaleCallEndedModalAction {
+  type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL;
+  payload: boolean;
+}
+
+interface SetFemaleCallEndedInfoAction {
+  type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO;
+  payload: FemaleCallSummaryInfo | null;
+}
+
+interface AddFemalePointsEarnedAction {
+  type: AgoraActionType.ADD_FEMALE_POINTS_EARNED;
+  payload: number;
+}
+
 export type AgoraAction =
   | SetAppIdAction
   | SetLocalUserProfileAction
@@ -409,4 +440,7 @@ export type AgoraAction =
   | SetShowInsufficientMinutesModalAction
   | SetMaleInitialMinutesInCallAction
   | AddMaleGiftMinutesSpentAction
-  | SetShowMinutesExhaustedModalAction;
+  | SetShowMinutesExhaustedModalAction
+  | SetFemaleCallEndedModalAction
+  | SetFemaleCallEndedInfoAction
+  | AddFemalePointsEarnedAction;

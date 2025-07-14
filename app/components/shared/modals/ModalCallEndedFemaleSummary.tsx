@@ -38,7 +38,7 @@ const CallEndedSummaryIcon = ({ reasonType }: { reasonType: string }) => {
 };
 
 const ModalCallEndedFemaleSummary = () => {
-  const { state, closeCallEndedFemaleSummaryModal } = useAgoraContext();
+  const { state, closeFemaleCallEndedSummaryModal } = useAgoraContext();
   const { callSummaryInfo } = state;
 
   if (!callSummaryInfo) {
@@ -49,8 +49,8 @@ const ModalCallEndedFemaleSummary = () => {
 
   return (
     <StyledModal
-      isOpen={state.showCallEndedFemaleSummaryModal}
-      onClose={closeCallEndedFemaleSummaryModal}
+      isOpen={state.showFemaleCallEndedModal}
+      onClose={closeFemaleCallEndedSummaryModal}
       title=""
       position="center"
       noClose
@@ -64,7 +64,7 @@ const ModalCallEndedFemaleSummary = () => {
       >
         <div
           className="absolute right-4 top-4 z-10 cursor-pointer rounded-full border p-3 transition-all duration-300 hover:scale-110"
-          onClick={closeCallEndedFemaleSummaryModal}
+          onClick={closeFemaleCallEndedSummaryModal}
         >
           <IoMdClose className="h-6 w-6 text-[#747474]" />
         </div>
@@ -96,7 +96,7 @@ const ModalCallEndedFemaleSummary = () => {
             <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
               <span className="font-medium text-gray-600">Ganancias:</span>
               <span className="text-xl font-bold text-green-600">
-                {earnings}
+                ${earnings}
               </span>
             </div>
           </div>
