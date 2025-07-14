@@ -22,22 +22,26 @@ export const useAgoraCallChannel = (
   broadcastLocalFemaleStatusUpdate: (
     statusInfo: Partial<UserInformation>,
   ) => Promise<void>,
+  callTimer: string,
 ) => {
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const pendingProfilePromisesRef = useRef(new Map<string, () => void>());
 
-  const waitForUserProfile = useCallback((uidToWaitFor: string | number) => {
-    const stringUid = String(uidToWaitFor);
-    if (state.remoteUsers?.find((u) => String(u.rtcUid) === stringUid)) {
-      return Promise.resolve();
-    }
+  const waitForUserProfile = useCallback(
+    (uidToWaitFor: string | number) => {
+      const stringUid = String(uidToWaitFor);
+      if (state.remoteUsers?.find((u) => String(u.rtcUid) === stringUid)) {
+        return Promise.resolve();
+      }
 
-    return new Promise<void>((resolve) => {
-      pendingProfilePromisesRef.current.set(stringUid, resolve);
-    });
-  }, []);
+      return new Promise<void>((resolve) => {
+        pendingProfilePromisesRef.current.set(stringUid, resolve);
+      });
+    },
+    [state.remoteUsers],
+  );
 
   const sendCallSignal = useCallback(
     async (type: string, payload: any) => {
@@ -167,6 +171,40 @@ export const useAgoraCallChannel = (
                   ended: true,
                 },
               });
+            } else if (receivedMsg.type === 'GIFT_SENT') {
+              const giftData = receivedMsg.payload;
+              let messageText: string;
+              let messageType: 'channel-gift' | 'self-gift';
+
+              if (localUser?.rtmUid === giftData.sender_rtm_uid) {
+                messageText = `Has enviado un regalo a ${giftData.receiver_name}! (${giftData.cost_in_minutes} min)`;
+                messageType = 'self-gift';
+              } else if (localUser?.rtmUid === giftData.receiver_rtm_uid) {
+                messageText = `${giftData.sender_name} te ha enviado un ${giftData.gift_name}! (${giftData.cost_in_minutes} min)`;
+                messageType = 'channel-gift';
+              } else {
+                messageText = `${giftData.sender_name} ha enviado un ${giftData.gift_name} a ${giftData.receiver_name}! (${giftData.cost_in_minutes} min)`;
+                messageType = 'channel-gift';
+              }
+
+              const newGiftMessage: ChatMessage = {
+                rtmUid: giftData.sender_rtm_uid,
+                user_name: giftData.sender_name,
+                text: messageText,
+                timestamp: Date.now(),
+                type: messageType,
+                gift_image: giftData.gift_image || '',
+              };
+
+              setChatMessages((prevMessages) => [
+                ...prevMessages,
+                newGiftMessage,
+              ]);
+              dispatch({
+                type: AgoraActionType.ADD_CHAT_MESSAGE,
+                payload: newGiftMessage,
+              });
+              console.log('[RTM Listener] Regalo procesado:', newGiftMessage);
             }
           } catch (e) {
             console.error(
@@ -182,7 +220,14 @@ export const useAgoraCallChannel = (
         }
       });
     },
-    [dispatch, localUser, sendProfileUpdateRtmMessage],
+    [
+      dispatch,
+      localUser,
+      sendProfileUpdateRtmMessage,
+      state.localUser,
+      state.channelName,
+      broadcastLocalFemaleStatusUpdate,
+    ],
   );
 
   const joinCallChannel = useCallback(
@@ -227,6 +272,7 @@ export const useAgoraCallChannel = (
       setRtmChannel(channel);
       setIsRtmChannelJoined(true);
       setChatMessages([]);
+      dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
 
       setupCallChannelListeners(channel);
 
@@ -359,7 +405,164 @@ export const useAgoraCallChannel = (
     if (!isRtmChannelJoined && chatMessages.length > 0) {
       setChatMessages([]);
     }
-  }, [isRtmChannelJoined]);
+  }, [isRtmChannelJoined, chatMessages.length]);
+
+  const sendGift = useCallback(
+    async (
+      gifId: string | number,
+      giftCostInMinutes: number,
+      gift_image: string,
+    ) => {
+      if (
+        !localUser ||
+        localUser.role !== 'male' ||
+        !state.channelName ||
+        !state.localUser?.user_id
+      ) {
+        console.warn(
+          `${LOG_PREFIX_RTM_LISTEN} No se puede enviar regalo. Male no logueado o en canal.`,
+        );
+        return {
+          success: false,
+          message:
+            'Usuario no autorizado para enviar regalos o no en llamada activa.',
+        };
+      }
+
+      if (!state.remoteUsers || state.remoteUsers.length === 0) {
+        console.warn(
+          `${LOG_PREFIX_RTM_LISTEN} No se puede enviar regalo. No hay female conectada.`,
+        );
+        return { success: false, message: 'No hay receptores disponibles.' };
+      }
+
+      if (state.maleInitialMinutesInCall === null) {
+        console.warn(
+          `${LOG_PREFIX_RTM_LISTEN} No se pueden validar minutos para regalo: maleInitialMinutesInCall no está establecido.`,
+        );
+        dispatch({
+          type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
+          payload: true,
+        });
+        return {
+          success: false,
+          message: 'Error de cálculo de minutos iniciales.',
+          cost_in_minutes: 0,
+          gift_image_url: '',
+        };
+      }
+
+      const [minutesStr, secondsStr] = callTimer.split(':');
+      const totalElapsedSeconds =
+        parseInt(minutesStr, 10) * 60 + parseInt(secondsStr, 10);
+
+      const initialMinutesInSeconds = state.maleInitialMinutesInCall * 60;
+      const giftMinutesSpentSoFarInSeconds = state.maleGiftMinutesSpent * 60;
+
+      const currentRemainingSeconds =
+        initialMinutesInSeconds -
+        totalElapsedSeconds -
+        giftMinutesSpentSoFarInSeconds;
+
+      const newGiftCostInSeconds = giftCostInMinutes * 60;
+
+      if (currentRemainingSeconds < newGiftCostInSeconds) {
+        console.warn(
+          `${LOG_PREFIX_RTM_LISTEN} Minutos insuficientes para enviar regalo. Requeridos para regalo: ${giftCostInMinutes}, Segundos restantes calculados: ${currentRemainingSeconds}.`,
+        );
+        dispatch({
+          type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL,
+          payload: true,
+        });
+        return {
+          success: false,
+          message: 'Minutos insuficientes para enviar el regalo.',
+          cost_in_minutes: 0,
+          gift_image_url: '',
+        };
+      }
+
+      const receiverFemale = state.remoteUsers.find(
+        (u) => u.role === 'female' || u.role === 'admin',
+      );
+
+      if (!receiverFemale) {
+        console.warn(
+          `${LOG_PREFIX_RTM_LISTEN} No se encontró a la female receptora.`,
+        );
+        return { success: false, message: 'No se encontró a la receptora.' };
+      }
+
+      try {
+        const result = await agoraBackend.handleSendGift(
+          String(localUser.user_id),
+          String(receiverFemale.user_id),
+          gifId,
+          state.channelName,
+          giftCostInMinutes,
+        );
+
+        if (result.success) {
+          dispatch({
+            type: AgoraActionType.ADD_MALE_GIFT_MINUTES_SPENT,
+            payload: giftCostInMinutes,
+          });
+
+          const selfGiftMessage: ChatMessage = {
+            rtmUid: String(localUser.rtmUid),
+            user_name: localUser.user_name || 'Tú',
+            text: `Has enviado un regalo a ${receiverFemale.user_name || 'la modelo'}! (${giftCostInMinutes} min)`,
+            timestamp: Date.now(),
+            gift_image: gift_image,
+            type: 'self-gift',
+          };
+          setChatMessages((prevMessages) => [...prevMessages, selfGiftMessage]);
+          dispatch({
+            type: AgoraActionType.ADD_CHAT_MESSAGE,
+            payload: selfGiftMessage,
+          });
+
+          const giftRtmMessage = {
+            type: 'GIFT_SENT',
+            payload: {
+              sender_rtm_uid: String(localUser.rtmUid),
+              sender_name: localUser.user_name || 'Anónimo',
+              receiver_rtm_uid: String(receiverFemale.rtmUid),
+              receiver_name: receiverFemale.user_name || 'Modelo',
+              gif_id: gifId,
+              gift_name: 'Regalo especial',
+              cost_in_minutes: giftCostInMinutes,
+              gift_image: gift_image,
+            },
+          };
+          await rtmChannel?.sendMessage({
+            text: JSON.stringify(giftRtmMessage),
+          });
+          console.log('[Send Gift] Mensaje RTM de regalo enviado al canal.');
+        }
+        return result;
+      } catch (error) {
+        console.error(
+          `${LOG_PREFIX_RTM_LISTEN} Error al enviar regalo:`,
+          error,
+        );
+        return {
+          success: false,
+          message: 'Error al enviar el regalo.',
+          cost_in_minutes: 0,
+        };
+      }
+    },
+    [
+      localUser,
+      state.channelName,
+      state.localUser?.user_id,
+      state.remoteUsers,
+      agoraBackend,
+      dispatch,
+      rtmChannel,
+    ],
+  );
 
   return {
     rtmChannel,
@@ -370,5 +573,6 @@ export const useAgoraCallChannel = (
     leaveCallChannel,
     sendCallSignal,
     waitForUserProfile,
+    sendGift,
   };
 };

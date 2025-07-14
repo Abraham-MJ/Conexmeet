@@ -116,6 +116,39 @@ export const AgoraApiClient = {
     return enterChannelResult;
   },
 
+  async closeMaleChannel(
+    maleUserId: string | number,
+    hostId: string,
+    roomId: string | number,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await fetch('/api/agora/channels/close-channel-male', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: maleUserId,
+          host_id: hostId,
+          id: roomId,
+        }),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok || !responseData.success) {
+        throw new Error(
+          responseData.message ||
+            `Error al notificar cierre de canal del male al backend: ${response.status}`,
+        );
+      }
+      return responseData;
+    } catch (error: any) {
+      console.error(
+        `Excepción al notificar cierre de canal del male al backend para ${maleUserId} (host: ${hostId}, room: ${roomId}):`,
+        error,
+      );
+      throw error;
+    }
+  },
+
   async closeChannel(
     hostId: string,
     status:
@@ -186,6 +219,47 @@ export const AgoraApiClient = {
       throw new Error(
         result.message || 'Respuesta inválida de API de lista de females.',
       );
+    }
+  },
+
+  async sendGift(
+    senderUserId: string | number,
+    receiverUserId: string | number,
+    gifId: string | number,
+    hostId: string,
+    giftCostInMinutes: number,
+  ): Promise<{ success: boolean; message?: string; cost_in_minutes: number }> {
+    try {
+      const response = await fetch('/api/gift/send-gifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id_sends: senderUserId,
+          user_id_receives: receiverUserId,
+          gif_id: gifId,
+          host_id: hostId,
+          gift_cost_in_minutes: giftCostInMinutes,
+        }),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok || !responseData.success) {
+        throw new Error(
+          responseData.message ||
+            `Error al enviar regalo al backend: ${response.status}`,
+        );
+      }
+      return {
+        success: true,
+        message: responseData.message || 'Regalo enviado.',
+        cost_in_minutes: responseData.cost_in_minutes || giftCostInMinutes,
+      };
+    } catch (error: any) {
+      console.error(
+        `Excepción al enviar regalo de ${senderUserId} a ${receiverUserId} (gifId: ${gifId}, hostId: ${hostId}):`,
+        error,
+      );
+      throw error;
     }
   },
 };

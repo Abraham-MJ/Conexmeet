@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { RtmChannel } from 'agora-rtm-sdk';
 import {
@@ -18,6 +18,8 @@ import {
   LOG_PREFIX_PROVIDER,
 } from '@/lib/constants';
 import { useAgoraServer } from './useAgoraServer';
+import { useUser } from '@/app/context/useClientContext';
+import { converterMinutes } from '@/app/utils/converter-minutes';
 
 interface CallOrchestratorFunctions {
   initRtcClient: (
@@ -62,7 +64,15 @@ export const useCallFlows = (
     waitForUserProfile,
   }: CallOrchestratorFunctions,
   hostEndedCallInfo: { message?: string; ended: boolean } | null,
+  current_room_id: string | null,
+  callTimer: string,
+  maleInitialMinutesInCall: number | null,
+  maleGiftMinutesSpent: number,
 ) => {
+  const { handleGetInformation, state: user } = useUser();
+
+  const hasTriggeredOutOfMinutesRef = useRef(false);
+
   const determineJoinChannelName = useCallback(
     async (
       passedChannel?: string,
@@ -74,6 +84,18 @@ export const useCallFlows = (
       });
       dispatch({
         type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
+        payload: false,
+      });
+      dispatch({
+        type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
+        payload: false,
+      });
+      dispatch({
+        type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL,
+        payload: false,
+      });
+      dispatch({
+        type: AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL,
         payload: false,
       });
 
@@ -171,6 +193,16 @@ export const useCallFlows = (
         type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
         payload: false,
       });
+      dispatch({
+        type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL,
+        payload: false,
+      });
+      dispatch({
+        type: AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL,
+        payload: false,
+      });
+
+      hasTriggeredOutOfMinutesRef.current = false;
 
       if (
         !localUser ||
@@ -191,6 +223,30 @@ export const useCallFlows = (
         return;
       }
 
+      const minutesAvailable = converterMinutes(user.user?.minutes);
+
+      const MIN_REQUIRED_MINUTES = 1;
+
+      if (localUser.role === 'male' || localUser.role === 'admin') {
+        if (
+          minutesAvailable === null ||
+          minutesAvailable < MIN_REQUIRED_MINUTES
+        ) {
+          console.warn(
+            `[VideoChatMale] Minutos insuficientes para ${localUser.role}: ${minutesAvailable}`,
+          );
+          dispatch({
+            type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL,
+            payload: true,
+          });
+          dispatch({
+            type: AgoraActionType.RTC_SETUP_FAILURE,
+            payload: 'No tienes minutos suficientes para iniciar la llamada.',
+          });
+          return;
+        }
+      }
+
       const {
         rtcUid,
         rtmUid,
@@ -204,6 +260,7 @@ export const useCallFlows = (
           channelToJoin,
           localUserRole,
         );
+
         const targetFemale = onlineFemalesList.find(
           (female) => female.host_id === determinedChannelName,
         );
@@ -273,6 +330,25 @@ export const useCallFlows = (
                 'El servidor rechazó la entrada al canal.',
             );
           }
+
+          if (backendJoinResponse.data && backendJoinResponse.data.id) {
+            dispatch({
+              type: AgoraActionType.SET_CURRENT_ROOM_ID,
+              payload: String(backendJoinResponse.data.id),
+            });
+          } else {
+            console.warn(
+              '[Male Join] No se recibió un ID de sala del backend al unirse.',
+            );
+          }
+
+          dispatch({
+            type: AgoraActionType.SET_MALE_INITIAL_MINUTES_IN_CALL,
+            payload: minutesAvailable,
+          });
+          console.log(
+            `[Male Join] Minutos iniciales del male en llamada guardados: ${minutesAvailable}`,
+          );
         }
 
         const rtcRoleForToken =
@@ -354,6 +430,7 @@ export const useCallFlows = (
       leaveCallChannel,
       determineJoinChannelName,
       waitForUserProfile,
+      user.user?.minutes,
     ],
   );
 
@@ -370,6 +447,12 @@ export const useCallFlows = (
       type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
       payload: false,
     });
+    dispatch({
+      type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL,
+      payload: false,
+    });
+
+    hasTriggeredOutOfMinutesRef.current = false;
 
     if (!localUser || !localUser.rtcUid || !localUser.rtmUid || !appID) {
       dispatch({
@@ -493,6 +576,28 @@ export const useCallFlows = (
         });
         await agoraBackend.closeChannel(currentChannel, 'finished');
       } else if (currentUser.role === 'male' && currentChannel) {
+        if (!current_room_id) {
+          console.warn(
+            '[handleLeaveCall - Male] No se encontró el ID de la sala (current_room_id) para cerrar en el backend.',
+          );
+        } else {
+          try {
+            await (agoraBackend as any).closeMaleChannel(
+              currentUser.user_id,
+              currentChannel || '',
+              current_room_id || '',
+            );
+            console.log(
+              `[handleLeaveCall - Male] Notificado backend para cerrar sala ${current_room_id}.`,
+            );
+          } catch (apiError) {
+            console.error(
+              '[handleLeaveCall - Male] Error al llamar a closeMaleChannel:',
+              apiError,
+            );
+          }
+        }
+
         if (!isHostEndedCall) {
           await agoraBackend.closeChannel(currentChannel, 'waiting');
         }
@@ -500,6 +605,7 @@ export const useCallFlows = (
 
       await leaveRtcChannel();
       await leaveCallChannel();
+      await handleGetInformation();
     } catch (error: any) {
       console.error(
         `${LOG_PREFIX_PROVIDER} Error durante handleLeaveCall para ${currentUser.role} (${currentUser.user_id}):`,
@@ -523,6 +629,8 @@ export const useCallFlows = (
     broadcastLocalFemaleStatusUpdate,
     sendCallSignal,
     hostEndedCallInfo,
+    current_room_id,
+    handleGetInformation,
   ]);
 
   const closeNoChannelsAvailableModal = useCallback(() => {
@@ -545,6 +653,61 @@ export const useCallFlows = (
       payload: false,
     });
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!isRtcJoined && hasTriggeredOutOfMinutesRef.current) {
+      console.log(
+        '[useCallFlows] Resetting hasTriggeredOutOfMinutesRef.current as RTC is no longer joined.',
+      );
+      hasTriggeredOutOfMinutesRef.current = false;
+    }
+  }, [isRtcJoined]);
+
+  useEffect(() => {
+    if (hasTriggeredOutOfMinutesRef.current) {
+      return;
+    }
+
+    if (
+      localUser?.role !== 'male' ||
+      !isRtcJoined ||
+      maleInitialMinutesInCall === null
+    ) {
+      return;
+    }
+
+    const [minutesStr, secondsStr] = callTimer.split(':');
+    const totalElapsedSeconds =
+      parseInt(minutesStr, 10) * 60 + parseInt(secondsStr, 10);
+
+    const initialMinutesInSeconds = (maleInitialMinutesInCall || 0) * 60;
+    const giftMinutesInSeconds = maleGiftMinutesSpent * 60;
+
+    const remainingSeconds =
+      initialMinutesInSeconds - totalElapsedSeconds - giftMinutesInSeconds;
+
+    if (remainingSeconds <= 0) {
+      console.log(
+        `[Minutos Agotados] Male (${localUser.user_id}) agotó sus minutos. Segundos restantes: ${remainingSeconds}. Tiempo transcurrido: ${callTimer}, Minutos iniciales: ${maleInitialMinutesInCall}, Minutos gastados en regalos: ${maleGiftMinutesSpent}`,
+      );
+
+      hasTriggeredOutOfMinutesRef.current = true;
+
+      dispatch({
+        type: AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL,
+        payload: true,
+      });
+      handleLeaveCall();
+    }
+  }, [
+    callTimer,
+    localUser,
+    isRtcJoined,
+    maleInitialMinutesInCall,
+    maleGiftMinutesSpent,
+    dispatch,
+    handleLeaveCall,
+  ]);
 
   return {
     handleVideoChatMale,

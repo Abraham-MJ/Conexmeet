@@ -43,6 +43,11 @@ export const initialState: AgoraState = {
   showMediaPermissionsDeniedModal: false,
   showChannelIsBusyModal: false,
   showUnexpectedErrorModal: false,
+  current_room_id: null,
+  showInsufficientMinutesModal: false,
+  maleInitialMinutesInCall: null,
+  maleGiftMinutesSpent: 0,
+  showMinutesExhaustedModal: false,
 };
 
 export function agoraReducer(
@@ -55,6 +60,9 @@ export function agoraReducer(
 
     case AgoraActionType.SET_LOCAL_USER_PROFILE:
       return { ...state, localUser: action.payload };
+
+    case AgoraActionType.SET_CURRENT_ROOM_ID:
+      return { ...state, current_room_id: action.payload };
 
     case AgoraActionType.SET_TOKENS:
       return {
@@ -133,6 +141,9 @@ export function agoraReducer(
         channelName: null,
         currentCallHostRtcUid: null,
         hostEndedCallInfo: null,
+        maleInitialMinutesInCall: null,
+        maleGiftMinutesSpent: 0,
+        showInsufficientMinutesModal: false,
       };
 
     case AgoraActionType.RTM_SETUP_START:
@@ -192,6 +203,7 @@ export function agoraReducer(
         ...state,
         rtmChannel: null,
         isRtmChannelJoined: false,
+        current_room_id: null,
       };
 
     case AgoraActionType.RTM_LOGOUT_LEAVE_CHANNEL:
@@ -439,6 +451,18 @@ export function agoraReducer(
       return { ...state, showChannelIsBusyModal: action.payload };
     case AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL:
       return { ...state, showUnexpectedErrorModal: action.payload };
+    case AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL:
+      return { ...state, showInsufficientMinutesModal: action.payload };
+    case AgoraActionType.SET_MALE_INITIAL_MINUTES_IN_CALL:
+      return { ...state, maleInitialMinutesInCall: action.payload };
+
+    case AgoraActionType.ADD_MALE_GIFT_MINUTES_SPENT:
+      return {
+        ...state,
+        maleGiftMinutesSpent: state.maleGiftMinutesSpent + action.payload,
+      };
+    case AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL: // <-- NUEVO CASO
+      return { ...state, showMinutesExhaustedModal: action.payload };
 
     default:
       return state;

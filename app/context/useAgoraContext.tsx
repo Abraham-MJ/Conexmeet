@@ -7,6 +7,7 @@ import {
   ReactNode,
   useEffect,
   useMemo,
+  useCallback,
 } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -50,6 +51,16 @@ const AgoraContext = createContext<{
   closeChannelIsBusyModal: () => void;
   closeUnexpectedErrorModal: () => void;
   callTimer: string;
+  closeInsufficientMinutesModal: () => void;
+  closeMinutesExhaustedModal: () => void;
+  sendGift: (
+    gifId: string | number,
+    giftCostInMinutes: number,
+    gift_image: string,
+  ) => Promise<
+    | { success: boolean; message?: string; cost_in_minutes: number }
+    | { success: boolean; message: string }
+  >;
 }>({
   state: initialState,
   dispatch: () => undefined,
@@ -69,6 +80,14 @@ const AgoraContext = createContext<{
   closeChannelIsBusyModal: () => {},
   closeUnexpectedErrorModal: () => {},
   callTimer: '00:00',
+  closeInsufficientMinutesModal: () => {},
+  closeMinutesExhaustedModal: () => {},
+  sendGift: async () =>
+    Promise.resolve({
+      success: false,
+      message: 'Not implemented',
+      cost_in_minutes: 0,
+    }),
 });
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
@@ -165,11 +184,34 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     broadcastLocalFemaleStatusUpdate,
   );
 
+  const isCallTimerActive = useMemo(() => {
+    if (state.localUser?.role === 'admin') {
+      return false;
+    }
+    const isLocalUserInCall = state.isRtcJoined;
+    const hasActiveRemoteMale = state.remoteUsers.some(
+      (user) => user.role === 'male' && (user.hasAudio || user.hasVideo),
+    );
+
+    return (
+      (state.localUser?.role === 'male' && isLocalUserInCall) ||
+      (state.localUser?.role === 'female' &&
+        isLocalUserInCall &&
+        hasActiveRemoteMale)
+    );
+  }, [state.localUser, state.isRtcJoined, state.remoteUsers]);
+
+  const callTimer = useCallTimer(
+    isCallTimerActive,
+    state.localUser?.role || null,
+  );
+
   const {
     sendChatMessage: sendRtmChannelMessage,
     joinCallChannel,
     leaveCallChannel,
     sendCallSignal,
+    sendGift,
   } = useAgoraCallChannel(
     dispatch,
     state.appID,
@@ -180,6 +222,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     initializeRtmClient,
     state,
     broadcastLocalFemaleStatusUpdate,
+    callTimer,
   );
 
   const {
@@ -209,28 +252,10 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       waitForUserProfile: async () => {},
     },
     state.hostEndedCallInfo,
-  );
-
-  const isCallTimerActive = useMemo(() => {
-    if (state.localUser?.role === 'admin') {
-      return false;
-    }
-    const isLocalUserInCall = state.isRtcJoined;
-    const hasActiveRemoteMale = state.remoteUsers.some(
-      (user) => user.role === 'male' && (user.hasAudio || user.hasVideo),
-    );
-
-    return (
-      (state.localUser?.role === 'male' && isLocalUserInCall) ||
-      (state.localUser?.role === 'female' &&
-        isLocalUserInCall &&
-        hasActiveRemoteMale)
-    );
-  }, [state.localUser, state.isRtcJoined, state.remoteUsers]);
-
-  const callTimer = useCallTimer(
-    isCallTimerActive,
-    state.localUser?.role || null,
+    state.current_room_id,
+    callTimer,
+    state.maleInitialMinutesInCall,
+    state.maleGiftMinutesSpent,
   );
 
   useEffect(() => {
@@ -297,6 +322,20 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     isLoadingOnlineFemales,
   ]);
 
+  const closeInsufficientMinutesModal = useCallback(() => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL,
+      payload: false,
+    });
+  }, [dispatch]);
+
+  const closeMinutesExhaustedModal = useCallback(() => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL,
+      payload: false,
+    });
+  }, [dispatch]);
+
   return (
     <AgoraContext.Provider
       value={{
@@ -318,6 +357,9 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         closeChannelIsBusyModal,
         closeUnexpectedErrorModal,
         callTimer,
+        closeInsufficientMinutesModal,
+        closeMinutesExhaustedModal,
+        sendGift,
       }}
     >
       {children}

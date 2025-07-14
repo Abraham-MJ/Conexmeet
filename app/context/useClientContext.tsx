@@ -13,6 +13,7 @@ interface State {
   user: any | null;
   loading: boolean;
   error: string | null;
+  handleGetInformation: () => Promise<void>;
 }
 
 type Action =
@@ -26,14 +27,17 @@ const initialState: State = {
   user: null,
   loading: true,
   error: null,
+  handleGetInformation: async () => {},
 };
 
 const UserContextInternal = createContext<{
   state: State;
   dispatch: React.Dispatch<Action>;
+  handleGetInformation: () => Promise<void>;
 }>({
   state: initialState,
   dispatch: () => undefined,
+  handleGetInformation: async () => {},
 });
 
 function reducer(state: State, action: Action): State {
@@ -140,8 +144,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
+  const handleGetInformation = async () => {
+    const res = await fetch('/api/auth/user-data');
+
+    if (res.ok) {
+      const responseData = await res.json();
+
+      if (responseData && responseData.data && responseData.data.user) {
+        dispatch({
+          type: 'FETCH_USER_SUCCESS',
+          payload: {
+            ...responseData.data.user,
+            token: responseData.data.access_token,
+          },
+        });
+      }
+    }
+  };
+
   return (
-    <UserContextInternal.Provider value={{ state, dispatch }}>
+    <UserContextInternal.Provider
+      value={{ state, dispatch, handleGetInformation }}
+    >
       {children}
     </UserContextInternal.Provider>
   );

@@ -3,16 +3,26 @@ import { EmojiPickerButton } from '@/app/components/UI/StyledEmoji';
 import { EmojiStyle, Theme } from 'emoji-picker-react';
 import { BsEmojiGrin } from 'react-icons/bs';
 import { ChatMessage } from '@/app/types/streams';
+import { LuMessageSquareText } from 'react-icons/lu';
+import { useMobile } from '@/app/hooks/useMobile';
+import { IoMdClose } from 'react-icons/io';
+import { cn } from '@/lib/utils';
 
 interface MessagesProps {
   messages: ChatMessage[];
   sendMessage: (message: string) => void;
+  isOpenMessages: boolean;
+  setIsOpenMessages: (isOpen: boolean) => void;
 }
 
 const MessagingContainer: React.FC<MessagesProps> = ({
   messages,
   sendMessage,
+  isOpenMessages,
+  setIsOpenMessages,
 }) => {
+  const isMobile = useMobile(1024);
+
   const [message, setMessage] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -47,13 +57,7 @@ const MessagingContainer: React.FC<MessagesProps> = ({
                     >
                       <span className="flex items-center">
                         <div className="relative isolate flex h-6 w-6 items-center justify-center">
-                          <div className="relative h-6 w-6">
-                            {/* <img
-                              alt="stream-avatar"
-                              src={agora.localUser?.avatar}
-                              className="relative h-[24px] max-h-full w-[24px] max-w-full rounded-full bg-cover bg-center bg-no-repeat object-cover"
-                            /> */}
-                          </div>
+                          <div className="relative h-6 w-6"></div>
                         </div>
                       </span>
                       <div className="z-[2] ml-1.5 w-full self-center overflow-hidden pr-[25px] text-start leading-5 tracking-normal">
@@ -73,45 +77,79 @@ const MessagingContainer: React.FC<MessagesProps> = ({
           </div>
         </div>
       </div>
-      <div className="mt-1.5 rounded-3xl">
-        <div className="shrink-0">
-          <div className="flex items-center gap-2 rounded-full bg-white/10 p-1.5 px-3 backdrop-blur-xl focus-within:ring-0">
-            <input
-              type="text"
-              placeholder="Escribe un mensaje..."
-              className="h-full w-full flex-1 bg-transparent py-2 text-sm text-white placeholder-gray-400 focus:outline-none"
-              value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-              }}
-              onKeyPress={handleSendMessage}
-              disabled={false}
-            />
-            <EmojiPickerButton
-              onEmojiSelect={(emojiData: { emoji: string }) => {
-                setMessage((prev) => prev + emojiData.emoji);
-              }}
-              placement="top-end"
-              offset={10}
-              emojiPickerProps={{
-                width: 400,
-                height: 400,
-                emojiStyle: EmojiStyle.GOOGLE,
-                theme: Theme.DARK,
-              }}
-            >
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 backdrop-blur-xl transition-all duration-300 hover:bg-white/5 hover:text-white"
-                aria-label="Abrir selector de emojis"
-                disabled={false}
+
+      {isMobile && !isOpenMessages ? (
+        <button
+          onClick={() => {
+            setIsOpenMessages(true);
+          }}
+          className={cn(
+            'pointer-events-auto relative m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none p-0 text-white no-underline opacity-100 shadow-none backdrop-blur-md transition-all duration-300 ease-in-out [-webkit-tap-highlight-color:transparent] hover:scale-105',
+            isMobile ? 'bg-[#182337]' : 'bg-[#ffffff29]',
+          )}
+        >
+          <LuMessageSquareText className="h-6 w-6" />
+        </button>
+      ) : (
+        <>
+          <div className="mt-1.5 rounded-3xl">
+            <div className="shrink-0">
+              <div
+                className={cn(
+                  'flex items-center gap-2 rounded-full bg-white/10 p-1.5 backdrop-blur-xl focus-within:ring-0',
+                  isMobile ? 'bg-[#182337] backdrop-blur-0' : 'px-3',
+                )}
               >
-                <BsEmojiGrin size={18} />
-              </button>
-            </EmojiPickerButton>
+                {isMobile && (
+                  <button
+                    onClick={() => {
+                      setIsOpenMessages(false);
+                    }}
+                    className="pointer-events-auto relative m-0 box-border flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-none bg-[#ffffff29] p-0 text-white no-underline opacity-100 shadow-none backdrop-blur-md transition-all duration-300 ease-in-out [-webkit-tap-highlight-color:transparent] hover:scale-105"
+                  >
+                    <IoMdClose className="h-5 w-5" />
+                  </button>
+                )}
+                <input
+                  type="text"
+                  placeholder="Escribe un mensaje..."
+                  className={cn(
+                    'h-full w-full flex-1 bg-transparent py-2 text-sm text-white placeholder-gray-400 focus:outline-none',
+                  )}
+                  value={message}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                  }}
+                  onKeyPress={handleSendMessage}
+                  disabled={false}
+                />
+                <EmojiPickerButton
+                  onEmojiSelect={(emojiData: { emoji: string }) => {
+                    setMessage((prev) => prev + emojiData.emoji);
+                  }}
+                  placement="top-end"
+                  offset={10}
+                  emojiPickerProps={{
+                    width: 400,
+                    height: 400,
+                    emojiStyle: EmojiStyle.GOOGLE,
+                    theme: Theme.DARK,
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 backdrop-blur-xl transition-all duration-300 hover:bg-white/5 hover:text-white"
+                    aria-label="Abrir selector de emojis"
+                    disabled={false}
+                  >
+                    <BsEmojiGrin size={18} className="text-white" />
+                  </button>
+                </EmojiPickerButton>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </>
   );
 };

@@ -86,6 +86,29 @@ export const useAgoraServer = (dispatch: React.Dispatch<AgoraAction>) => {
     [],
   );
 
+  const closeMaleChannel = useCallback(
+    async (
+      maleUserId: string | number,
+      hostId: string,
+      roomId: string | number,
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        return await AgoraApiClient.closeMaleChannel(
+          maleUserId,
+          hostId,
+          roomId,
+        );
+      } catch (error: any) {
+        console.error(
+          `${LOG_PREFIX_MALE_ADMIN} Error al notificar cierre de canal del male al backend:`,
+          error.message,
+        );
+        throw error;
+      }
+    },
+    [],
+  );
+
   const closeChannel = useCallback(
     async (
       hostId: string,
@@ -136,6 +159,37 @@ export const useAgoraServer = (dispatch: React.Dispatch<AgoraAction>) => {
     }
   }, [dispatch]);
 
+  const handleSendGift = useCallback(
+    async (
+      senderUserId: string | number,
+      receiverUserId: string | number,
+      gifId: string | number,
+      hostId: string,
+      giftCostInMinutes: number,
+    ): Promise<{
+      success: boolean;
+      message?: string;
+      cost_in_minutes: number;
+    }> => {
+      try {
+        return await AgoraApiClient.sendGift(
+          senderUserId,
+          receiverUserId,
+          gifId,
+          hostId,
+          giftCostInMinutes,
+        );
+      } catch (error: any) {
+        console.error(
+          `${LOG_PREFIX_PROVIDER} Error al enviar regalo:`,
+          error.message,
+        );
+        throw error;
+      }
+    },
+    [],
+  );
+
   return {
     fetchRtcToken,
     fetchRtmToken,
@@ -143,5 +197,7 @@ export const useAgoraServer = (dispatch: React.Dispatch<AgoraAction>) => {
     notifyMaleJoining,
     closeChannel,
     fetchOnlineFemales,
+    closeMaleChannel,
+    handleSendGift,
   };
 };

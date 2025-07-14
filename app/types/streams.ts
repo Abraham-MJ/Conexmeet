@@ -48,6 +48,11 @@ export enum AgoraActionType {
   SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL = 'SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL',
   SET_SHOW_CHANNEL_IS_BUSY_MODAL = 'SET_SHOW_CHANNEL_IS_BUSY_MODAL',
   SET_SHOW_UNEXPECTED_ERROR_MODAL = 'SET_SHOW_UNEXPECTED_ERROR_MODAL',
+  SET_CURRENT_ROOM_ID = 'SET_CURRENT_ROOM_ID',
+  SET_SHOW_INSUFFICIENT_MINUTES_MODAL = 'SET_SHOW_INSUFFICIENT_MINUTES_MODAL',
+  SET_MALE_INITIAL_MINUTES_IN_CALL = 'SET_MALE_INITIAL_MINUTES_IN_CALL',
+  ADD_MALE_GIFT_MINUTES_SPENT = 'ADD_MALE_GIFT_MINUTES_SPENT',
+  SET_SHOW_MINUTES_EXHAUSTED_MODAL = 'SET_SHOW_MINUTES_EXHAUSTED_MODAL',
 }
 
 export interface LoadingStatus {
@@ -77,8 +82,9 @@ export interface ChatMessage {
   user_name?: string;
   text: string;
   timestamp: number;
-  type: 'channel' | 'self';
+  type: 'channel' | 'self' | 'self-gift' | 'channel-gift';
   translatedText?: string;
+  gift_image?: string;
 }
 
 export interface AgoraState {
@@ -117,11 +123,26 @@ export interface AgoraState {
   showMediaPermissionsDeniedModal: boolean;
   showChannelIsBusyModal: boolean;
   showUnexpectedErrorModal: boolean;
+  current_room_id: string | null;
+  showInsufficientMinutesModal: boolean;
+  maleInitialMinutesInCall: number | null;
+  maleGiftMinutesSpent: number;
+  showMinutesExhaustedModal: boolean;
 }
 
 interface RemoteHostEndedCallAction {
   type: AgoraActionType.REMOTE_HOST_ENDED_CALL;
   payload: { message?: string; ended?: boolean } | null;
+}
+
+interface SetShowMinutesExhaustedModalAction {
+  type: AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL;
+  payload: boolean;
+}
+
+interface SetShowInsufficientMinutesModalAction {
+  type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL;
+  payload: boolean;
 }
 
 interface SetAppIdAction {
@@ -226,6 +247,11 @@ interface UpdateRemoteUserTrackStateAction {
   };
 }
 
+interface SetCurrentRoomIdAction {
+  type: AgoraActionType.SET_CURRENT_ROOM_ID;
+  payload: string | null;
+}
+
 interface UpdateRemoteUserProfileInfoAction {
   type: AgoraActionType.UPDATE_REMOTE_USER_PROFILE_INFO;
   payload: {
@@ -328,6 +354,16 @@ interface SetShowUnexpectedErrorModalAction {
   payload: boolean;
 }
 
+interface SetMaleInitialMinutesInCallAction {
+  type: AgoraActionType.SET_MALE_INITIAL_MINUTES_IN_CALL;
+  payload: number | null;
+}
+
+interface AddMaleGiftMinutesSpentAction {
+  type: AgoraActionType.ADD_MALE_GIFT_MINUTES_SPENT;
+  payload: number;
+}
+
 export type AgoraAction =
   | SetAppIdAction
   | SetLocalUserProfileAction
@@ -368,4 +404,9 @@ export type AgoraAction =
   | SetShowMediaPermissionsModalAction
   | SetShowMediaPermissionsDeniedModalAction
   | SetShowChannelIsBusyModalAction
-  | SetShowUnexpectedErrorModalAction;
+  | SetShowUnexpectedErrorModalAction
+  | SetCurrentRoomIdAction
+  | SetShowInsufficientMinutesModalAction
+  | SetMaleInitialMinutesInCallAction
+  | AddMaleGiftMinutesSpentAction
+  | SetShowMinutesExhaustedModalAction;

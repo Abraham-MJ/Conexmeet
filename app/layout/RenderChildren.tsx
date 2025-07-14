@@ -11,6 +11,7 @@ import ModalNotChannel from '../components/shared/modals/ModalNotChannel';
 import ModalChannelBusy from '../components/shared/modals/ModalChannelBusy';
 import ModalInsufficientMinutes from '../components/shared/modals/ModalInsufficientMinutes';
 import ModalCallEndedFemaleSummary from '../components/shared/modals/ModalCallEndedFemaleSummary';
+import ModalMinutesExhausted from '../components/shared/modals/ModalMinutesExhausted';
 
 const baseRoutes = {
   female: {
@@ -37,6 +38,7 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const hiddenHeader =
     pathname.includes('/chat') || pathname.includes('/stream');
+  const hiddenStream = pathname.includes('/stream');
 
   const initialFetchAttemptedRef = useRef(false);
   const lobbyJoinAttemptedRef = useRef(false);
@@ -94,12 +96,13 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
   }, [agoraState.isLobbyJoined]);
   return (
     <>
-      {isMobile && <HeaderMobile routes={baseRoutes} />}
-      <HeaderDesktop routes={baseRoutes} />
+      {!hiddenStream && isMobile && <HeaderMobile routes={baseRoutes} />}
+      {!hiddenStream && <HeaderDesktop routes={baseRoutes} />}
       <main
         className={cn(
-          'relative mx-auto mt-[80px] h-[calc(100dvh-80px)] w-full max-w-[1536px] flex-grow px-4',
+          'relative mx-auto w-full max-w-[1536px] flex-grow px-4',
           hiddenHeader && 'mx-0 max-w-full px-0',
+          !hiddenStream && 'mt-[80px] h-[calc(100dvh-80px)]',
         )}
       >
         {children}
@@ -110,6 +113,7 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
       <ModalChannelBusy />
       <ModalInsufficientMinutes />
       <ModalCallEndedFemaleSummary />
+      <ModalMinutesExhausted />
     </>
   );
 };
