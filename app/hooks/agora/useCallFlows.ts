@@ -327,7 +327,8 @@ export const useCallFlows = (
               backendJoinResponse.message?.toLowerCase().includes('ocupado') ||
               backendJoinResponse.message
                 ?.toLowerCase()
-                .includes('ya está ocupado')
+                .includes('ya está ocupado') ||
+              'El canal seleccionado ya no está disponible o no existe.'
             ) {
               dispatch({
                 type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,

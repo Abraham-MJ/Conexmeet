@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
     }
 
     const listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting`;
-
     const roomsListResponse = await fetch(listRoomsApiUrl, {
       method: 'GET',
       headers: {
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     if (!roomsListResponse.ok) {
       console.error(
-        `[API enter-channel-male] Error al obtener lista de salas: ${roomsListResponse.status}`,
+        `[API enter-channel-male] Error al obtener lista de salas (pre-check): ${roomsListResponse.status}`,
       );
       return NextResponse.json(
         {
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
       !Array.isArray(roomsListData.data)
     ) {
       console.error(
-        `[API enter-channel-male] Respuesta inesperada de la API de lista de salas:`,
+        `[API enter-channel-male] Respuesta inesperada de la API de lista de salas (pre-check):`,
         roomsListData,
       );
       return NextResponse.json(
@@ -79,13 +78,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const targetRoom = roomsListData.data.find(
+    const targetRoomPreCheck = roomsListData.data.find(
       (room: RoomData) => room.host_id === targetHostId,
     );
 
-    if (!targetRoom) {
+    if (!targetRoomPreCheck) {
       console.log(
-        `[API enter-channel-male] Canal ${targetHostId} no encontrado o no está en estado 'waiting'.`,
+        `[API enter-channel-male] Canal ${targetHostId} no encontrado o no está en estado 'waiting' (pre-check).`,
       );
       return NextResponse.json(
         {
@@ -96,9 +95,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (targetRoom.another_user_id !== null) {
+    if (targetRoomPreCheck.another_user_id !== null) {
       console.log(
-        `[API enter-channel-male] Canal ${targetHostId} ya está ocupado por another_user_id: ${targetRoom.another_user_id}.`,
+        `[API enter-channel-male] Canal ${targetHostId} ya está ocupado por another_user_id: ${targetRoomPreCheck.another_user_id} (pre-check).`,
       );
       return NextResponse.json(
         {
@@ -110,7 +109,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `[API enter-channel-male] Canal ${targetHostId} está disponible. another_user_id es null.`,
+      `[API enter-channel-male] Canal ${targetHostId} está disponible según pre-check.`,
     );
 
     console.log(
@@ -146,7 +145,7 @@ export async function POST(request: NextRequest) {
         );
       }
       console.warn(
-        '[API enter-channel-male] API /enter-room respondió OK pero no era JSON. Asumiendo éxito con mensaje genérico.',
+        '[API enter-channel-male] API /enter-room respondió OK pero no era JSON. Asumiendo éxito inicial con mensaje genérico.',
       );
       enterRoomResponseData = {
         status: 'Success',
@@ -156,11 +155,29 @@ export async function POST(request: NextRequest) {
     }
 
     if (
+      enterRoomResponseData.status === 'Error' &&
+      enterRoomResponseData.data === 'Host no disponible'
+    ) {
+      console.warn(
+        `[API enter-channel-male] La API externa indicó que el Host no está disponible:`,
+        enterRoomResponseData,
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'El canal ya fue ocupado por otro usuario.',
+          details: enterRoomResponseData,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (
       !externalEnterRoomApiResponse.ok ||
       enterRoomResponseData.status !== 'Success'
     ) {
       console.error(
-        `[API enter-channel-male] Falló la llamada a /api/v1/enter-room:`,
+        `[API enter-channel-male] Falló la llamada a /api/v1/enter-room o la API externa indicó un error:`,
         enterRoomResponseData,
       );
       return NextResponse.json(
@@ -176,7 +193,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `[API enter-channel-male] Éxito al ocupar el canal ${targetHostId} para male ${maleUserId} vía POST /api/v1/enter-room.`,
+      `[API enter-channel-male] Ingreso a la sala exitoso para male ${maleUserId}.`,
     );
     return NextResponse.json(
       {
