@@ -15,6 +15,7 @@ import { TabNavigation } from '@/app/components/UI/StyledTabs';
 import { FemaleWithStatus } from '@/app/api/agora/host/route';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
 import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
+import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
 
 const gridContainerVariants = {
   hidden: { opacity: 0 },
@@ -61,7 +62,7 @@ const FeaturesScreen = () => {
   ];
 
   return (
-    <div className="w-full">
+    <ContainerGlobal classNames="max-w-[1536px] px-4 mx-auto">
       <StyledFloatAlert
         message={loadingStatus.message}
         isOpen={loadingStatus.isLoading}
@@ -74,7 +75,7 @@ const FeaturesScreen = () => {
         items={itemsTabs}
       />
 
-      <div className="mt-6 px-4 pb-12 md:px-0">
+      <div className="mt-6 pb-12 md:px-0">
         {activeTab === 'online' && (
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
@@ -84,7 +85,7 @@ const FeaturesScreen = () => {
               <FeaturesSkeleton />
             ) : (
               <motion.div
-                className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4"
+                className="relative grid grid-flow-dense auto-rows-min grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                 variants={gridContainerVariants}
                 initial="hidden"
                 animate="visible"
@@ -127,7 +128,7 @@ const FeaturesScreen = () => {
               <FeaturesSkeleton />
             ) : (
               <motion.div
-                className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4"
+                className="relative grid grid-flow-dense auto-rows-min grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                 variants={gridContainerVariants}
                 initial="hidden"
                 animate="visible"
@@ -159,7 +160,7 @@ const FeaturesScreen = () => {
               <FeaturesSkeleton />
             ) : (
               <motion.div
-                className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4"
+                className="relative grid grid-flow-dense auto-rows-min grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                 variants={gridContainerVariants}
                 initial="hidden"
                 animate="visible"
@@ -177,7 +178,7 @@ const FeaturesScreen = () => {
           </div>
         )}
       </div>
-    </div>
+    </ContainerGlobal>
   );
 };
 

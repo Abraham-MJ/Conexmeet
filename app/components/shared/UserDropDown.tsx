@@ -94,8 +94,8 @@ export default function UserDropdown() {
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full',
                       state?.user?.gender === 'male'
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-pink-100 text-pink-600',
+                        ? 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white'
+                        : 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white',
                     )}
                   >
                     <User className="h-4 w-4" />
@@ -113,8 +113,8 @@ export default function UserDropdown() {
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full',
                       state?.user?.gender === 'male'
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-pink-100 text-pink-600',
+                        ? 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white'
+                        : 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white',
                     )}
                   >
                     <LogOut className="h-4 w-4" />

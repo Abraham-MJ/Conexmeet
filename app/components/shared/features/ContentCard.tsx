@@ -12,6 +12,7 @@ import { FiArrowUpRight } from 'react-icons/fi';
 import ModalStories from '../modals/ModalStories';
 import { FemaleWithStatus } from '@/app/api/agora/host/route';
 import { cn } from '@/lib/utils';
+import { useMobile } from '@/app/hooks/useMobile';
 
 interface ContentStoriesProps {
   user: HistoryData;
@@ -37,6 +38,8 @@ export const ContentCardStories = React.memo(function ContentCardStories({
   onSetPlayingVideoUrl,
   stories,
 }: ContentStoriesProps) {
+  const isMobile = useMobile(920);
+
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -111,7 +114,12 @@ export const ContentCardStories = React.memo(function ContentCardStories({
 
   return (
     <>
-      <div className="group relative aspect-square cursor-pointer overflow-hidden rounded-3xl bg-gray-900 shadow-lg transition-transform duration-300 ease-in-out hover:scale-105">
+      <div
+        className={cn(
+          'group relative overflow-hidden bg-current shadow-lg',
+          isMobile ? 'aspect-video rounded-2xl' : 'aspect-square rounded-3xl',
+        )}
+      >
         {!showVideo && (
           <img
             src={user.user.profile_photo_path}
@@ -204,9 +212,15 @@ export const ContentCardStories = React.memo(function ContentCardStories({
 export function ContentCardContacts({ user }: ContentContactProps) {
   const router = useRouter();
   const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://avatar.iran.liara.run/`;
+  const isMobile = useMobile(920);
 
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-3xl bg-gray-100">
+    <div
+      className={cn(
+        'group relative overflow-hidden bg-current shadow-lg',
+        isMobile ? 'aspect-video rounded-2xl' : 'aspect-square rounded-3xl',
+      )}
+    >
       <AvatarImage
         primarySrc={user.user.profile_photo_path}
         defaultPlaceholderSrc={`https://avatar.iran.liara.run/`}
@@ -239,14 +253,16 @@ export function ContentCardRooms({
   isLoadingCall,
   rolUser,
 }: ContentRoomsProps) {
+  const isMobile = useMobile(920);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://avatar.iran.liara.run/`;
 
   return (
     <div
       className={cn(
-        'group relative aspect-square overflow-hidden rounded-3xl bg-current shadow-lg',
+        'group relative overflow-hidden bg-current shadow-lg',
         user.status === 'available_call' && 'cursor-pointer',
+        isMobile ? 'aspect-video rounded-2xl' : 'aspect-square rounded-3xl',
       )}
       onClick={() => {
         if (

@@ -121,7 +121,7 @@ const RankingPage: React.FC<RankingProps> = ({
 
         if (currentUserRankingIndex === 0) {
           dynamicFooterContent = (
-            <p className="flex items-center text-sm text-gray-700">
+            <p className="flex flex-col text-sm text-gray-700">
               <span className="font-medium">Congratulations! You are</span>
               <span className="mx-1 font-bold text-[#fc3d6b]">#1</span>
               <span>in the rankings. Keep it up!</span>
@@ -134,7 +134,7 @@ const RankingPage: React.FC<RankingProps> = ({
 
           if (minutesDifference < 0) {
             dynamicFooterContent = (
-              <p className="flex items-center text-sm">
+              <p className="flex flex-col text-sm">
                 <span className="font-medium text-gray-700">
                   Your ranking position is updating!
                 </span>
@@ -163,7 +163,7 @@ const RankingPage: React.FC<RankingProps> = ({
               );
             } else {
               dynamicFooterContent = (
-                <p className="flex items-center text-sm">
+                <p className="flex flex-col text-sm">
                   <span className="font-medium text-gray-700">You: Need</span>
                   <span className="mx-1 font-bold text-[#fc3d6b]">
                     {pointsNeededToDisplay}
@@ -184,7 +184,7 @@ const RankingPage: React.FC<RankingProps> = ({
 
         if (currentUserMinutesNumeric > lastUserInList.minutes) {
           dynamicFooterContent = (
-            <p className="flex items-center text-sm">
+            <p className="flex flex-col text-sm">
               <span className="font-medium text-gray-700">
                 You have {currentUserMinutesNumeric.toFixed(2)} points. Enough
                 to enter this top list! Updating...
@@ -199,15 +199,18 @@ const RankingPage: React.FC<RankingProps> = ({
           );
 
           dynamicFooterContent = (
-            <p className="flex items-center text-sm">
-              <span className="font-medium text-gray-700">You: Need</span>
-              <span className="mx-1 font-bold text-[#fc3d6b]">
-                {pointsNeededToDisplay}
+            <p className="flex flex-col text-sm">
+              <span className="font-medium text-gray-700">
+                You: Need{' '}
+                <span className="mx-1 font-bold text-[#fc3d6b]">
+                  {pointsNeededToDisplay}
+                </span>
               </span>
+
               <span className="text-gray-700">
                 More points to enter the top {data.length} rankings.
               </span>
-              <span className="ml-2 text-xs text-gray-600">
+              <span className="text-xs text-gray-600">
                 (Your points: {currentUserMinutesNumeric.toFixed(2)})
               </span>
             </p>

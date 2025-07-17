@@ -34,11 +34,7 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
     joinLobbyForRealtimeUpdates,
   } = useAgoraContext();
 
-  const isMobile = useMobile();
-  const pathname = usePathname();
-  const hiddenHeader =
-    pathname.includes('/chat') || pathname.includes('/stream');
-  const hiddenStream = pathname.includes('/stream');
+  const isMobile = useMobile(920);
 
   const initialFetchAttemptedRef = useRef(false);
   const lobbyJoinAttemptedRef = useRef(false);
@@ -96,13 +92,11 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
   }, [agoraState.isLobbyJoined]);
   return (
     <>
-      {!hiddenStream && isMobile && <HeaderMobile routes={baseRoutes} />}
-      {!hiddenStream && <HeaderDesktop routes={baseRoutes} />}
+      {isMobile && <HeaderMobile routes={baseRoutes} />}
+      {<HeaderDesktop routes={baseRoutes} />}
       <main
         className={cn(
-          'relative mx-auto w-full max-w-[1536px] flex-grow px-4',
-          hiddenHeader && 'mx-0 max-w-full px-0',
-          !hiddenStream && 'mt-[80px] h-[calc(100dvh-80px)]',
+          'relative mx-auto h-[100dvh] w-full flex-grow',
         )}
       >
         {children}

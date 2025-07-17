@@ -43,11 +43,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         </div>
 
         <div className="ml-4 flex-1 overflow-hidden">
-          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
             {conversation.user_info.name}
-          </p>
-          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-            Jajaja, qué gracioso.
           </p>
         </div>
         <div className="ml-2 flex flex-col items-end space-y-1.5 text-xs">

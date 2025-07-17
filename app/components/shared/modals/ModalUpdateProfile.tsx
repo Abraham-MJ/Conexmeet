@@ -98,10 +98,10 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
                 <button
                   onClick={triggerImageUpload}
                   type="button"
-                  className="absolute bottom-1 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#fc3d6b] text-white transition-colors hover:bg-[#e8356a]"
+                  className="absolute bottom-1 -right-1 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white transition-colors hover:bg-[#e8356a]"
                   aria-label="Cambiar foto de perfil"
                 >
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-6 w-6" />
                 </button>
               </div>
               <input

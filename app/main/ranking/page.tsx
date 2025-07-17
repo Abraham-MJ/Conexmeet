@@ -8,6 +8,7 @@ import ReferralPage from './sections/referral-page';
 import GiftPage from './sections/gift-page';
 import { useMyGiftsData } from '@/app/hooks/api/useMyGifts';
 import { useReferral } from '@/app/hooks/api/useReferral';
+import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
 
 const RankingScreen = () => {
   const {
@@ -65,14 +66,13 @@ const RankingScreen = () => {
   }, [fetchMyReferrals]);
 
   return (
-    <div className="w-full">
+    <ContainerGlobal classNames="max-w-[1536px] px-4 mx-auto">
       <TabNavigation
         activeTab={activeTab}
         handleTabChange={handleTabChange}
         items={itemsTabs}
       />
-
-      <div className="mt-6 px-4 pb-12 md:px-0">
+      <div className="mt-6  pb-12 md:px-0">
         {activeTab === 'Ranking' && (
           <RankingPage
             data={
@@ -92,7 +92,7 @@ const RankingScreen = () => {
           <GiftPage data={giftData} isLoading={isLoadingGift} />
         )}
       </div>
-    </div>
+    </ContainerGlobal>
   );
 };
 

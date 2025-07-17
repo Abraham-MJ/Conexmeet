@@ -1,11 +1,15 @@
 'use client';
 
+import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
 import ModalUpdateProfile from '@/app/components/shared/modals/ModalUpdateProfile';
 import { useUser } from '@/app/context/useClientContext';
-import { AtSign, Check, Copy, Edit3, Link, Mail, Share2 } from 'lucide-react';
+import { useMobile } from '@/app/hooks/useMobile';
+import { cn } from '@/lib/utils';
+import { AtSign, Check, Copy, Edit3, Link, Mail } from 'lucide-react';
 import React, { useState } from 'react';
 
 const ProfileScreen = () => {
+  const isMobile = useMobile(920);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [copied, setCopied] = useState(false);
 
@@ -22,13 +26,18 @@ const ProfileScreen = () => {
   };
 
   return (
-    <div className="flex h-full w-full items-center justify-center">
-      <div className="overflow-hidden bg-white md:rounded-3xl md:shadow-xl">
-        <div className="relative h-32 bg-gradient-to-r from-pink-500 via-rose-500 to-[#fc3d6b] md:h-32">
+    <ContainerGlobal classNames={cn('w-full h-full')}>
+      <div
+        className={cn(
+          'overflow-hidden bg-white md:rounded-3xl md:shadow-xl',
+          isMobile ? '' : 'mx-auto mt-8 w-[700px]',
+        )}
+      >
+        <div className="relative h-32 bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] md:h-32">
           <div className="absolute inset-0 bg-black/10"></div>
         </div>
 
-        <div className="relative px-6 pb-8">
+        <div className="relative px-4 pb-8">
           <div className="-mt-16 mb-6 flex justify-center">
             <div className="relative">
               <img
@@ -92,7 +101,12 @@ const ProfileScreen = () => {
               </p>
 
               <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3">
-                <p className="break-all text-sm text-gray-700">
+                <p
+                  className={cn(
+                    'break-all text-xs text-gray-700',
+                    isMobile ? 'text-xs' : 'text-sm',
+                  )}
+                >
                   http://localhost:3000/sign-up/{user.user.referral_code}
                 </p>
               </div>
@@ -104,7 +118,7 @@ const ProfileScreen = () => {
                       `http://localhost:3000/sign-up/${user.user.referral_code}`,
                     );
                   }}
-                  className="flex flex-1 items-center justify-center space-x-2 rounded-xl bg-[#fc3d6b] px-4 py-3 font-medium text-white transition-colors duration-200 hover:bg-[#e8356a]"
+                  className="flex flex-1 items-center justify-center space-x-2 rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] px-4 py-3 font-medium text-white transition-colors duration-200 hover:bg-[#e8356a]"
                 >
                   {copied ? (
                     <>
@@ -130,7 +144,7 @@ const ProfileScreen = () => {
         }}
         user={user.user}
       />
-    </div>
+    </ContainerGlobal>
   );
 };
 

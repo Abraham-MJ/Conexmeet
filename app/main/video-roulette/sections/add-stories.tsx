@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import React, { useState } from 'react';
 
-const AddStoriesView = () => {
+const AddStoriesView = ({ handleOpen }: { handleOpen: () => void }) => {
   const [isHovering, setIsHovering] = useState(false);
 
   return (
@@ -12,6 +12,7 @@ const AddStoriesView = () => {
         className="flex h-full cursor-pointer select-none flex-col items-center justify-center bg-gradient-to-br from-[#fc3d6b] via-[#fd5b87] to-purple-500 p-4 text-white"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
+        onClick={handleOpen}
       >
         <div
           className="translate-z-0 mb-10 transform text-center"
@@ -57,14 +58,14 @@ const AddStoriesView = () => {
         </button>
 
         <div
-          className="translate-z-0 animate-float transform text-center"
+          className="translate-z-0 transform animate-float text-center"
           style={{
             textShadow: '0 2px 8px rgba(0,0,0,0.2)',
           }}
         >
           <p className="flex items-center justify-center text-sm">
             <span
-              className="animate-sparkle mr-2 text-yellow-300"
+              className="mr-2 animate-sparkle text-yellow-300"
               style={{
                 textShadow: '0 0 10px rgba(253, 224, 71, 0.7)',
               }}

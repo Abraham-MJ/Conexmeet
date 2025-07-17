@@ -29,5 +29,5 @@ export function converterMinutes(timeString: string): number | null {
   }
 
   const totalMinutes = hours * 60 + minutes + seconds / 60;
-  return totalMinutes;
+  return Math.trunc(totalMinutes);
 }

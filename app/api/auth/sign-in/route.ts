@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    if (!response.ok) {
+    if (data.status !== 'Success') {
       return NextResponse.json(
         { success: false, message: data.message || 'Error en el login' },
         { status: response.status },

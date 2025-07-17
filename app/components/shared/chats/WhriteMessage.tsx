@@ -209,7 +209,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
           onKeyDown={handleKeyPress}
           onBlur={handleInputBlur}
           placeholder="Escribe un mensaje..."
-          className="mr-2 flex-1 rounded-full border-0 bg-[#f6f6f8] px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0 focus:ring-transparent"
+          className="mr-2 flex-1 rounded-full w-full border-0 bg-[#f6f6f8] px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0 focus:ring-transparent"
           aria-label="Message input"
           disabled={!peerRtmUidForTyping}
         />
