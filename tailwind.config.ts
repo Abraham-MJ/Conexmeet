@@ -9,6 +9,9 @@ export default {
   ],
   theme: {
     extend: {
+      textShadow: {
+        custom: '0 1px 2px rgba(0, 0, 0, 0.13), 0 0 13px rgba(0, 0, 0, 0.23)',
+      },
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
@@ -96,6 +99,10 @@ export default {
           from: { opacity: '0' },
           to: { opacity: '1' },
         },
+        'fade-in-right': {
+          '0%': { transform: 'translateX(-20px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
       },
       animation: {
         float: 'float 3s ease-in-out infinite',
@@ -110,6 +117,7 @@ export default {
         'bounce-dots': 'bounce-dots 1.2s infinite ease-in-out',
         spin: 'spin 1s linear infinite',
         'fade-in': 'fade-in 0.5s ease-in-out',
+        'fade-in-right': 'fade-in-right 0.35s ease-in-out both',
       },
     },
   },

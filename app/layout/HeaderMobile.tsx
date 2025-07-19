@@ -30,7 +30,10 @@ interface RouteConfig {
   iconActive?: React.ElementType;
 }
 
-const hiddenRoutes: RegExp[] = [/^\/main\/chat\/[^/]+$/];
+const hiddenRoutes: RegExp[] = [
+  /^\/main\/chat\/[^/]+$/,
+  /^\/main\/stream\/[^/]+$/,
+];
 
 const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
   const [isOpen, setIsOpen] = useState(false);

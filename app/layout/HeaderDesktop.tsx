@@ -44,6 +44,8 @@ interface UserInfoConfig {
   ) => React.ReactNode;
 }
 
+const hiddenRoutes: RegExp[] = [/^\/main\/stream\/[^/]+$/];
+
 const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { state: userState } = useUser();
@@ -65,6 +67,10 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
   const getSpanClasses = () => {
     return cn('text-[12px] text-[#181a21]');
   };
+
+  const shouldHideHeader = hiddenRoutes.some((pattern) =>
+    pattern.test(pathname),
+  );
 
   const navRoutes: RouteConfig[] = [
     {
@@ -155,6 +161,7 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
       <motion.header
         className={cn(
           'fixed top-0 z-[50] flex h-[80px] w-full items-center justify-between border-b bg-[#fffffff0] px-4 py-3 text-white backdrop-blur-md transition-all duration-300',
+          shouldHideHeader && 'hidden',
         )}
       >
         {userInfoConfig.map((config, index) => {
@@ -184,7 +191,10 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
 
   return (
     <header
-      className={`fixed top-0 z-[50] flex h-[80px] w-full items-center justify-center border-b bg-[#FFFFFF] px-4 py-3 text-white backdrop-blur-md transition-all duration-300`}
+      className={cn(
+        `fixed top-0 z-[50] flex h-[80px] w-full items-center justify-center border-b bg-[#FFFFFF] px-4 py-3 text-white backdrop-blur-md transition-all duration-300`,
+        shouldHideHeader && 'hidden',
+      )}
     >
       <div className="flex w-full max-w-[1536px] items-center justify-between">
         <div className="flex items-center space-x-3">
