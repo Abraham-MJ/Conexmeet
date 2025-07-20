@@ -23,12 +23,20 @@ import { useUser } from '@/app/context/useClientContext';
 import { converterMinutes } from '@/app/utils/converter-minutes';
 
 interface CallOrchestratorFunctions {
+  requestMediaPermissions: () => Promise<{
+    audioTrack: IMicrophoneAudioTrack;
+    videoTrack: ICameraVideoTrack;
+  }>;
   initRtcClient: (
     channelName: string,
     rtcUid: string,
     roleForToken: 'publisher' | 'subscriber',
     publishTracksFlag: boolean,
     loadingMessage?: string,
+    preCreatedTracks?: {
+      audioTrack: IMicrophoneAudioTrack;
+      videoTrack: ICameraVideoTrack;
+    } | null,
   ) => Promise<{
     rtcClient: IAgoraRTCClient;
     localAudioTrack: IMicrophoneAudioTrack | null;
@@ -69,6 +77,7 @@ export const useCallFlows = (
   onlineFemalesList: UserInformation[],
   agoraBackend: ReturnType<typeof useAgoraServer>,
   {
+    requestMediaPermissions,
     initRtcClient,
     leaveRtcChannel,
     joinCallChannel,
@@ -317,6 +326,28 @@ export const useCallFlows = (
             return;
           }
 
+        }
+
+        const rtcRoleForToken =
+          localUserRole === 'admin' ? 'subscriber' : 'publisher';
+
+        const publishTracksFlag = localUserRole !== 'admin';
+
+        const rtcLoadingMsg =
+          localUserRole === 'admin'
+            ? 'Accediendo a la transmisión de video...'
+            : '¡Un momento! Estableciendo la videollamada...';
+
+        let preCreatedTracks = null;
+        if (publishTracksFlag) {
+          try {
+            preCreatedTracks = await requestMediaPermissions();
+          } catch (permissionError) {
+            throw permissionError;
+          }
+        }
+
+        if (localUserRole === 'male') {
           const backendJoinResponse = await agoraBackend.notifyMaleJoining(
             determinedChannelName,
             String(appUserId),
@@ -367,16 +398,6 @@ export const useCallFlows = (
           );
         }
 
-        const rtcRoleForToken =
-          localUserRole === 'admin' ? 'subscriber' : 'publisher';
-
-        const publishTracksFlag = localUserRole !== 'admin';
-
-        const rtcLoadingMsg =
-          localUserRole === 'admin'
-            ? 'Accediendo a la transmisión de video...'
-            : '¡Un momento! Estableciendo la videollamada...';
-
         await joinCallChannel(determinedChannelName);
 
         if (!targetFemale) {
@@ -393,6 +414,7 @@ export const useCallFlows = (
           rtcRoleForToken,
           publishTracksFlag,
           rtcLoadingMsg,
+          preCreatedTracks,
         );
 
         router.push(`/main/stream/${determinedChannelName}`);
@@ -440,6 +462,7 @@ export const useCallFlows = (
       appID,
       onlineFemalesList,
       agoraBackend,
+      requestMediaPermissions,
       initRtcClient,
       leaveRtcChannel,
       joinCallChannel,
@@ -489,7 +512,21 @@ export const useCallFlows = (
     try {
       channel_name = createHost() ?? '';
 
-      await initRtcClient(channel_name, String(rtcUid), 'publisher', true);
+      let preCreatedTracks = null;
+      try {
+        preCreatedTracks = await requestMediaPermissions();
+      } catch (permissionError) {
+        throw permissionError;
+      }
+
+      await initRtcClient(
+        channel_name,
+        String(rtcUid),
+        'publisher',
+        true,
+        undefined,
+        preCreatedTracks,
+      );
       await joinCallChannel(channel_name);
 
       await agoraBackend.registerChannel(channel_name);
@@ -557,6 +594,7 @@ export const useCallFlows = (
     localUser,
     appID,
     agoraBackend,
+    requestMediaPermissions,
     initRtcClient,
     leaveRtcChannel,
     joinCallChannel,

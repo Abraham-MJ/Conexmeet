@@ -96,7 +96,7 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
                 <IoMicOffOutline className="h-6 w-6 text-white" />
               </div>
             )
-          : isAudioRemote && (
+          : !isAudioRemote && (
               <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
                 <IoMicOffOutline className="h-6 w-6 text-white" />
               </div>
@@ -110,7 +110,7 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
           onClick={handleVideoSwap}
         >
           {isLocalVideoMain
-            ? isAudioRemote && (
+            ? !isAudioRemote && (
                 <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
                   <IoMicOffOutline className="h-6 w-6 text-white" />
                 </div>

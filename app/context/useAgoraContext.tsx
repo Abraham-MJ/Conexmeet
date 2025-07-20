@@ -172,6 +172,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     isRtcJoined,
     rtcError,
     requestingMediaPermissions,
+    requestMediaPermissions,
     initializeRtc: initRtcClient,
     leaveRtcChannel,
     toggleLocalAudio,
@@ -247,6 +248,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     onlineFemalesList,
     agoraBackend,
     {
+      requestMediaPermissions,
       initRtcClient,
       leaveRtcChannel,
       joinCallChannel,

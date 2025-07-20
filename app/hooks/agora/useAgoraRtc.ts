@@ -108,6 +108,56 @@ export const useAgoraRtc = (
     [dispatch, localUser, broadcastLocalFemaleStatusUpdate],
   );
 
+  const requestMediaPermissions = useCallback(async () => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
+      payload: true,
+    });
+    setRequestingMediaPermissions(true);
+    dispatch({
+      type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
+      payload: true,
+    });
+
+    try {
+      const [audioTrack, videoTrack] = await Promise.all([
+        AgoraRTC.createMicrophoneAudioTrack(),
+        AgoraRTC.createCameraVideoTrack(),
+      ]);
+
+      dispatch({
+        type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
+        payload: false,
+      });
+      setRequestingMediaPermissions(false);
+      dispatch({
+        type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
+        payload: false,
+      });
+
+      return { audioTrack, videoTrack };
+    } catch (permissionError: any) {
+      console.error(
+        `${LOG_PREFIX_PROVIDER} Error creando tracks locales (¿permisos denegados?):`,
+        permissionError,
+      );
+      dispatch({
+        type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
+        payload: false,
+      });
+      dispatch({
+        type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL,
+        payload: true,
+      });
+      setRequestingMediaPermissions(false);
+      dispatch({
+        type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
+        payload: false,
+      });
+      throw permissionError;
+    }
+  }, [dispatch]);
+
   const initializeRtc = useCallback(
     async (
       channelName: string,
@@ -115,6 +165,7 @@ export const useAgoraRtc = (
       roleForToken: 'publisher' | 'subscriber',
       publishTracksFlag: boolean,
       loadingMessage?: string,
+      preCreatedTracks?: { audioTrack: IMicrophoneAudioTrack; videoTrack: ICameraVideoTrack } | null,
     ) => {
       if (!appID) {
         const msg = 'AppID no disponible para RTC.';
@@ -160,52 +211,59 @@ export const useAgoraRtc = (
         let videoTrack: ICameraVideoTrack | null = null;
 
         if (publishTracksFlag) {
-          dispatch({
-            type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
-            payload: true,
-          });
-          setRequestingMediaPermissions(true);
-          dispatch({
-            type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
-            payload: true,
-          });
-
-          try {
-            [audioTrack, videoTrack] = await Promise.all([
-              AgoraRTC.createMicrophoneAudioTrack(),
-              AgoraRTC.createCameraVideoTrack(),
-            ]);
+          if (preCreatedTracks) {
+            audioTrack = preCreatedTracks.audioTrack;
+            videoTrack = preCreatedTracks.videoTrack;
             setLocalAudioTrack(audioTrack);
             setLocalVideoTrack(videoTrack);
-
+          } else {
             dispatch({
               type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
-              payload: false,
-            });
-            setRequestingMediaPermissions(false);
-            dispatch({
-              type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
-              payload: false,
-            });
-          } catch (permissionError: any) {
-            console.error(
-              `${LOG_PREFIX_PROVIDER} Error creando tracks locales (¿permisos denegados?):`,
-              permissionError,
-            );
-            dispatch({
-              type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
-              payload: false,
-            });
-            dispatch({
-              type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL,
               payload: true,
             });
-            setRequestingMediaPermissions(false);
+            setRequestingMediaPermissions(true);
             dispatch({
               type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
-              payload: false,
+              payload: true,
             });
-            throw permissionError;
+
+            try {
+              [audioTrack, videoTrack] = await Promise.all([
+                AgoraRTC.createMicrophoneAudioTrack(),
+                AgoraRTC.createCameraVideoTrack(),
+              ]);
+              setLocalAudioTrack(audioTrack);
+              setLocalVideoTrack(videoTrack);
+
+              dispatch({
+                type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
+                payload: false,
+              });
+              setRequestingMediaPermissions(false);
+              dispatch({
+                type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
+                payload: false,
+              });
+            } catch (permissionError: any) {
+              console.error(
+                `${LOG_PREFIX_PROVIDER} Error creando tracks locales (¿permisos denegados?):`,
+                permissionError,
+              );
+              dispatch({
+                type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
+                payload: false,
+              });
+              dispatch({
+                type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL,
+                payload: true,
+              });
+              setRequestingMediaPermissions(false);
+              dispatch({
+                type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
+                payload: false,
+              });
+              throw permissionError;
+            }
           }
           await tempRtcClient.publish([audioTrack, videoTrack]);
         }
@@ -343,6 +401,7 @@ export const useAgoraRtc = (
     isRtcJoined,
     rtcError,
     requestingMediaPermissions,
+    requestMediaPermissions,
     initializeRtc,
     leaveRtcChannel,
     toggleLocalAudio,
