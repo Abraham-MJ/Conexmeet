@@ -39,6 +39,9 @@ const cardItemVariants = {
   },
 };
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 const FeaturesScreen = () => {
   const {
     handleVideoChatMale,

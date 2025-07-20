@@ -4,12 +4,8 @@ interface Errors {
   [key: string]: any;
 }
 
-interface Credentials {
-  [key: string]: any;
-}
-
-export const useForm = (initialValues: Credentials) => {
-  const [credentials, setCredentials] = useState<Credentials>(initialValues);
+export const useForm = <T extends Record<string, any>>(initialValues: T) => {
+  const [credentials, setCredentials] = useState<T>(initialValues);
   const [errors, setErrors] = useState<Errors>({});
 
   const changeField = (e: React.ChangeEvent<HTMLInputElement>) => {

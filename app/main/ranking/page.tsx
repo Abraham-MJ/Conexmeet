@@ -10,6 +10,9 @@ import { useMyGiftsData } from '@/app/hooks/api/useMyGifts';
 import { useReferral } from '@/app/hooks/api/useReferral';
 import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 const RankingScreen = () => {
   const {
     data: rankingData,

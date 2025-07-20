@@ -6,6 +6,9 @@ import FemaleViewVideo from './sections/female-section';
 import MaleViewVideo from './sections/male-section';
 import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function VideoRoulettePage() {
   const { state } = useUser();
 

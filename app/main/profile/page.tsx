@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import { AtSign, Check, Copy, Edit3, Link, Mail } from 'lucide-react';
 import React, { useState } from 'react';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 const ProfileScreen = () => {
   const isMobile = useMobile(920);
   const [isOpen, setIsOpen] = useState<boolean>(false);

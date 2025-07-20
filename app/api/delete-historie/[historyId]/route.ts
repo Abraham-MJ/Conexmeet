@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 interface Context {
-  params: {
+  params: Promise<{
     historyId: string;
-  };
+  }>;
 }
 
 export async function DELETE(request: NextRequest, context: Context) {
   try {
-    const { historyId } = context.params;
+    const { historyId } = await context.params;
 
     if (!historyId) {
       return NextResponse.json(
@@ -82,7 +82,7 @@ export async function DELETE(request: NextRequest, context: Context) {
     );
   } catch (error: any) {
     console.error(
-      `Error en la ruta API DELETE /api/histories/${context?.params?.historyId}:`,
+      `Error en la ruta API DELETE /api/delete-historie/[historyId]:`,
       error.message,
     );
 

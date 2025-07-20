@@ -14,6 +14,9 @@ import StreamsVideo from '../sections/StreamsVideo';
 import StreamMobile from '../sections/StreamMobile';
 import { TbPlayerTrackNextFilled } from 'react-icons/tb';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 const PageStreamVideo = () => {
   const { contentGifts } = useListGifts();
 

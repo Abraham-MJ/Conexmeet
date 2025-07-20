@@ -16,6 +16,9 @@ import { useMobile } from '@/app/hooks/useMobile';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown } from 'lucide-react';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 const ChatScreen = () => {
   const router = useRouter();
 
