@@ -94,7 +94,8 @@ export function agoraReducer(
         rtcClient: null,
         localAudioTrack: null,
         localVideoTrack: null,
-        channelName: null,
+        channelName:
+          state.localUser?.role === 'female' ? state.channelName : null,
         chatMessages: [],
         remoteUsers: [],
         currentCallHostRtcUid: null,
@@ -127,7 +128,8 @@ export function agoraReducer(
         rtcClient: null,
         localAudioTrack: null,
         localVideoTrack: null,
-        channelName: null,
+        channelName:
+          state.localUser?.role === 'female' ? state.channelName : null,
         currentCallHostRtcUid: null,
         activeLoadingMessage: null,
       };
@@ -141,7 +143,8 @@ export function agoraReducer(
         localVideoTrack: null,
         remoteUsers: [],
         chatMessages: [],
-        channelName: null,
+        channelName:
+          state.localUser?.role === 'female' ? state.channelName : null,
         currentCallHostRtcUid: null,
         hostEndedCallInfo: null,
         maleInitialMinutesInCall: null,

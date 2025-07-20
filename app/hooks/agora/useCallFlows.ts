@@ -531,6 +531,17 @@ export const useCallFlows = (
 
       await agoraBackend.registerChannel(channel_name);
 
+      dispatch({
+        type: AgoraActionType.SET_LOCAL_USER_PROFILE,
+        payload: {
+          ...localUser,
+          host_id: channel_name,
+          status: 'available_call',
+          in_call: 0,
+          is_active: 1,
+        },
+      });
+
       await broadcastLocalFemaleStatusUpdate({
         host_id: channel_name,
         status: 'available_call',

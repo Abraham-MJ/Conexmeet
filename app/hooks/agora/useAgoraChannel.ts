@@ -28,6 +28,16 @@ export const useAgoraCallChannel = (
 ) => {
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
+
+  // useRef para evitar closure stale en listeners
+  const stateRef = useRef(state);
+  const localUserRef = useRef(localUser);
+
+  // Actualizar refs cuando cambie el estado
+  useEffect(() => {
+    stateRef.current = state;
+    localUserRef.current = localUser;
+  }, [state, localUser]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const pendingProfilePromisesRef = useRef(new Map<string, () => void>());
 
@@ -134,16 +144,32 @@ export const useAgoraCallChannel = (
                 pendingProfilePromisesRef.current.delete(stringUid);
               }
 
+              const currentState = stateRef.current;
+              const currentLocalUser = currentState.localUser;
+
               if (
-                state.localUser?.role === 'female' &&
+                currentLocalUser?.role === 'female' &&
                 remoteUserProfile.role === 'male' &&
-                (state.localUser.in_call !== 1 ||
-                  state.localUser.status !== 'in_call')
+                (currentLocalUser.in_call !== 1 ||
+                  currentLocalUser.status !== 'in_call')
               ) {
+                const hostIdToUse =
+                  currentLocalUser.host_id || currentState.channelName;
+
+                dispatch({
+                  type: AgoraActionType.SET_LOCAL_USER_PROFILE,
+                  payload: {
+                    ...currentLocalUser,
+                    in_call: 1,
+                    status: 'in_call',
+                    host_id: hostIdToUse,
+                  },
+                });
+
                 broadcastLocalFemaleStatusUpdate({
                   in_call: 1,
                   status: 'in_call',
-                  host_id: state.channelName,
+                  host_id: hostIdToUse,
                 });
               }
             } else if (receivedMsg.type === 'CHAT_MESSAGE') {
@@ -224,7 +250,7 @@ export const useAgoraCallChannel = (
                   `[Female Client] Recibido resumen de llamada del male:`,
                   summaryPayload,
                 );
-                
+
                 if (summaryPayload.reason !== 'Finalizada por ti') {
                   broadcastLocalFemaleStatusUpdate({
                     in_call: 0,

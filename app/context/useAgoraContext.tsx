@@ -121,8 +121,9 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         avatar: userState.user.profile_photo_path,
         role: role,
         is_active: 1,
-        in_call: 0,
-        host_id: null,
+        in_call: state.localUser?.in_call || 0,
+        host_id: state.localUser?.host_id || null,
+        status: state.localUser?.status || undefined,
       };
 
       dispatch({
@@ -132,7 +133,13 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     } else if (!userState.user) {
       dispatch({ type: AgoraActionType.SET_LOCAL_USER_PROFILE, payload: null });
     }
-  }, [userState.user, dispatch]);
+  }, [
+    userState.user,
+    dispatch,
+    state.localUser?.in_call,
+    state.localUser?.host_id,
+    state.localUser?.status,
+  ]);
 
   const agoraBackend = useAgoraServer(dispatch);
 
