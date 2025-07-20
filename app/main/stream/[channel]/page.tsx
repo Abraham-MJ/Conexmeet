@@ -73,7 +73,7 @@ const PageStreamVideo = () => {
                 <div className="relative bg-transparent">
                   <StreamsVideo
                     localUser={agora?.localUser}
-                    remoteUser={agora?.remoteUsers[0] ?? []}
+                    remoteUser={agora?.localUser?.role === 'admin' ? agora?.remoteUsers : (agora?.remoteUsers[0] ?? [])}
                     localVideoTrack={agora?.localVideoTrack}
                     isAudioLocal={agora?.isLocalAudioMuted}
                     isAudioRemote={agora?.remoteUsers[0]?.hasAudio}

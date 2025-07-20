@@ -14,6 +14,7 @@ interface StreamsVideoProps {
 }
 
 const StreamsVideo: React.FC<StreamsVideoProps> = ({
+  localUser,
   localVideoTrack,
   remoteUser,
   isAudioRemote,
@@ -25,61 +26,110 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
   const remoteVideoPlayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const localTrack = localVideoTrack;
-    const remoteTrack = remoteUser?.videoTrack;
+    let mainTrack = null;
+    let smallTrack = null;
+
+    if (localUser?.role === 'admin') {
+      const femaleUser = Array.isArray(remoteUser)
+        ? remoteUser.find((user) => user.role === 'female')
+        : remoteUser?.role === 'female'
+          ? remoteUser
+          : null;
+
+      const maleUser = Array.isArray(remoteUser)
+        ? remoteUser.find((user) => user.role === 'male')
+        : remoteUser?.role === 'male'
+          ? remoteUser
+          : null;
+
+      mainTrack = femaleUser?.videoTrack;
+      smallTrack = maleUser?.videoTrack;
+    } else {
+      const localTrack = localVideoTrack;
+      const remoteTrack = Array.isArray(remoteUser)
+        ? remoteUser[0]?.videoTrack
+        : remoteUser?.videoTrack;
+
+      if (isLocalVideoMain) {
+        mainTrack = localTrack;
+        smallTrack = remoteTrack;
+      } else {
+        mainTrack = remoteTrack;
+        smallTrack = localTrack;
+      }
+    }
 
     const localPlayerDiv = localVideoPlayerRef.current;
     const remotePlayerDiv = remoteVideoPlayerRef.current;
 
     try {
-      localTrack?.stop();
+      mainTrack?.stop();
     } catch (e) {
-      console.warn('No se pudo detener la pista local:', e);
+      console.warn('No se pudo detener la pista principal:', e);
     }
     try {
-      remoteTrack?.stop();
+      smallTrack?.stop();
     } catch (e) {
-      console.warn('No se pudo detener la pista remota:', e);
+      console.warn('No se pudo detener la pista pequeña:', e);
     }
 
-    if (isLocalVideoMain) {
-      if (localTrack && remotePlayerDiv) {
-        localTrack.play(remotePlayerDiv);
-      }
-      if (remoteTrack && localPlayerDiv) {
-        remoteTrack.play(localPlayerDiv);
-      }
-    } else {
-      if (remoteTrack && remotePlayerDiv) {
-        remoteTrack.play(remotePlayerDiv);
-      }
-      if (localTrack && localPlayerDiv) {
-        localTrack.play(localPlayerDiv);
-      }
+    if (mainTrack && remotePlayerDiv) {
+      mainTrack.play(remotePlayerDiv);
+    }
+    if (smallTrack && localPlayerDiv) {
+      smallTrack.play(localPlayerDiv);
     }
 
     return () => {
       try {
-        localTrack?.stop();
+        mainTrack?.stop();
       } catch (e) {
-        console.warn('No se pudo detener la pista local en la limpieza:', e);
+        console.warn(
+          'No se pudo detener la pista principal en la limpieza:',
+          e,
+        );
       }
       try {
-        remoteTrack?.stop();
+        smallTrack?.stop();
       } catch (e) {
-        console.warn('No se pudo detener la pista remota en la limpieza:', e);
+        console.warn('No se pudo detener la pista pequeña en la limpieza:', e);
       }
     };
-  }, [
-    localVideoTrack,
-    remoteUser?.videoTrack,
-    remoteUser?.rtcUid,
-    isLocalVideoMain,
-  ]);
+  }, [localUser, localVideoTrack, remoteUser, isLocalVideoMain]);
 
   const handleVideoSwap = () => {
-    setIsLocalVideoMain((prev) => !prev);
+    if (localUser?.role !== 'admin') {
+      setIsLocalVideoMain((prev) => !prev);
+    }
   };
+
+  let mainAudioMuted = false;
+  let smallAudioMuted = false;
+
+  if (localUser?.role === 'admin') {
+    const femaleUser = Array.isArray(remoteUser)
+      ? remoteUser.find((user) => user.role === 'female')
+      : remoteUser?.role === 'female'
+        ? remoteUser
+        : null;
+
+    const maleUser = Array.isArray(remoteUser)
+      ? remoteUser.find((user) => user.role === 'male')
+      : remoteUser?.role === 'male'
+        ? remoteUser
+        : null;
+
+    mainAudioMuted = !femaleUser?.hasAudio;
+    smallAudioMuted = !maleUser?.hasAudio;
+  } else {
+    if (isLocalVideoMain) {
+      mainAudioMuted = isAudioLocal ?? false;
+      smallAudioMuted = !(isAudioRemote ?? false);
+    } else {
+      mainAudioMuted = !(isAudioRemote ?? false);
+      smallAudioMuted = isAudioLocal ?? false;
+    }
+  }
 
   return (
     <div
@@ -90,17 +140,16 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
         className="relative h-full w-full bg-[#ffffff14] object-cover"
         ref={remoteVideoPlayerRef}
       >
-        {isLocalVideoMain
-          ? isAudioLocal && (
-              <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
-                <IoMicOffOutline className="h-6 w-6 text-white" />
-              </div>
-            )
-          : !isAudioRemote && (
-              <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
-                <IoMicOffOutline className="h-6 w-6 text-white" />
-              </div>
-            )}
+        {mainAudioMuted && (
+          <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
+            <IoMicOffOutline className="h-6 w-6 text-white" />
+          </div>
+        )}
+        {localUser?.role === 'admin' && (
+          <div className="absolute left-2 top-2 z-50 rounded bg-[#0000007a] px-2 py-1 text-xs text-white">
+            Female
+          </div>
+        )}
       </div>
 
       <div className="absolute right-4 top-4">
@@ -108,18 +157,20 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
           className="relative h-[150px] w-[150px] bg-[#ffffff14]"
           ref={localVideoPlayerRef}
           onClick={handleVideoSwap}
+          style={{
+            cursor: localUser?.role === 'admin' ? 'default' : 'pointer',
+          }}
         >
-          {isLocalVideoMain
-            ? !isAudioRemote && (
-                <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
-                  <IoMicOffOutline className="h-6 w-6 text-white" />
-                </div>
-              )
-            : isAudioLocal && (
-                <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
-                  <IoMicOffOutline className="h-6 w-6 text-white" />
-                </div>
-              )}
+          {smallAudioMuted && (
+            <div className="absolute bottom-2 left-2 z-50 rounded-full bg-[#0000007a] p-1 backdrop:blur-2xl">
+              <IoMicOffOutline className="h-6 w-6 text-white" />
+            </div>
+          )}
+          {localUser?.role === 'admin' && (
+            <div className="absolute left-2 top-2 z-50 rounded bg-[#0000007a] px-2 py-1 text-xs text-white">
+              Male
+            </div>
+          )}
         </div>
       </div>
     </div>
