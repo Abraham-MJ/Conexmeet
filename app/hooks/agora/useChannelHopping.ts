@@ -165,6 +165,11 @@ export const useChannelHopping = (
       return;
     }
 
+    dispatch({
+      type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+      payload: true,
+    });
+
     if (state.localUser?.role !== 'male') {
       console.warn(
         '[Channel Hopping] Solo los males pueden hacer channel hopping',
@@ -281,6 +286,11 @@ export const useChannelHopping = (
       dispatch({
         type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
         payload: true,
+      });
+    } finally {
+      dispatch({
+        type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+        payload: false,
       });
     }
   }, [

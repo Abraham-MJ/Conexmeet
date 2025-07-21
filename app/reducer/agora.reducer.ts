@@ -58,6 +58,7 @@ export const initialState: AgoraState = {
     visitedChannelsInSession: new Set(),
   },
   showChannelHoppingBlockedModal: false,
+  isChannelHoppingLoading: false,
 };
 
 export function agoraReducer(
@@ -554,6 +555,12 @@ export function agoraReducer(
       return {
         ...state,
         showChannelHoppingBlockedModal: action.payload,
+      };
+
+    case AgoraActionType.SET_CHANNEL_HOPPING_LOADING:
+      return {
+        ...state,
+        isChannelHoppingLoading: action.payload,
       };
 
     default:

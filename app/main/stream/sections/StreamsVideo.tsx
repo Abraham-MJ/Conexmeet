@@ -11,6 +11,7 @@ interface StreamsVideoProps {
   isVideoRemote?: boolean;
   isAudioLocal?: boolean;
   isVideoLocal?: boolean;
+  isChannelHoppingLoading?: boolean;
 }
 
 const StreamsVideo: React.FC<StreamsVideoProps> = ({
@@ -19,6 +20,7 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
   remoteUser,
   isAudioRemote,
   isAudioLocal,
+  isChannelHoppingLoading = false,
 }) => {
   const [isLocalVideoMain, setIsLocalVideoMain] = useState<boolean>(false);
 
@@ -136,6 +138,17 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
       className="relative flex h-screen max-h-full w-[100vh] items-center justify-center bg-transparent transition-all duration-75"
       data-testid="content-stream"
     >
+      {isChannelHoppingLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-[#fc3d6b]"></div>
+            <p className="text-center text-white text-lg font-medium">
+              Cambiando de canal...
+            </p>
+          </div>
+        </div>
+      )}
+
       <div
         className="relative h-full w-full bg-[#ffffff14] object-cover"
         ref={remoteVideoPlayerRef}

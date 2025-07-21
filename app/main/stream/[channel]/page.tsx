@@ -29,6 +29,7 @@ const PageStreamVideo = () => {
     callTimer,
     sendGift,
     hopToRandomChannel,
+    isChannelHoppingLoading,
   } = useAgoraContext();
 
   if (isMobile) {
@@ -41,6 +42,7 @@ const PageStreamVideo = () => {
         sendMessage={sendRtmChannelMessage}
         sendGift={sendGift}
         hopToRandomChannel={hopToRandomChannel}
+        isChannelHoppingLoading={isChannelHoppingLoading}
       />
     );
   }
@@ -82,6 +84,7 @@ const PageStreamVideo = () => {
                     localVideoTrack={agora?.localVideoTrack}
                     isAudioLocal={agora?.isLocalAudioMuted}
                     isAudioRemote={agora?.remoteUsers[0]?.hasAudio}
+                    isChannelHoppingLoading={isChannelHoppingLoading}
                   />
                 </div>
               </div>

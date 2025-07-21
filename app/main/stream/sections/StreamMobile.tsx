@@ -27,6 +27,7 @@ interface StreamMobileProps {
     | { success: boolean; message?: string }
   >;
   hopToRandomChannel: () => Promise<void>;
+  isChannelHoppingLoading: boolean;
 }
 
 const VIDEO_WIDTH = 120;
@@ -41,6 +42,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
   sendMessage,
   sendGift,
   hopToRandomChannel,
+  isChannelHoppingLoading,
 }) => {
   const { contentGifts } = useListGifts();
   const [isOpenChat, setIsOpenChat] = useState<boolean>(false);
@@ -356,6 +358,17 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                   </div>
                 </div>
               </div>
+
+              {isChannelHoppingLoading && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-[#fc3d6b]"></div>
+                    <p className="text-center font-medium text-white">
+                      Cambiando de canal...
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="pointer-events-none relative z-20 flex flex-1 flex-col">
                 <div className="pointer-events-none flex flex-1 flex-col justify-end">

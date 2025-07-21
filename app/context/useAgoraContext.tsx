@@ -70,6 +70,7 @@ const AgoraContext = createContext<{
   closeChannelHoppingBlockedModal: () => void;
   showChannelHoppingBlockedModal: boolean;
   openChannelHoppingBlockedModal: () => void;
+  isChannelHoppingLoading: boolean;
 }>({
   state: initialState,
   dispatch: () => undefined,
@@ -104,6 +105,7 @@ const AgoraContext = createContext<{
   closeChannelHoppingBlockedModal: () => {},
   openChannelHoppingBlockedModal: () => {},
   showChannelHoppingBlockedModal: false,
+  isChannelHoppingLoading: false,
 });
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
@@ -429,6 +431,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         closeChannelHoppingBlockedModal,
         openChannelHoppingBlockedModal,
         showChannelHoppingBlockedModal,
+        isChannelHoppingLoading: state.isChannelHoppingLoading,
       }}
     >
       {children}
