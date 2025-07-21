@@ -39,7 +39,6 @@ const cardItemVariants = {
   },
 };
 
-// Disable static generation for this page
 export const dynamic = 'force-dynamic';
 
 const FeaturesScreen = () => {
@@ -47,6 +46,8 @@ const FeaturesScreen = () => {
     handleVideoChatMale,
     loadingStatus,
     state: agora,
+    channelHoppingBlockTimeRemaining,
+    openChannelHoppingBlockedModal,
   } = useAgoraContext();
 
   const {
@@ -63,6 +64,12 @@ const FeaturesScreen = () => {
     'stories',
     'contacts',
   ];
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <ContainerGlobal classNames="max-w-[1536px] px-4 mx-auto">
@@ -83,6 +90,7 @@ const FeaturesScreen = () => {
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
               Online now
+              {`${agora.channelHopping.isBlocked ? `🚫 Bloqueado ${formatTime(channelHoppingBlockTimeRemaining)}` : ''}`}
             </h2>
             {online.loading ? (
               <FeaturesSkeleton />
@@ -109,7 +117,11 @@ const FeaturesScreen = () => {
                       <ContentCardRooms
                         user={normalizedUser}
                         initialCall={(host_id: string) => {
-                          handleVideoChatMale(host_id);
+                          if (agora.channelHopping.isBlocked) {
+                            openChannelHoppingBlockedModal();
+                          } else {
+                            handleVideoChatMale(host_id);
+                          }
                         }}
                         isLoadingCall={loadingStatus.isLoading}
                         rolUser={agora.localUser?.role ?? 'male'}

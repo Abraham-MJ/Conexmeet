@@ -29,6 +29,7 @@ import {
 } from '../types/streams';
 import { useAgoraServer } from '../hooks/agora/useAgoraServer';
 import { useAgoraCallChannel } from '../hooks/agora/useAgoraChannel';
+import { useChannelHopping } from '../hooks/agora/useChannelHopping';
 
 const AgoraContext = createContext<{
   state: AgoraState;
@@ -63,6 +64,12 @@ const AgoraContext = createContext<{
     | { success: boolean; message: string }
   >;
   closeFemaleCallEndedSummaryModal: () => void;
+  hopToRandomChannel: () => Promise<void>;
+  isChannelHoppingBlocked: boolean;
+  channelHoppingBlockTimeRemaining: number;
+  closeChannelHoppingBlockedModal: () => void;
+  showChannelHoppingBlockedModal: boolean;
+  openChannelHoppingBlockedModal: () => void;
 }>({
   state: initialState,
   dispatch: () => undefined,
@@ -91,6 +98,12 @@ const AgoraContext = createContext<{
       cost_in_minutes: 0,
     }),
   closeFemaleCallEndedSummaryModal: () => {},
+  hopToRandomChannel: async () => {},
+  isChannelHoppingBlocked: false,
+  channelHoppingBlockTimeRemaining: 0,
+  closeChannelHoppingBlockedModal: () => {},
+  openChannelHoppingBlockedModal: () => {},
+  showChannelHoppingBlockedModal: false,
 });
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
@@ -270,6 +283,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.maleInitialMinutesInCall,
     state.maleGiftMinutesSpent,
     state.femaleTotalPointsEarnedInCall,
+    state.channelHopping.entries, 
   );
 
   useEffect(() => {
@@ -361,6 +375,29 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     });
   }, [dispatch]);
 
+  const {
+    hopToRandomChannel,
+    isBlocked: isChannelHoppingBlocked,
+    blockTimeRemaining: channelHoppingBlockTimeRemaining,
+    closeChannelHoppingBlockedModal,
+    showChannelHoppingBlockedModal,
+    openChannelHoppingBlockedModal,
+  } = useChannelHopping(
+    dispatch,
+    state,
+    onlineFemalesList,
+    {
+      handleVideoChatMale,
+      handleLeaveCall,
+      leaveRtcChannel,
+      leaveCallChannel,
+      joinCallChannel,
+      initRtcClient,
+      requestMediaPermissions,
+    },
+    router,
+  );
+
   return (
     <AgoraContext.Provider
       value={{
@@ -386,6 +423,12 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         closeMinutesExhaustedModal,
         sendGift,
         closeFemaleCallEndedSummaryModal,
+        hopToRandomChannel,
+        isChannelHoppingBlocked,
+        channelHoppingBlockTimeRemaining,
+        closeChannelHoppingBlockedModal,
+        openChannelHoppingBlockedModal,
+        showChannelHoppingBlockedModal,
       }}
     >
       {children}

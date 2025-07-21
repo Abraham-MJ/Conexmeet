@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { useMobile } from '../hooks/useMobile';
-import { usePathname } from 'next/navigation';
 import HeaderMobile from './HeaderMobile';
 import HeaderDesktop from './HeaderDesktop';
 import { cn } from '@/lib/utils';
@@ -12,6 +11,7 @@ import ModalChannelBusy from '../components/shared/modals/ModalChannelBusy';
 import ModalInsufficientMinutes from '../components/shared/modals/ModalInsufficientMinutes';
 import ModalCallEndedFemaleSummary from '../components/shared/modals/ModalCallEndedFemaleSummary';
 import ModalMinutesExhausted from '../components/shared/modals/ModalMinutesExhausted';
+import { ChannelHoppingBlockedModal } from '../components/shared/modals/ChannelHoppingBlockedModal';
 
 const baseRoutes = {
   female: {
@@ -94,11 +94,7 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
     <>
       {isMobile && <HeaderMobile routes={baseRoutes} />}
       {<HeaderDesktop routes={baseRoutes} />}
-      <main
-        className={cn(
-          'relative mx-auto h-[100dvh] w-full flex-grow',
-        )}
-      >
+      <main className={cn('relative mx-auto h-[100dvh] w-full flex-grow')}>
         {children}
       </main>
       <ModalCallEndedFemaleSummary />
@@ -108,6 +104,7 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
       <ModalChannelBusy />
       <ModalInsufficientMinutes />
       <ModalMinutesExhausted />
+      <ChannelHoppingBlockedModal />
     </>
   );
 };

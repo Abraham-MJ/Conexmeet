@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useVideoRouletteMale } from '@/app/hooks/api/useVideoRouletteMale';
 import { HistoryData } from '@/app/types/histories';
-import { Camera, Play, Video } from 'lucide-react';
+import { Camera, Play } from 'lucide-react';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,11 +11,22 @@ import { useMobile } from '@/app/hooks/useMobile';
 
 const MaleViewVideo = () => {
   const isMobile = useMobile(920);
-  const { handleVideoChatMale, loadingStatus } = useAgoraContext();
+  const {
+    handleVideoChatMale,
+    loadingStatus,
+    isChannelHoppingBlocked,
+    channelHoppingBlockTimeRemaining,
+  } = useAgoraContext();
   const { currentDate, histories } = useVideoRouletteMale();
 
   const [currentStory, setCurrentStory] = useState<HistoryData | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   const selectRandomStory = useCallback(() => {
     if (histories && histories.length > 0) {
@@ -120,7 +131,7 @@ const MaleViewVideo = () => {
               className={cn(
                 'mb-6 w-full rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] py-7 text-lg font-medium transition-all duration-300',
               )}
-              disabled={loadingStatus.isLoading}
+              disabled={loadingStatus.isLoading || isChannelHoppingBlocked}
               onClick={() => handleVideoChatMale()}
             >
               {loadingStatus.isLoading ? (
@@ -140,7 +151,14 @@ const MaleViewVideo = () => {
                 </div>
               ) : (
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  Entrar al video chat
+                  {isChannelHoppingBlocked ? (
+                    <>
+                      🚫 Bloqueado (
+                      {formatTime(channelHoppingBlockTimeRemaining)})
+                    </>
+                  ) : (
+                    <>Entrar al video chat</>
+                  )}
                 </span>
               )}
             </Button>

@@ -26,6 +26,7 @@ interface StreamMobileProps {
     | { success: boolean; message?: string; cost_in_minutes: number }
     | { success: boolean; message?: string }
   >;
+  hopToRandomChannel: () => Promise<void>;
 }
 
 const VIDEO_WIDTH = 120;
@@ -39,6 +40,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
   toggleLocalAudio,
   sendMessage,
   sendGift,
+  hopToRandomChannel,
 }) => {
   const { contentGifts } = useListGifts();
   const [isOpenChat, setIsOpenChat] = useState<boolean>(false);
@@ -449,11 +451,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                           </button>
                           {agora?.localUser?.role === 'male' ? (
                             <button
-                              onClick={() => {
-                                console.log(
-                                  'Botón de regalo general clicado. Podrías abrir un modal aquí.',
-                                );
-                              }}
+                              onClick={hopToRandomChannel}
                               className="transition-border pointer-events-auto m-0 box-border flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-none bg-[#0000007a] text-white no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out"
                               aria-label="Enviar un regalo"
                             >

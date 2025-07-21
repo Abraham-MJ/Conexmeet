@@ -155,7 +155,6 @@ const FemaleViewVideo = () => {
                 )}
               </Button>
               <div className="mt-5 flex items-center justify-center gap-2 text-sm font-light text-white">
-                <Camera className="h-4 w-4" />
                 <span>Activate your camera to start searching.</span>
               </div>
             </motion.div>

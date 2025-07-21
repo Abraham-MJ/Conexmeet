@@ -51,6 +51,13 @@ export const initialState: AgoraState = {
   showFemaleCallEndedModal: false,
   callSummaryInfo: null,
   femaleTotalPointsEarnedInCall: 0,
+  channelHopping: {
+    entries: [],
+    isBlocked: false,
+    blockStartTime: null,
+    visitedChannelsInSession: new Set(),
+  },
+  showChannelHoppingBlockedModal: false,
 };
 
 export function agoraReducer(
@@ -484,6 +491,71 @@ export function agoraReducer(
         femaleTotalPointsEarnedInCall:
           state.femaleTotalPointsEarnedInCall + action.payload,
       };
+
+    case AgoraActionType.CHANNEL_HOP_JOIN:
+      const newEntry = {
+        hostId: action.payload.hostId,
+        joinTime: action.payload.joinTime,
+      };
+      return {
+        ...state,
+        channelHopping: {
+          ...state.channelHopping,
+          entries: [...state.channelHopping.entries, newEntry],
+          visitedChannelsInSession: new Set([
+            ...state.channelHopping.visitedChannelsInSession,
+            action.payload.hostId,
+          ]),
+        },
+      };
+
+    case AgoraActionType.CHANNEL_HOP_LEAVE:
+      const updatedEntries = state.channelHopping.entries.map((entry) =>
+        entry.hostId === action.payload.hostId && !entry.leaveTime
+          ? {
+              ...entry,
+              leaveTime: action.payload.leaveTime,
+              duration: Math.floor(
+                (action.payload.leaveTime - entry.joinTime) / 1000,
+              ),
+            }
+          : entry,
+      );
+      return {
+        ...state,
+        channelHopping: {
+          ...state.channelHopping,
+          entries: updatedEntries,
+        },
+      };
+
+    case AgoraActionType.SET_CHANNEL_HOPPING_BLOCKED:
+      return {
+        ...state,
+        channelHopping: {
+          ...state.channelHopping,
+          isBlocked: action.payload.isBlocked,
+          blockStartTime: action.payload.blockStartTime,
+        },
+      };
+
+    case AgoraActionType.RESET_CHANNEL_HOPPING:
+      return {
+        ...state,
+        channelHopping: {
+          entries: [],
+          isBlocked: false,
+          blockStartTime: null,
+          visitedChannelsInSession: new Set(),
+        },
+      };
+
+    case AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL:
+      return {
+        ...state,
+        showChannelHoppingBlockedModal: action.payload,
+      };
+
     default:
       return state;
   }

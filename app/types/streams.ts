@@ -56,6 +56,11 @@ export enum AgoraActionType {
   SET_FEMALE_CALL_ENDED_MODAL = 'SET_FEMALE_CALL_ENDED_MODAL',
   SET_FEMALE_CALL_ENDED_INFO = 'SET_FEMALE_CALL_ENDED_INFO',
   ADD_FEMALE_POINTS_EARNED = 'ADD_FEMALE_POINTS_EARNED',
+  CHANNEL_HOP_JOIN = 'CHANNEL_HOP_JOIN',
+  CHANNEL_HOP_LEAVE = 'CHANNEL_HOP_LEAVE',
+  SET_CHANNEL_HOPPING_BLOCKED = 'SET_CHANNEL_HOPPING_BLOCKED',
+  RESET_CHANNEL_HOPPING = 'RESET_CHANNEL_HOPPING',
+  SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL = 'SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL',
 }
 
 export interface LoadingStatus {
@@ -99,6 +104,20 @@ export interface ChatMessage {
   type: 'channel' | 'self' | 'self-gift' | 'channel-gift';
   translatedText?: string;
   gift_image?: string;
+}
+
+export interface ChannelHopEntry {
+  hostId: string;
+  joinTime: number;
+  leaveTime?: number;
+  duration?: number;
+}
+
+export interface ChannelHoppingState {
+  entries: ChannelHopEntry[];
+  isBlocked: boolean;
+  blockStartTime: number | null;
+  visitedChannelsInSession: Set<string>;
 }
 
 export interface AgoraState {
@@ -145,6 +164,8 @@ export interface AgoraState {
   showFemaleCallEndedModal: boolean;
   callSummaryInfo: FemaleCallSummaryInfo | null;
   femaleTotalPointsEarnedInCall: number;
+  channelHopping: ChannelHoppingState;
+  showChannelHoppingBlockedModal: boolean;
 }
 
 interface RemoteHostEndedCallAction {
@@ -396,6 +417,30 @@ interface AddFemalePointsEarnedAction {
   payload: number;
 }
 
+interface ChannelHopJoinAction {
+  type: AgoraActionType.CHANNEL_HOP_JOIN;
+  payload: { hostId: string; joinTime: number };
+}
+
+interface ChannelHopLeaveAction {
+  type: AgoraActionType.CHANNEL_HOP_LEAVE;
+  payload: { hostId: string; leaveTime: number };
+}
+
+interface SetChannelHoppingBlockedAction {
+  type: AgoraActionType.SET_CHANNEL_HOPPING_BLOCKED;
+  payload: { isBlocked: boolean; blockStartTime: number | null };
+}
+
+interface ResetChannelHoppingAction {
+  type: AgoraActionType.RESET_CHANNEL_HOPPING;
+}
+
+interface SetShowChannelHoppingBlockedModalAction {
+  type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL;
+  payload: boolean;
+}
+
 export type AgoraAction =
   | SetAppIdAction
   | SetLocalUserProfileAction
@@ -444,4 +489,9 @@ export type AgoraAction =
   | SetShowMinutesExhaustedModalAction
   | SetFemaleCallEndedModalAction
   | SetFemaleCallEndedInfoAction
-  | AddFemalePointsEarnedAction;
+  | AddFemalePointsEarnedAction
+  | ChannelHopJoinAction
+  | ChannelHopLeaveAction
+  | SetChannelHoppingBlockedAction
+  | ResetChannelHoppingAction
+  | SetShowChannelHoppingBlockedModalAction;

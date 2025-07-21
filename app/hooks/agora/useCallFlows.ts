@@ -92,6 +92,7 @@ export const useCallFlows = (
   maleInitialMinutesInCall: number | null,
   maleGiftMinutesSpent: number,
   femaleTotalPointsEarnedInCall: number,
+  channelHoppingEntries: any[], 
 ) => {
   const { handleGetInformation, state: user } = useUser();
 
@@ -325,7 +326,6 @@ export const useCallFlows = (
             });
             return;
           }
-
         }
 
         const rtcRoleForToken =
@@ -416,6 +416,35 @@ export const useCallFlows = (
           rtcLoadingMsg,
           preCreatedTracks,
         );
+
+        if (localUserRole === 'male' && targetFemale) {
+          console.log(`[Male Join] Actualizando estado de female ${targetFemale.user_id} a 'in_call'`);
+
+          const femaleToUpdate = onlineFemalesList.find(f => f.host_id === determinedChannelName);
+          if (femaleToUpdate) {
+            dispatch({
+              type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+              payload: {
+                ...femaleToUpdate,
+                in_call: 1,
+                status: 'in_call',
+                host_id: determinedChannelName,
+              },
+            });
+            console.log(`[Male Join] Estado de female actualizado en lobby local`);
+          }
+
+          try {
+            await sendCallSignal('MALE_JOINED_SIGNAL', {
+              maleUserId: appUserId,
+              channelName: determinedChannelName,
+              timestamp: Date.now(),
+            });
+            console.log(`[Male Join] Señal MALE_JOINED_SIGNAL enviada a female`);
+          } catch (signalError) {
+            console.error('[Male Join] Error enviando MALE_JOINED_SIGNAL:', signalError);
+          }
+        }
 
         router.push(`/main/stream/${determinedChannelName}`);
       } catch (error: any) {

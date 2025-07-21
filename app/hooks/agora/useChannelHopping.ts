@@ -1,0 +1,379 @@
+import { useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  AgoraAction,
+  AgoraActionType,
+  AgoraState,
+  UserInformation,
+} from '@/app/types/streams';
+
+interface ChannelHoppingFunctions {
+  handleVideoChatMale: (channelToJoin?: string) => Promise<void>;
+  handleLeaveCall: () => Promise<void>;
+  leaveRtcChannel: () => Promise<void>;
+  leaveCallChannel: () => Promise<void>;
+  joinCallChannel: (channelName: string) => Promise<any>;
+  initRtcClient: (
+    channelName: string,
+    rtcUid: string,
+    roleForToken: 'publisher' | 'subscriber',
+    publishTracksFlag: boolean,
+    loadingMessage?: string,
+    preCreatedTracks?: any,
+  ) => Promise<any>;
+  requestMediaPermissions: () => Promise<any>;
+}
+
+const BLOCK_DURATION_MS = 5 * 60 * 1000;
+const MIN_STAY_DURATION_SECONDS = 15;
+const MAX_SHORT_VISITS = 3;
+
+export const useChannelHopping = (
+  dispatch: React.Dispatch<AgoraAction>,
+  state: AgoraState,
+  onlineFemalesList: UserInformation[],
+  { handleVideoChatMale, handleLeaveCall }: ChannelHoppingFunctions,
+  router: ReturnType<typeof useRouter>,
+) => {
+  const currentChannelJoinTimeRef = useRef<number | null>(null);
+
+  const checkBlockExpiration = useCallback(() => {
+    if (state.channelHopping.isBlocked && state.channelHopping.blockStartTime) {
+      const now = Date.now();
+      const blockElapsed = now - state.channelHopping.blockStartTime;
+
+      if (blockElapsed >= BLOCK_DURATION_MS) {
+        dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+        console.log('[Channel Hopping] Bloqueo expirado, reseteando estado');
+      }
+    }
+  }, [
+    state.channelHopping.isBlocked,
+    state.channelHopping.blockStartTime,
+    dispatch,
+  ]);
+
+  useEffect(() => {
+    const interval = setInterval(checkBlockExpiration, 60000);
+    return () => clearInterval(interval);
+  }, [checkBlockExpiration]);
+
+  const evaluateChannelHoppingBehavior = useCallback(() => {
+    const { entries } = state.channelHopping;
+
+    const completedEntries = entries.filter(
+      (entry) => entry.leaveTime && entry.duration !== undefined,
+    );
+
+    if (completedEntries.length < MAX_SHORT_VISITS) {
+      return false;
+    }
+
+    const recentEntries = completedEntries.slice(-MAX_SHORT_VISITS);
+
+    const allShortVisits = recentEntries.every(
+      (entry) => entry.duration! < MIN_STAY_DURATION_SECONDS,
+    );
+
+    if (allShortVisits) {
+      console.log('[Channel Hopping] Detectado comportamiento abusivo:', {
+        recentEntries: recentEntries.map((e) => ({
+          hostId: e.hostId,
+          duration: e.duration,
+        })),
+      });
+      return true;
+    }
+
+    return false;
+  }, [state.channelHopping.entries]);
+
+  const registerChannelJoin = useCallback(
+    (hostId: string) => {
+      const joinTime = Date.now();
+      currentChannelJoinTimeRef.current = joinTime;
+
+      dispatch({
+        type: AgoraActionType.CHANNEL_HOP_JOIN,
+        payload: { hostId, joinTime },
+      });
+
+      console.log(`[Channel Hopping] Registrado join a canal: ${hostId}`);
+    },
+    [dispatch],
+  );
+
+  const registerChannelLeave = useCallback(
+    (hostId: string) => {
+      const leaveTime = Date.now();
+      currentChannelJoinTimeRef.current = null;
+
+      dispatch({
+        type: AgoraActionType.CHANNEL_HOP_LEAVE,
+        payload: { hostId, leaveTime },
+      });
+
+      console.log(`[Channel Hopping] Registrado leave de canal: ${hostId}`);
+
+      setTimeout(() => {
+        const shouldBlock = evaluateChannelHoppingBehavior();
+        if (shouldBlock) {
+          dispatch({
+            type: AgoraActionType.SET_CHANNEL_HOPPING_BLOCKED,
+            payload: { isBlocked: true, blockStartTime: Date.now() },
+          });
+          dispatch({
+            type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
+            payload: true,
+          });
+        }
+      }, 100);
+    },
+    [dispatch, evaluateChannelHoppingBehavior],
+  );
+
+  const hopToRandomChannel = useCallback(async () => {
+    checkBlockExpiration();
+
+    if (state.channelHopping.isBlocked) {
+      console.log(
+        '[Channel Hopping] Usuario bloqueado intentó hacer hop - Forzando salida de la llamada',
+      );
+
+      dispatch({
+        type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
+        payload: true,
+      });
+
+      if (state.isRtcJoined && state.channelName) {
+        try {
+          console.log(
+            '[Channel Hopping] Ejecutando handleLeaveCall por bloqueo...',
+          );
+          await handleLeaveCall();
+          console.log(
+            '[Channel Hopping] Usuario removido de la llamada por estar bloqueado',
+          );
+        } catch (error) {
+          console.error(
+            '[Channel Hopping] Error al forzar salida por bloqueo:',
+            error,
+          );
+        }
+      }
+
+      return;
+    }
+
+    if (state.localUser?.role !== 'male') {
+      console.warn(
+        '[Channel Hopping] Solo los males pueden hacer channel hopping',
+      );
+      return;
+    }
+
+    if (!state.isRtcJoined || !state.channelName) {
+      console.warn('[Channel Hopping] No está en una llamada activa');
+      return;
+    }
+
+    const availableChannels = onlineFemalesList.filter(
+      (female) =>
+        female.status === 'available_call' &&
+        female.host_id &&
+        female.host_id !== state.channelName &&
+        !state.channelHopping.visitedChannelsInSession.has(female.host_id) &&
+        female.is_active === 1,
+    );
+
+    if (availableChannels.length === 0) {
+      console.log(
+        '[Channel Hopping] No hay canales disponibles - Forzando salida de la llamada',
+      );
+
+      dispatch({
+        type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+        payload: true,
+      });
+
+      if (state.isRtcJoined && state.channelName) {
+        try {
+          console.log(
+            '[Channel Hopping] Ejecutando handleLeaveCall por falta de canales...',
+          );
+          await handleLeaveCall();
+          console.log(
+            '[Channel Hopping] Usuario removido de la llamada por falta de canales disponibles',
+          );
+
+          console.log(
+            '[Channel Hopping] Reseteando estado para permitir reconexiones...',
+          );
+          dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+        } catch (error) {
+          console.error(
+            '[Channel Hopping] Error al forzar salida por falta de canales:',
+            error,
+          );
+        }
+      }
+
+      return;
+    }
+
+    const currentChannelName = state.channelName;
+
+    try {
+      console.log(
+        `[Channel Hopping] Iniciando salida completa del canal actual: ${currentChannelName}`,
+      );
+
+      registerChannelLeave(currentChannelName);
+
+      const randomIndex = Math.floor(Math.random() * availableChannels.length);
+      const selectedChannel = availableChannels[randomIndex];
+
+      console.log(
+        `[Channel Hopping] Canal seleccionado: ${selectedChannel.host_id}`,
+      );
+
+      console.log(
+        '[Channel Hopping] Ejecutando limpieza completa del canal anterior...',
+      );
+
+      const originalPush = router.push;
+      router.push = () => Promise.resolve(true);
+
+      try {
+        await handleLeaveCall();
+        console.log('[Channel Hopping] Limpieza completa exitosa');
+      } finally {
+        router.push = originalPush;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      registerChannelJoin(selectedChannel.host_id!);
+
+      console.log(
+        `[Channel Hopping] Uniéndose al nuevo canal: ${selectedChannel.host_id}`,
+      );
+      await handleVideoChatMale(selectedChannel.host_id!);
+
+      console.log('[Channel Hopping] Channel hopping completado exitosamente');
+    } catch (error) {
+      console.error(
+        '[Channel Hopping] Error durante el channel hopping:',
+        error,
+      );
+
+      try {
+        if (currentChannelName) {
+          registerChannelLeave(currentChannelName);
+        }
+      } catch (cleanupError) {
+        console.error(
+          '[Channel Hopping] Error durante limpieza de emergencia:',
+          cleanupError,
+        );
+      }
+
+      dispatch({
+        type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
+        payload: true,
+      });
+    }
+  }, [
+    state.channelHopping.isBlocked,
+    state.channelHopping.visitedChannelsInSession,
+    state.localUser?.role,
+    state.isRtcJoined,
+    state.channelName,
+    onlineFemalesList,
+    dispatch,
+    checkBlockExpiration,
+    registerChannelJoin,
+    registerChannelLeave,
+    handleVideoChatMale,
+    handleLeaveCall,
+    router,
+  ]);
+
+  const resetChannelHoppingIfStayedLong = useCallback(() => {
+    const { entries } = state.channelHopping;
+    const lastEntry = entries[entries.length - 1];
+
+    if (lastEntry && lastEntry.duration && lastEntry.duration >= 60) {
+      console.log(
+        '[Channel Hopping] Usuario permaneció 1+ minuto, reseteando contador',
+      );
+      dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+    }
+  }, [state.channelHopping.entries, dispatch]);
+
+  const closeChannelHoppingBlockedModal = useCallback(() => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
+      payload: false,
+    });
+  }, [dispatch]);
+
+  const openChannelHoppingBlockedModal = useCallback(() => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
+      payload: true,
+    });
+  }, [dispatch]);
+
+  const getBlockTimeRemaining = useCallback(() => {
+    if (
+      !state.channelHopping.isBlocked ||
+      !state.channelHopping.blockStartTime
+    ) {
+      return 0;
+    }
+
+    const elapsed = Date.now() - state.channelHopping.blockStartTime;
+    const remaining = Math.max(0, BLOCK_DURATION_MS - elapsed);
+    return Math.ceil(remaining / 1000);
+  }, [state.channelHopping.isBlocked, state.channelHopping.blockStartTime]);
+
+  useEffect(() => {
+    if (
+      state.isRtcJoined &&
+      state.channelName &&
+      state.localUser?.role === 'male'
+    ) {
+      if (!currentChannelJoinTimeRef.current) {
+        registerChannelJoin(state.channelName);
+      }
+    }
+  }, [
+    state.isRtcJoined,
+    state.channelName,
+    state.localUser?.role,
+    registerChannelJoin,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (currentChannelJoinTimeRef.current && state.channelName) {
+        registerChannelLeave(state.channelName);
+      }
+    };
+  }, [state.channelName, registerChannelLeave]);
+
+  return {
+    hopToRandomChannel,
+    isBlocked: state.channelHopping.isBlocked,
+    blockTimeRemaining: getBlockTimeRemaining(),
+    visitedChannelsCount: state.channelHopping.visitedChannelsInSession.size,
+    recentHops: state.channelHopping.entries.slice(-5),
+    closeChannelHoppingBlockedModal,
+    showChannelHoppingBlockedModal: state.showChannelHoppingBlockedModal,
+    resetChannelHoppingIfStayedLong,
+    registerChannelJoin,
+    registerChannelLeave,
+    openChannelHoppingBlockedModal,
+  };
+};

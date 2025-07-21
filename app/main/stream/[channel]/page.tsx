@@ -14,7 +14,6 @@ import StreamsVideo from '../sections/StreamsVideo';
 import StreamMobile from '../sections/StreamMobile';
 import { TbPlayerTrackNextFilled } from 'react-icons/tb';
 
-// Disable static generation for this page
 export const dynamic = 'force-dynamic';
 
 const PageStreamVideo = () => {
@@ -29,6 +28,7 @@ const PageStreamVideo = () => {
     handleLeaveCall,
     callTimer,
     sendGift,
+    hopToRandomChannel,
   } = useAgoraContext();
 
   if (isMobile) {
@@ -40,6 +40,7 @@ const PageStreamVideo = () => {
         toggleLocalAudio={toggleLocalAudio}
         sendMessage={sendRtmChannelMessage}
         sendGift={sendGift}
+        hopToRandomChannel={hopToRandomChannel}
       />
     );
   }
@@ -73,7 +74,11 @@ const PageStreamVideo = () => {
                 <div className="relative bg-transparent">
                   <StreamsVideo
                     localUser={agora?.localUser}
-                    remoteUser={agora?.localUser?.role === 'admin' ? agora?.remoteUsers : (agora?.remoteUsers[0] ?? [])}
+                    remoteUser={
+                      agora?.localUser?.role === 'admin'
+                        ? agora?.remoteUsers
+                        : (agora?.remoteUsers[0] ?? [])
+                    }
                     localVideoTrack={agora?.localVideoTrack}
                     isAudioLocal={agora?.isLocalAudioMuted}
                     isAudioRemote={agora?.remoteUsers[0]?.hasAudio}
@@ -141,7 +146,10 @@ const PageStreamVideo = () => {
                 </div>
                 {agora.localUser?.role !== 'female' && (
                   <div className="mt-4 flex flex-shrink-0 justify-end pe-6">
-                    <button className="pointer-events-auto relative m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none bg-[#ffffff29] text-base text-white no-underline opacity-100 outline-none backdrop-blur-[12px] transition duration-300 ease-in-out hover:scale-105 hover:cursor-pointer hover:bg-[#ffffff3d]">
+                    <button
+                      onClick={hopToRandomChannel}
+                      className="pointer-events-auto relative m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none bg-[#ffffff29] text-base text-white no-underline opacity-100 outline-none backdrop-blur-[12px] transition duration-300 ease-in-out hover:scale-105 hover:cursor-pointer hover:bg-[#ffffff3d]"
+                    >
                       <TbPlayerTrackNextFilled className="h-8 w-8" />
                     </button>
                   </div>
