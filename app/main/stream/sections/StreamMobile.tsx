@@ -22,6 +22,7 @@ interface StreamMobileProps {
     giftCostInMinutes: number,
     gift_image: string,
     giftPoints: number,
+    gift_name: string,
   ) => Promise<
     | { success: boolean; message?: string; cost_in_minutes: number }
     | { success: boolean; message?: string }
@@ -398,6 +399,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                                 gift.minutes,
                                 gift.image,
                                 gift.points,
+                                gift.name,
                               );
                             }}
                             className="relative ml-3 flex flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg bg-[#0000007a] px-3 py-2 backdrop-blur-3xl transition-colors duration-200 ease-in-out hover:bg-[#0000009a]"

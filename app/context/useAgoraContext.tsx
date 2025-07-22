@@ -59,6 +59,7 @@ const AgoraContext = createContext<{
     giftCostInMinutes: number,
     gift_image: string,
     giftPoints: number,
+    gift_name: string,
   ) => Promise<
     | { success: boolean; message?: string; cost_in_minutes: number }
     | { success: boolean; message: string }
