@@ -7,6 +7,7 @@ interface GiftContainerProps {
     giftCostInMinutes: number,
     gift_image: string,
     giftPoints: number,
+    giftName: string,
   ) => Promise<
     | { success: boolean; message?: string; cost_in_minutes: number }
     | { success: boolean; message?: string }
@@ -18,6 +19,7 @@ export interface GiftItem {
   image: string;
   minutes: number;
   points: number;
+  name: string;
 }
 
 const GiftContainer: React.FC<GiftContainerProps> = ({
@@ -33,7 +35,13 @@ const GiftContainer: React.FC<GiftContainerProps> = ({
               key={i}
               className="pointer-events-auto relative mb-1 ml-0 flex h-[72px] w-14 flex-col items-center justify-center rounded-2xl transition-all duration-300 after:min-w-4 after:content-[''] hover:cursor-pointer hover:bg-[#ffffff1f]"
               onClick={() => {
-                sendGift(gift.id, gift.minutes, gift.image, gift.points);
+                sendGift(
+                  gift.id,
+                  gift.minutes,
+                  gift.image,
+                  gift.points,
+                  gift.name,
+                );
               }}
             >
               <img

@@ -1,3 +1,6 @@
+'use client';
+
+import AnimateGifts from '@/app/components/shared/global/AnimateGifts';
 import { useMobile } from '@/app/hooks/useMobile';
 import { ChatMessage } from '@/app/types/streams';
 import { cn } from '@/lib/utils';
@@ -10,6 +13,13 @@ interface TranslatedChatMessage extends ChatMessage {
   display_text?: string;
 }
 
+interface MessageGift {
+  cost_in_minutes: number;
+  gift_image: string;
+  is_show: boolean;
+  gift_name: string;
+}
+
 interface MessagesProps {
   messages: ChatMessage[];
   avatar: {
@@ -19,6 +29,13 @@ interface MessagesProps {
 }
 
 const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
+  const [messageGift, setMessageGift] = useState<MessageGift>({
+    cost_in_minutes: 0,
+    gift_image: '',
+    gift_name: '',
+    is_show: false,
+  });
+
   const isMobile = useMobile(1024);
 
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -33,6 +50,26 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
     );
 
     if (audioRef.current && messages.length > 0) {
+      if (messages?.[messages?.length - 1]?.type === 'channel-gift') {
+        setMessageGift({
+          ...messageGift,
+          cost_in_minutes:
+            messages?.[messages?.length - 1]?.cost_in_minutes ?? 0,
+          gift_image: messages?.[messages?.length - 1]?.gift_image ?? '',
+          gift_name: messages?.[messages?.length - 1]?.gift_name ?? '',
+          is_show: true,
+        });
+
+        setTimeout(() => {
+          setMessageGift({
+            cost_in_minutes: 0,
+            gift_image: '',
+            gift_name: '',
+            is_show: false,
+          });
+        }, 5000);
+      }
+
       audioRef.current.play().catch((error) => {
         console.warn('Error al reproducir el audio:', error);
       });
@@ -120,6 +157,7 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
                     className={cn(
                       'm-unset w-unset z-10 cursor-auto self-center overflow-hidden pr-[25px] text-left text-sm font-medium not-italic leading-tight tracking-normal',
                       isMobile && 'ml-2',
+                      items.type === 'channel-gift' ? 'flex' : '',
                     )}
                   >
                     <span className="text-shadow-md inline-block max-w-full cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap pr-1.5 align-top leading-tight text-[#ffe5df]">
@@ -127,21 +165,43 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
                         {items.user_name}:
                       </span>
                     </span>
-                    <span className="cursor-pointer font-normal">
-                      {items.isTranslating ? (
-                        <span className="text-sm text-white">
-                          Traduciendo...
+                    {items.type === 'self' ||
+                    items.type === 'channel' ||
+                    items.type === 'self-gift' ? (
+                      <>
+                        <span className="cursor-pointer font-normal">
+                          {items.isTranslating ? (
+                            <span className="text-sm text-white">
+                              Traduciendo...
+                            </span>
+                          ) : (
+                            items.display_text
+                          )}
+                          {!items.isTranslating && (
+                            <RiTranslate className="relative ml-1 inline-block h-4 w-4 align-text-bottom text-[#bfc1c5]" />
+                          )}
                         </span>
-                      ) : (
-                        items.display_text
-                      )}
-                      {!items.isTranslating &&
-                        items.type !== 'self-gift' &&
-                        items.type !== 'channel-gift' &&
-                        items.type !== 'self' && (
-                          <RiTranslate className="relative ml-1 inline-block h-4 w-4 align-text-bottom text-[#bfc1c5]" />
-                        )}
-                    </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-2 flex items-center">
+                          <div className="relative isolate flex h-6 w-6 items-center justify-center">
+                            <div
+                              className="box-border h-full w-full overflow-hidden rounded-full bg-cover bg-center bg-no-repeat"
+                              style={{
+                                backgroundImage: `url(${items.gift_image})`,
+                              }}
+                            ></div>
+                          </div>
+                          <span className="ml-2">
+                            {items.gift_name}{' '}
+                            {(items?.cost_in_minutes ?? 0) > 0
+                              ? `(${items.cost_in_minutes} min)`
+                              : ''}
+                          </span>
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -156,6 +216,14 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
           />
         </div>
       </div>
+
+      {messageGift.is_show && (
+        <AnimateGifts
+          image_gift={messageGift.gift_image}
+          minutes={messageGift.cost_in_minutes}
+          name={messageGift.gift_name}
+        />
+      )}
     </div>
   );
 };

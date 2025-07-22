@@ -199,6 +199,7 @@ export const useAgoraCallChannel = (
               });
             } else if (receivedMsg.type === 'GIFT_SENT') {
               const giftData = receivedMsg.payload;
+
               let messageText: string;
               let messageType: 'channel-gift' | 'self-gift';
 
@@ -219,7 +220,9 @@ export const useAgoraCallChannel = (
                 text: messageText,
                 timestamp: Date.now(),
                 type: messageType,
-                gift_image: giftData.gift_image_url,
+                gift_image: giftData.gift_image,
+                cost_in_minutes: giftData.cost_in_minutes,
+                gift_name: giftData.gift_name,
               };
 
               setChatMessages((prevMessages) => [
@@ -614,6 +617,7 @@ export const useAgoraCallChannel = (
       giftCostInMinutes: number,
       gift_image: string,
       giftPoints: number,
+      gift_name: string,
     ) => {
       if (
         !localUser ||
@@ -737,16 +741,16 @@ export const useAgoraCallChannel = (
               receiver_rtm_uid: String(receiverFemale.rtmUid),
               receiver_name: receiverFemale.user_name || 'Modelo',
               gif_id: gifId,
-              gift_name: 'Regalo especial',
+              gift_name: gift_name,
               cost_in_minutes: giftCostInMinutes,
               gift_image: gift_image,
               gift_points: giftPoints,
             },
           };
+
           await rtmChannel?.sendMessage({
             text: JSON.stringify(giftRtmMessage),
           });
-          console.log('[Send Gift] Mensaje RTM de regalo enviado al canal.');
         }
         return result;
       } catch (error) {

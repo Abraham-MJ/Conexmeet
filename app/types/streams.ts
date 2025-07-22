@@ -105,6 +105,8 @@ export interface ChatMessage {
   type: 'channel' | 'self' | 'self-gift' | 'channel-gift';
   translatedText?: string;
   gift_image?: string;
+  cost_in_minutes?: number;
+  gift_name?: string;
 }
 
 export interface ChannelHopEntry {
