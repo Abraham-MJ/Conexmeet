@@ -7,7 +7,14 @@ import { signIn } from 'next-auth/react';
 
 const StyledBottomGoogle = () => {
   const handleGoogleSignIn = async () => {
-    await signIn('google', { callbackUrl: '/' });
+    try {
+      await signIn('google', { 
+        callbackUrl: '/auth/sign-in',
+        redirect: true 
+      });
+    } catch (error) {
+      console.error('Error durante el login con Google:', error);
+    }
   };
 
   return (

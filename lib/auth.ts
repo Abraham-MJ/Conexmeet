@@ -19,4 +19,8 @@ export const authOptions: AuthOptions = {
       return session;
     },
   },
+  pages: {
+    signIn: '/auth/sign-in',
+    error: '/auth/sign-in',
+  },
 };
