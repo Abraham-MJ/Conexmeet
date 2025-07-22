@@ -15,12 +15,13 @@ import { useAgoraContext } from '@/app/context/useAgoraContext';
 import { useMobile } from '@/app/hooks/useMobile';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown } from 'lucide-react';
+import { useUser } from '@/app/context/useClientContext';
 
-// Disable static generation for this page
 export const dynamic = 'force-dynamic';
 
 const ChatScreen = () => {
   const router = useRouter();
+  const { state: user } = useUser();
 
   const { chat_id } = useParams<{ chat_id: string }>();
   const isMobile = useMobile(1024);
@@ -93,6 +94,7 @@ const ChatScreen = () => {
               isActiveChat={
                 state.peerOnlineInChatStatus[remote_user?.id.toString()]
               }
+              role={user.user.gender}
             />
             <div
               ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
@@ -140,7 +142,7 @@ const ChatScreen = () => {
             <button
               onClick={() => scrollToBottom(true)}
               aria-label="Ir al final"
-              className="animate-fade-in absolute bottom-20 right-6 z-10 transform rounded-full bg-[#fc3d6b] p-2 text-white shadow-lg transition-all duration-300 ease-in-out hover:scale-110 hover:bg-[#fc3d6b]/90"
+              className="absolute bottom-20 right-6 z-10 transform animate-fade-in rounded-full bg-[#fc3d6b] p-2 text-white shadow-lg transition-all duration-300 ease-in-out hover:scale-110 hover:bg-[#fc3d6b]/90"
             >
               <ArrowDown className="h-6 w-6" />
             </button>

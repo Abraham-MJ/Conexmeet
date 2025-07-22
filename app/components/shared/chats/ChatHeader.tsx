@@ -18,6 +18,7 @@ interface ChatHeaderProps {
   onBack: () => void;
   isTyping: boolean;
   isActiveChat: boolean;
+  role: string;
 }
 
 const statusConfig = {
@@ -49,6 +50,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onBack,
   isTyping,
   isActiveChat,
+  role,
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [channel, setChannel] = useState<UserInformation>();
@@ -137,67 +139,69 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         </div>
       </div>
 
-      <div className="group relative">
-        <button
-          onClick={() => {
-            handleVideoChatMale(channel?.host_id ?? undefined);
-          }}
-          disabled={
-            statusConfig[
-              channel?.status === 'available_call' ||
-              channel?.status === 'in_call' ||
-              channel?.status === 'online'
-                ? channel?.status
-                : 'online'
-            ].disabled
-          }
-          className={cn(
-            'flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition-all duration-200',
-            isMobile && 'p-4',
-            statusConfig[
-              channel?.status === 'available_call' ||
-              channel?.status === 'in_call' ||
-              channel?.status === 'online'
-                ? channel?.status
-                : 'online'
-            ].className,
-          )}
-        >
-          {
-            statusConfig[
-              channel?.status === 'available_call' ||
-              channel?.status === 'in_call' ||
-              channel?.status === 'online'
-                ? channel?.status
-                : 'online'
-            ].icon
-          }
-          {!isMobile && (
-            <span>
-              {
-                statusConfig[
-                  channel?.status === 'available_call' ||
-                  channel?.status === 'in_call' ||
-                  channel?.status === 'online'
-                    ? channel?.status
-                    : 'online'
-                ].text
-              }
-            </span>
-          )}
-        </button>
-        <div className="pointer-events-none absolute top-full mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-800 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-          {
-            statusConfig[
-              channel?.status === 'available_call' ||
-              channel?.status === 'in_call' ||
-              channel?.status === 'online'
-                ? channel?.status
-                : 'online'
-            ].tooltip
-          }
+      {role !== 'female' && (
+        <div className="group relative">
+          <button
+            onClick={() => {
+              handleVideoChatMale(channel?.host_id ?? undefined);
+            }}
+            disabled={
+              statusConfig[
+                channel?.status === 'available_call' ||
+                channel?.status === 'in_call' ||
+                channel?.status === 'online'
+                  ? channel?.status
+                  : 'online'
+              ].disabled
+            }
+            className={cn(
+              'flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition-all duration-200',
+              isMobile && 'p-4',
+              statusConfig[
+                channel?.status === 'available_call' ||
+                channel?.status === 'in_call' ||
+                channel?.status === 'online'
+                  ? channel?.status
+                  : 'online'
+              ].className,
+            )}
+          >
+            {
+              statusConfig[
+                channel?.status === 'available_call' ||
+                channel?.status === 'in_call' ||
+                channel?.status === 'online'
+                  ? channel?.status
+                  : 'online'
+              ].icon
+            }
+            {!isMobile && (
+              <span>
+                {
+                  statusConfig[
+                    channel?.status === 'available_call' ||
+                    channel?.status === 'in_call' ||
+                    channel?.status === 'online'
+                      ? channel?.status
+                      : 'online'
+                  ].text
+                }
+              </span>
+            )}
+          </button>
+          <div className="pointer-events-none absolute top-full mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-800 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+            {
+              statusConfig[
+                channel?.status === 'available_call' ||
+                channel?.status === 'in_call' ||
+                channel?.status === 'online'
+                  ? channel?.status
+                  : 'online'
+              ].tooltip
+            }
+          </div>
         </div>
-      </div>
+      )}
 
       <ModalChannelNotFound
         isOpen={isOpen}

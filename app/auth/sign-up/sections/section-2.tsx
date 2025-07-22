@@ -81,7 +81,7 @@ const SectionTwoStep: React.FC<Props> = ({
             (item) => item?.id.toString() === credentials?.country_id,
           )?.[0]?.phonecode ?? '57'
         }`}
-        label="Número de teléfono:"
+        label="Número de teléfono (opcional):"
         value={credentials.number_phone}
         onFocus={() => clearError('number_phone')}
         type="text"

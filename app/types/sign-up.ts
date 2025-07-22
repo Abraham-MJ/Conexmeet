@@ -7,7 +7,7 @@ export interface Credentials {
   country_id: string;
   password: string;
   confirm_password: string;
-  number_phone: string;
+  number_phone?: string;
   date_of_birth: string;
   privacity: boolean;
   code_otp: string;

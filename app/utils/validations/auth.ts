@@ -64,11 +64,11 @@ export const StepTwoSchema = z
     country_id: z.string().min(1, 'El país es requerido'),
     number_phone: z
       .string()
-      .min(7, 'El número de teléfono es requerido')
-      .regex(
-        /^\+?\d{7,15}$/,
-        'Número de teléfono inválido (debe contener entre 7 y 15 dígitos, con o sin "+")',
-      ),
+      .optional()
+      .refine((value) => {
+        if (!value || value.trim() === '') return true;
+        return /^\+?\d{7,15}$/.test(value);
+      }, 'Número de teléfono inválido (debe contener entre 7 y 15 dígitos, con o sin "+")'),
     privacity: z
       .boolean()
       .refine(

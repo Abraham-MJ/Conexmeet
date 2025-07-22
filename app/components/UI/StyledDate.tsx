@@ -1,16 +1,34 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { format, parse } from 'date-fns';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  format,
+  parse,
+  setYear,
+  setMonth,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  isToday,
+} from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { MdEditCalendar } from 'react-icons/md';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { itemVariants } from '@/app/utils/animations';
 import { motion } from 'framer-motion';
 
@@ -24,6 +42,30 @@ interface StyledInputProps {
   onFocus: () => void;
 }
 
+const months = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+// Generate years from 1950 to current year
+const currentYear = new Date().getFullYear();
+const years = Array.from(
+  { length: currentYear - 1949 },
+  (_, i) => currentYear - i,
+);
+
 export const StyledDate: React.FC<StyledInputProps> = ({
   label,
   handleChange,
@@ -36,6 +78,9 @@ export const StyledDate: React.FC<StyledInputProps> = ({
   const [date, setDate] = useState<Date | undefined>(
     value ? parse(value, 'yyyy/MM/dd', new Date()) : undefined,
   );
+  const [currentMonth, setCurrentMonth] = useState(date || new Date());
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (date) {
@@ -51,8 +96,74 @@ export const StyledDate: React.FC<StyledInputProps> = ({
     }
   }, [date]);
 
+  const handleDateSelect = (selectedDate: Date) => {
+    setDate(selectedDate);
+    setIsOpen(false);
+  };
+
+  const handleMonthChange = (monthIndex: string) => {
+    setCurrentMonth(setMonth(currentMonth, parseInt(monthIndex)));
+  };
+
+  const handleYearChange = (year: string) => {
+    setCurrentMonth(setYear(currentMonth, parseInt(year)));
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth((prev) => {
+      const newMonth =
+        direction === 'prev'
+          ? setMonth(prev, prev.getMonth() - 1)
+          : setMonth(prev, prev.getMonth() + 1);
+      return newMonth;
+    });
+  };
+
+  const renderCalendar = () => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+    // Add empty cells for days before month start
+    const startDay = monthStart.getDay();
+    const emptyCells = Array.from({ length: startDay }, (_, i) => (
+      <div key={`empty-${i}`} className="h-8 w-8" />
+    ));
+
+    return (
+      <div className="grid grid-cols-7 gap-1">
+        {weekDays.map((day) => (
+          <div
+            key={day}
+            className="flex h-8 w-8 items-center justify-center text-xs font-medium text-gray-500"
+          >
+            {day}
+          </div>
+        ))}
+        {emptyCells}
+        {days.map((day) => (
+          <button
+            key={day.toISOString()}
+            onClick={() => handleDateSelect(day)}
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors duration-200 hover:bg-gray-100',
+              isSameDay(day, date || new Date()) &&
+                'bg-gradient-to-r from-[#f711ba] to-[#ff465d] text-white hover:opacity-90',
+              isToday(day) &&
+                !isSameDay(day, date || new Date()) &&
+                'bg-blue-100 text-blue-600',
+              !isSameMonth(day, currentMonth) && 'text-gray-300',
+            )}
+          >
+            {format(day, 'd')}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <motion.div
           className="relative flex h-[68px] flex-col"
@@ -65,6 +176,7 @@ export const StyledDate: React.FC<StyledInputProps> = ({
             {label || 'Fecha de nacimiento'}
           </label>
           <Button
+            ref={triggerRef}
             type="button"
             variant={'outline'}
             className={cn(
@@ -74,7 +186,7 @@ export const StyledDate: React.FC<StyledInputProps> = ({
                 : 'border-gray-300 bg-white/50 font-latosans',
             )}
           >
-            <MdEditCalendar size={40} className="text-gray-400" />
+            <MdEditCalendar size={20} className="mr-2 text-gray-400" />
             {date ? (
               <span>{format(date, 'yyyy/MM/dd')}</span>
             ) : (
@@ -88,8 +200,70 @@ export const StyledDate: React.FC<StyledInputProps> = ({
           )}
         </motion.div>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="single" selected={date} onSelect={setDate} />
+      <PopoverContent
+        className="p-4"
+        align="start"
+        style={{ width: triggerRef.current?.offsetWidth || 'auto' }}
+      >
+        <div className="space-y-4">
+          {/* Header with month/year selectors */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth('prev')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center space-x-2">
+              <Select
+                value={currentMonth.getMonth().toString()}
+                onValueChange={handleMonthChange}
+              >
+                <SelectTrigger className="h-9 w-32 text-sm px-3 py-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={currentMonth.getFullYear().toString()}
+                onValueChange={handleYearChange}
+              >
+                <SelectTrigger className="h-9 w-24 text-sm px-3 py-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-48">
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth('next')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Calendar grid */}
+          {renderCalendar()}
+        </div>
       </PopoverContent>
     </Popover>
   );
