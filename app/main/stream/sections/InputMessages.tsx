@@ -22,7 +22,18 @@ const InputMessages: React.FC<InputMessagesProps> = ({ sendMessage }) => {
       }
     }
   };
-  
+
+  const handleSendClick = async () => {
+    if (message.trim() !== '') {
+      try {
+        await sendMessage(message);
+        setMessage('');
+      } catch (error) {
+        console.error('SectionChat: Error al enviar mensaje:', error);
+      }
+    }
+  };
+
   return (
     <div className="relative mx-2 mb-0 mt-1 box-border flex min-h-12 flex-row items-end rounded-3xl bg-[#ffffff29] p-2 ps-1 backdrop-blur-[12px] transition-colors duration-300 ease-in-out">
       <input
@@ -72,7 +83,8 @@ const InputMessages: React.FC<InputMessagesProps> = ({ sendMessage }) => {
       </EmojiPickerButton>
       <button
         className="pointer-events-auto absolute right-2.5 m-0 box-border flex h-8 items-center justify-center overflow-hidden rounded-[18px] border-none bg-transparent p-0 no-underline opacity-100 outline-none transition duration-300 ease-in-out"
-        data-testid="show-emoji-picker"
+        data-testid="send-message-button"
+        onClick={handleSendClick}
       >
         <span className="translate-z-0 relative flex max-w-full items-center justify-center">
           <svg

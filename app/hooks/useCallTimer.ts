@@ -14,6 +14,15 @@ export const useCallTimer = (
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }, []);
 
+  const resetTimer = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    startTimeRef.current = null;
+    setElapsedTime(0);
+  }, []);
+
   useEffect(() => {
     if (
       isCallActive &&
@@ -47,5 +56,8 @@ export const useCallTimer = (
     };
   }, [isCallActive, localUserRole]);
 
-  return formatTime(elapsedTime);
+  return { 
+    formattedTime: formatTime(elapsedTime), 
+    resetTimer 
+  };
 };

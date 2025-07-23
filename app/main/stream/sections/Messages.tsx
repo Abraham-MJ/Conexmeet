@@ -41,6 +41,7 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioGiftRef = useRef<HTMLAudioElement | null>(null);
 
   const [chatMessages, setChatMessages] = useState<TranslatedChatMessage[]>([]);
 
@@ -70,9 +71,17 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
         }, 5000);
       }
 
-      audioRef.current.play().catch((error) => {
+     if (messages?.[messages?.length - 1]?.type === 'channel' || messages?.[messages?.length - 1]?.type === 'self') {
+       audioRef.current.play().catch((error) => {
         console.warn('Error al reproducir el audio:', error);
       });
+     } else {
+      if (audioGiftRef.current) {
+        audioGiftRef.current.play().catch((error) => {
+          console.warn('Error al reproducir el audio:', error);
+        });
+      }
+     }
     }
     if (messagesEndRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -212,6 +221,11 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
           <audio
             ref={audioRef}
             src={'/sound-notification.mp3'}
+            preload="auto"
+          />
+          <audio
+            ref={audioGiftRef}
+            src={'/gift-sound.mp3'}
             preload="auto"
           />
         </div>

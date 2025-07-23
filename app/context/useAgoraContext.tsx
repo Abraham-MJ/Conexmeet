@@ -8,6 +8,7 @@ import {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -228,10 +229,13 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     );
   }, [state.localUser, state.isRtcJoined, state.remoteUsers]);
 
-  const callTimer = useCallTimer(
+  const { formattedTime: callTimer, resetTimer: resetCallTimer } = useCallTimer(
     isCallTimerActive,
     state.localUser?.role || null,
   );
+
+  const prevRemoteUsersCount = useRef(state.remoteUsers.length);
+  const prevIsCallTimerActive = useRef(isCallTimerActive);
 
   const {
     sendChatMessage: sendRtmChannelMessage,
@@ -296,6 +300,38 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       dispatch({ type: AgoraActionType.REMOTE_HOST_ENDED_CALL, payload: null });
     }
   }, [state.hostEndedCallInfo, handleLeaveCall, dispatch]);
+
+  useEffect(() => {
+    const currentRemoteUsersCount = state.remoteUsers.length;
+    const currentIsCallTimerActive = isCallTimerActive;
+    
+    if (prevIsCallTimerActive.current && !currentIsCallTimerActive && state.isRtcJoined) {
+      console.log('[AgoraContext] Timer se desactivó (alguien se fue), reseteando mensajes y timer');
+      
+      dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+      
+      resetCallTimer();
+    }
+    
+    if (prevRemoteUsersCount.current > currentRemoteUsersCount && state.isRtcJoined) {
+      console.log('[AgoraContext] Usuario remoto se fue, reseteando mensajes y timer');
+      
+      dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+      
+      resetCallTimer();
+    }
+    
+    if (!state.isRtcJoined && state.chatMessages.length > 0) {
+      console.log('[AgoraContext] Usuario local salió del canal, reseteando mensajes y timer');
+      
+      dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+      
+      resetCallTimer();
+    }
+    
+    prevRemoteUsersCount.current = currentRemoteUsersCount;
+    prevIsCallTimerActive.current = currentIsCallTimerActive;
+  }, [state.remoteUsers.length, isCallTimerActive, state.isRtcJoined, state.chatMessages.length, dispatch, resetCallTimer]);
 
   const loadingStatus = useMemo<LoadingStatus>(() => {
     const { activeLoadingMessage } = state;
