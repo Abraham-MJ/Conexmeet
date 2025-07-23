@@ -24,6 +24,7 @@ export interface ApiResponse {
   details?: {
     profileUpdate?: UpdateOperationResult;
     photoUpdate?: UpdateOperationResult;
+    passwordUpdate?: UpdateOperationResult;
   };
   errorDetails?: any;
   data?: any;
@@ -35,7 +36,13 @@ interface HookError {
 }
 
 interface UseUpdateProfileEnhancedReturn {
-  credentials: { name: string; email: string };
+  credentials: {
+    name: string;
+    email: string;
+    password_old: string;
+    password: string;
+    password_confirmation: string;
+  };
   formErrors: ReturnType<typeof useForm>['errors'];
   changeFormField: ReturnType<typeof useForm>['changeField'];
   clearFormFieldError: ReturnType<typeof useForm>['clearError'];
@@ -69,6 +76,9 @@ export function useUpdateProfile({
   } = useForm({
     name: initialUser.name,
     email: initialUser.email,
+    password_old: '',
+    password: '',
+    password_confirmation: '',
   });
 
   const [photoPreview, setPhotoPreview] = useState<string | undefined>(
@@ -86,7 +96,13 @@ export function useUpdateProfile({
   }, []);
 
   const resetFormToInitial = useCallback(() => {
-    setCredentials({ name: initialUser.name, email: initialUser.email });
+    setCredentials({
+      name: initialUser.name,
+      email: initialUser.email,
+      password_old: '',
+      password: '',
+      password_confirmation: '',
+    });
     setPhotoPreview(initialUser.profile_photo_path || undefined);
     setSelectedPhotoFile(null);
     setHasChanges(false);
@@ -117,7 +133,13 @@ export function useUpdateProfile({
     const nameChanged = credentials.name !== initialUser.name;
     const emailChanged = credentials.email !== initialUser.email;
     const photoChanged = selectedPhotoFile !== null;
-    setHasChanges(nameChanged || emailChanged || photoChanged);
+    const passwordChanged =
+      credentials.password_old ||
+      credentials.password ||
+      credentials.password_confirmation;
+    setHasChanges(
+      nameChanged || emailChanged || photoChanged || !!passwordChanged,
+    );
   }, [credentials, selectedPhotoFile, initialUser.name, initialUser.email]);
 
   const submitProfileUpdate = useCallback(async (): Promise<
@@ -131,9 +153,14 @@ export function useUpdateProfile({
     const nameHasChanged = currentCredentials.name !== currentInitialUser.name;
     const emailHasChanged =
       currentCredentials.email !== currentInitialUser.email;
+    const passwordHasChanged = !!(
+      currentCredentials.password_old ||
+      currentCredentials.password ||
+      currentCredentials.password_confirmation
+    );
     const dataFieldsHaveChanged = nameHasChanged || emailHasChanged;
 
-    if (!photoHasChanged && !dataFieldsHaveChanged) {
+    if (!photoHasChanged && !dataFieldsHaveChanged && !passwordHasChanged) {
       setHasChanges(false);
       return {
         success: true,
@@ -146,9 +173,14 @@ export function useUpdateProfile({
 
     if (formErrors.name) clearFormFieldError('name');
     if (formErrors.email) clearFormFieldError('email');
+    if (formErrors.password_old) clearFormFieldError('password_old');
+    if (formErrors.password) clearFormFieldError('password');
+    if (formErrors.password_confirmation)
+      clearFormFieldError('password_confirmation');
 
     let photoUpdateOutcome: UpdateOperationResult | undefined = undefined;
     let dataUpdateOutcome: UpdateOperationResult | undefined = undefined;
+    let passwordUpdateOutcome: UpdateOperationResult | undefined = undefined;
     const aggregatedMessages: string[] = [];
     let overallRequestSuccess = true;
 
@@ -263,6 +295,89 @@ export function useUpdateProfile({
       }
     }
 
+    if (passwordHasChanged) {
+      if (
+        overallRequestSuccess ||
+        (!photoHasChanged && !dataFieldsHaveChanged)
+      ) {
+        const passwordFormData = new FormData();
+        passwordFormData.append(
+          'password_old',
+          currentCredentials.password_old,
+        );
+        passwordFormData.append('password', currentCredentials.password);
+        passwordFormData.append(
+          'password_confirmation',
+          currentCredentials.password_confirmation,
+        );
+
+        try {
+          const response = await fetch('/api/update-profile/update-password', {
+            method: 'POST',
+            body: passwordFormData,
+          });
+          passwordUpdateOutcome =
+            (await response.json()) as UpdateOperationResult;
+
+          if (!response.ok || !passwordUpdateOutcome.success) {
+            overallRequestSuccess = false;
+            aggregatedMessages.push(
+              passwordUpdateOutcome.message ||
+                `Error al actualizar contraseña (status ${response.status})`,
+            );
+            if (
+              passwordUpdateOutcome.errorDetails &&
+              typeof passwordUpdateOutcome.errorDetails === 'object'
+            ) {
+              const errorDetailsContent =
+                passwordUpdateOutcome.errorDetails as any;
+              for (const key in errorDetailsContent) {
+                if (
+                  (key === 'password_old' ||
+                    key === 'password' ||
+                    key === 'password_confirmation') &&
+                  Array.isArray(errorDetailsContent[key])
+                ) {
+                  setFormFieldError(
+                    key as
+                      | 'password_old'
+                      | 'password'
+                      | 'password_confirmation',
+                    errorDetailsContent[key][0],
+                  );
+                }
+              }
+            }
+          } else {
+            aggregatedMessages.push(
+              passwordUpdateOutcome.message ||
+                'Contraseña actualizada correctamente.',
+            );
+          }
+        } catch (e: any) {
+          overallRequestSuccess = false;
+          const passwordErrorMessage =
+            e.message || 'Error de red al actualizar la contraseña.';
+          aggregatedMessages.push(passwordErrorMessage);
+          passwordUpdateOutcome = {
+            success: false,
+            message: passwordErrorMessage,
+            status: 500,
+            errorDetails: e,
+          };
+        }
+      } else {
+        const skippedMessage =
+          'Actualización de contraseña omitida debido a errores previos.';
+        aggregatedMessages.push(skippedMessage);
+        passwordUpdateOutcome = {
+          success: false,
+          message: skippedMessage,
+          status: 400,
+        };
+      }
+    }
+
     setIsLoading(false);
     const finalCombinedMessage = aggregatedMessages.join(' ').trim();
 
@@ -284,6 +399,17 @@ export function useUpdateProfile({
         setCredentials({
           name: currentCredentials.name,
           email: currentCredentials.email,
+          password_old: '',
+          password: '',
+          password_confirmation: '',
+        });
+      } else if (passwordHasChanged) {
+        setCredentials({
+          name: currentCredentials.name,
+          email: currentCredentials.email,
+          password_old: '',
+          password: '',
+          password_confirmation: '',
         });
       }
       setHasChanges(false);
@@ -299,6 +425,7 @@ export function useUpdateProfile({
       details: {
         photoUpdate: photoUpdateOutcome,
         profileUpdate: dataUpdateOutcome,
+        passwordUpdate: passwordUpdateOutcome,
       },
     };
     return finalResponse;

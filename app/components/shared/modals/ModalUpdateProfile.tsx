@@ -7,6 +7,7 @@ import { useUpdateProfile } from '@/app/hooks/api/useUpdateProfile';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useUser } from '@/app/context/useClientContext';
 
 interface UpdateProfileUser {
   user: {
@@ -24,6 +25,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
   onClose,
   user,
 }) => {
+  const { handleGetInformation } = useUser();
   const {
     credentials,
     formErrors,
@@ -42,9 +44,9 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
 
   const handleActualSubmit = async () => {
     const response = await submitProfileUpdate();
-    console.log('RESPONSE:', response);
 
     if (response && response.success) {
+      await handleGetInformation();
       onClose();
     } else if (response && !response.success) {
       console.error(
@@ -98,7 +100,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
                 <button
                   onClick={triggerImageUpload}
                   type="button"
-                  className="absolute bottom-1 -right-1 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white transition-colors hover:bg-[#e8356a]"
+                  className="absolute -right-1 bottom-1 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white transition-colors hover:bg-[#e8356a]"
                   aria-label="Cambiar foto de perfil"
                 >
                   <Camera className="h-6 w-6" />
@@ -133,6 +135,36 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
                 error={formErrors.email}
                 placeholder="Correo electrónico"
                 onFocus={() => clearFormFieldError('email')}
+              />
+              <StyledInputs
+                name="password_old"
+                type="password"
+                label="Contraseña actual:"
+                value={credentials.password_old}
+                handleChange={changeFormField}
+                error={formErrors.password_old}
+                placeholder="Contraseña actual"
+                onFocus={() => clearFormFieldError('password_old')}
+              />
+              <StyledInputs
+                name="password"
+                type="password"
+                label="Nueva contraseña:"
+                value={credentials.password}
+                handleChange={changeFormField}
+                error={formErrors.password}
+                placeholder="Nueva contraseña"
+                onFocus={() => clearFormFieldError('password')}
+              />
+              <StyledInputs
+                name="password_confirmation"
+                type="password"
+                label="Confirmar contraseña:"
+                value={credentials.password_confirmation}
+                handleChange={changeFormField}
+                error={formErrors.password_confirmation}
+                placeholder="Confirmar nueva contraseña"
+                onFocus={() => clearFormFieldError('password_confirmation')}
               />
             </div>
 
