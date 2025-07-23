@@ -160,7 +160,7 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
     return (
       <motion.header
         className={cn(
-          'fixed top-0 z-[50] flex h-[80px] w-full items-center justify-between border-b bg-[#fffffff0] px-4 py-3 text-white backdrop-blur-md transition-all duration-300',
+          'fixed top-0 z-[50] flex h-[80px] w-full items-center justify-between border-b bg-[#fffffff0] px-4 py-3 text-white backdrop-blur-3xl transition-all duration-300',
           shouldHideHeader && 'hidden',
         )}
       >
@@ -192,7 +192,7 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
   return (
     <header
       className={cn(
-        `fixed top-0 z-[50] flex h-[80px] w-full items-center justify-center border-b bg-[#FFFFFF] px-4 py-3 text-white backdrop-blur-md transition-all duration-300`,
+        `fixed top-0 z-[50] flex h-[80px] w-full items-center justify-center border-b bg-[#FFFFFF] px-4 py-3 text-white backdrop-blur-3xl transition-all duration-300`,
         shouldHideHeader && 'hidden',
       )}
     >
@@ -221,7 +221,6 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
             );
           })}
         </div>
-
         <nav className="absolute left-1/2 flex -translate-x-1/2 items-center space-x-6">
           {navRoutes.map((route, index) => {
             if (route.show && !route.show(role)) {
@@ -250,7 +249,6 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
             );
           })}
         </nav>
-
         <UserDropdown />
       </div>
       <ModalPackage

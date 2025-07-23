@@ -6,8 +6,13 @@ import { User, LogOut, CircleUserRound, Menu } from 'lucide-react';
 import { useUser } from '@/app/context/useClientContext';
 import useLogin from '@/app/hooks/api/useLogin';
 import { cn } from '@/lib/utils';
+import { AiOutlineGlobal } from 'react-icons/ai';
+import { MdGTranslate } from 'react-icons/md';
+import ModalTranslate from './modals/ModalTranslate';
 
 export default function UserDropdown() {
+  const [isOpenTranslate, setIsOpenTranslate] = useState(false);
+
   const { state } = useUser();
   const { logout } = useLogin();
 
@@ -35,7 +40,15 @@ export default function UserDropdown() {
   }, []);
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative " ref={dropdownRef}>
+      <button
+        className="flex absolute -left-14 h-10 cursor-pointer items-center px-3 py-1 backdrop-blur-sm transition-all duration-300 hover:scale-105"
+        onClick={() => {
+          setIsOpenTranslate(true);
+        }}
+      >
+        <MdGTranslate className="h-6 w-6 text-[#181a21]" />
+      </button>
       <button
         className="flex h-10 cursor-pointer items-center rounded-full border bg-[#00000014] px-3 py-1 backdrop-blur-sm transition-all duration-300 hover:scale-105"
         onClick={toggleDropdown}
@@ -126,6 +139,12 @@ export default function UserDropdown() {
           </nav>
         </div>
       )}
+      <ModalTranslate
+        isOpen={isOpenTranslate}
+        onClose={() => {
+          setIsOpenTranslate(false);
+        }}
+      />
     </div>
   );
 }
