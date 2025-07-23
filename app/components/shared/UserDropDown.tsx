@@ -100,7 +100,7 @@ export default function UserDropdown() {
                   >
                     <User className="h-4 w-4" />
                   </div>
-                  <span>Profile</span>
+                  <span>Perfil</span>
                 </Link>
               </li>
               <li className="px-2">
@@ -119,7 +119,7 @@ export default function UserDropdown() {
                   >
                     <LogOut className="h-4 w-4" />
                   </div>
-                  <span>Log out</span>
+                  <span>Cerrar Sesión</span>
                 </Link>
               </li>
             </ul>

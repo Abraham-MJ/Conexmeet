@@ -18,10 +18,10 @@ const AddStoriesView = ({ handleOpen }: { handleOpen: () => void }) => {
           className="translate-z-0 mb-10 transform text-center"
           style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}
         >
-          <h1 className="text-2xl font-medium">Add a short video.</h1>
+          <h1 className="text-2xl font-medium">Agrega un video corto.</h1>
         </div>
 
-        <button className="group relative" aria-label="Add video">
+        <button className="group relative" aria-label="Agregar video">
           <div
             className="flex h-24 w-24 items-center justify-center rounded-full bg-white bg-opacity-20 backdrop-blur-sm transition-all duration-300 md:mb-16"
             style={{
@@ -72,7 +72,7 @@ const AddStoriesView = ({ handleOpen }: { handleOpen: () => void }) => {
             >
               ✨
             </span>
-            Get points for likes.
+            Obtén puntos por likes.
           </p>
         </div>
       </div>

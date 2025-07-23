@@ -11,7 +11,7 @@ const GiftPage: React.FC<GiftProps> = ({ data, isLoading }) => {
   const columns: Column<any>[] = [
     {
       key: 'sender_name',
-      header: 'Sender Name',
+      header: 'Nombre del Remitente',
       align: 'center',
       width: 'w-[100px]',
       cell: (item) => {
@@ -20,7 +20,7 @@ const GiftPage: React.FC<GiftProps> = ({ data, isLoading }) => {
     },
     {
       key: 'gift_name',
-      header: 'Gift Name',
+      header: 'Nombre del Regalo',
       align: 'center',
       cell: (item) => (
         <span className="font-normal text-gray-800">{item.gif_name}</span>
@@ -28,14 +28,14 @@ const GiftPage: React.FC<GiftProps> = ({ data, isLoading }) => {
     },
     {
       key: 'points',
-      header: 'Points',
+      header: 'Puntos',
       align: 'center',
       highlightColor: true,
       cell: (item) => <span className="font-semibold">+{item.points}</span>,
     },
     {
       key: 'date',
-      header: 'Date',
+      header: 'Fecha',
       align: 'center',
       cell: (item) => (
         <span className="font-normal">{formatCustomDate(item.created_at)}</span>

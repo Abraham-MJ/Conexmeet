@@ -468,7 +468,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                             <button
                               onClick={hopToRandomChannel}
                               className="transition-border pointer-events-auto m-0 box-border flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-none bg-[#0000007a] text-white no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out"
-                              aria-label="Enviar un regalo"
+                              aria-label="Siguiente canal"
                             >
                               <span className="translate-z-0 relative flex max-w-full flex-1 transform items-center justify-center">
                                 <TbPlayerTrackNextFilled className="h-8 w-8" />

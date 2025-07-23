@@ -43,7 +43,7 @@ const Header = () => {
               href="/auth/sign-in"
               className="inline-flex items-center rounded-full bg-gradient-to-r from-[#f711ba] to-[#ff465d] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:from-[#ff465d] hover:to-[#f711ba] hover:shadow-lg"
             >
-              Login / Register
+              Iniciar Sesión / Registrarse
             </Link>
           </div>
 
@@ -70,7 +70,7 @@ const Header = () => {
                 className="mx-2 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#f711ba] to-[#ff465d] px-6 py-3 text-sm font-semibold text-white transition-all duration-300 hover:shadow-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Login / Register
+                Iniciar Sesión / Registrarse
               </Link>
             </div>
           </div>

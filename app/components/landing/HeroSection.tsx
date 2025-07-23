@@ -48,7 +48,7 @@ const HeroSection = () => {
                   <BiMessageDetail className="h-6 w-6 text-white sm:h-8 sm:w-8" />
                 </div>
                 <span className="text-xs font-medium text-white sm:text-sm md:text-base">
-                  Messaging
+                  Mensajería
                 </span>
               </div>
 
@@ -57,7 +57,7 @@ const HeroSection = () => {
                   <BsGift className="h-6 w-6 text-white sm:h-8 sm:w-8" />
                 </div>
                 <span className="text-xs font-medium text-white sm:text-sm md:text-base">
-                  Gifts
+                  Regalos
                 </span>
               </div>
 
@@ -66,7 +66,7 @@ const HeroSection = () => {
                   <Users className="h-6 w-6 text-white sm:h-8 sm:w-8" />
                 </div>
                 <span className="text-xs font-medium text-white sm:text-sm md:text-base">
-                  Peer to Peer
+                  Persona a Persona
                 </span>
               </div>
             </div>

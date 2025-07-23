@@ -89,7 +89,7 @@ const FeaturesScreen = () => {
         {activeTab === 'online' && (
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
-              Online now
+              En línea ahora
               {`${agora.channelHopping.isBlocked ? `🚫 Bloqueado ${formatTime(channelHoppingBlockTimeRemaining)}` : ''}`}
             </h2>
             {online.loading ? (
@@ -137,7 +137,7 @@ const FeaturesScreen = () => {
         {activeTab === 'stories' && (
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
-              Histories
+              Historias
             </h2>
             {stories.loading ? (
               <FeaturesSkeleton />
@@ -169,7 +169,7 @@ const FeaturesScreen = () => {
         {activeTab === 'contacts' && (
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
-              Your contacts
+              Tus contactos
             </h2>
             {contacts.loading ? (
               <FeaturesSkeleton />

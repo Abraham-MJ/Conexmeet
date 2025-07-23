@@ -101,7 +101,7 @@ const PlayStoriesView: React.FC<PlayStoriesProps> = ({
               <button
                 onClick={togglePlayPause}
                 className="z-20 rounded-full bg-black/50 p-3 text-white backdrop-blur-sm transition-opacity hover:opacity-80"
-                aria-label={isPlaying ? 'Pause video' : 'Play video'}
+                aria-label={isPlaying ? 'Pausar video' : 'Reproducir video'}
               >
                 {isPlaying ? (
                   <FaPause className="h-6 w-6" />

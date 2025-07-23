@@ -189,7 +189,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
               >
                 {isLoading ? (
                   <div className="text-md flex items-center justify-center font-latosans">
-                    Loading
+                    Cargando
                     {[1, 2, 3].map((index) => (
                       <motion.span
                         key={index}

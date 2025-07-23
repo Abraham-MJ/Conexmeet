@@ -60,7 +60,7 @@ const ModalPackage = ({
           <div className="flex items-center gap-2">
             <FaCoins className="h-6 w-6 text-[#ffd000]" />
             <span className="font-medium text-white">
-              Minutes: {user.user.minutes}
+              Minutos: {user.user.minutes}
             </span>
           </div>
           <div

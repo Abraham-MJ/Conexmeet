@@ -40,7 +40,7 @@ const ContactsScreen = () => {
     <ContainerGlobal classNames="max-w-[1536px] px-4 mx-auto">
       <div className="mt-6 pb-12 md:px-0">
         <h2 className="mb-8 text-xl font-medium text-gray-800">
-          Your contacts
+          Tus contactos
         </h2>
         {contacts.loading ? (
           <FeaturesSkeleton />

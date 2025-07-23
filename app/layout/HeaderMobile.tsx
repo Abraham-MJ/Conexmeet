@@ -80,7 +80,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: role === 'female' ? MdInsertChartOutlined : BiLike,
       iconActive: role === 'female' ? MdInsertChart : BiSolidLike,
-      label: role === 'female' ? 'Ranking' : 'For You',
+      label: role === 'female' ? 'Ranking' : 'Para Ti',
       href: (currentRole) =>
         currentRole === 'female' ? routes.female.ranking : routes.male.forYou,
       disabled: role === 'female' && userState.user.confirmed !== 1,
@@ -88,7 +88,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: HiOutlineVideoCamera,
       iconActive: HiVideoCamera,
-      label: 'Video chat',
+      label: 'Video Chat',
       href: (currentRole) =>
         currentRole === 'female'
           ? routes.female.videoChat
@@ -98,7 +98,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: RiContactsLine,
       iconActive: RiContactsFill,
-      label: 'Contacts',
+      label: 'Contactos',
       href: (currentRole) =>
         'contacts' in routes[currentRole]
           ? (routes[currentRole] as { contacts: string }).contacts
@@ -108,7 +108,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     },
     {
       icon: DollarSign,
-      label: 'Recharge',
+      label: 'Recargar',
       href: () => '#',
       show: (currentRole) => currentRole === 'male',
       onClick: () => setIsOpen(true),

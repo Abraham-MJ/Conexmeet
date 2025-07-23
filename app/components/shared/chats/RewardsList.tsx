@@ -43,7 +43,7 @@ const RewardsList = () => {
           'ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-500 hover:bg-gray-50',
           !isMobile && 'border',
         )}
-        aria-label="Scroll left"
+        aria-label="Desplazar izquierda"
       >
         <IoIosArrowBack className="h-6 w-6" />
       </button>
@@ -77,7 +77,7 @@ const RewardsList = () => {
           'ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-500 hover:bg-gray-50',
           !isMobile && 'border',
         )}
-        aria-label="Scroll right"
+        aria-label="Desplazar derecha"
       >
         <IoIosArrowBack className="h-6 w-6 rotate-180" />
       </button>

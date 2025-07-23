@@ -92,7 +92,14 @@ export function TabNavigation({
                     {getTabIcon(tab)}
                   </motion.div>
                 )}
-                <span className="uppercase tracking-wide">{tab}</span>
+                <span className="uppercase tracking-wide">
+                  {tab === 'online' ? 'EN LÍNEA' : 
+                   tab === 'stories' ? 'HISTORIAS' : 
+                   tab === 'contacts' ? 'CONTACTOS' : 
+                   tab === 'Ranking' ? 'RANKING' : 
+                   tab === 'Referrals' ? 'REFERIDOS' : 
+                   tab === 'Gifts' ? 'REGALOS' : tab}
+                </span>
               </div>
 
               {activeTab === tab && (

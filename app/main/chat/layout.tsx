@@ -79,7 +79,7 @@ export default function ChatsLayout({
         <div className="flex h-full w-full flex-col bg-white">
           <div className="flex-shrink-0 border-b border-gray-200 p-4">
             <div className="flex items-center">
-              <h2 className="text-2xl font-semibold text-gray-900">Messages</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">Mensajes</h2>
             </div>
             <div className="relative mt-4">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

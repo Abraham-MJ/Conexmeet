@@ -160,7 +160,7 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
         )}
         {localUser?.role === 'admin' && (
           <div className="absolute left-2 top-2 z-50 rounded bg-[#0000007a] px-2 py-1 text-xs text-white">
-            Female
+            Mujer
           </div>
         )}
       </div>
@@ -181,7 +181,7 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
           )}
           {localUser?.role === 'admin' && (
             <div className="absolute left-2 top-2 z-50 rounded bg-[#0000007a] px-2 py-1 text-xs text-white">
-              Male
+              Hombre
             </div>
           )}
         </div>

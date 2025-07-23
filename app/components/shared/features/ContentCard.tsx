@@ -302,22 +302,22 @@ export function ContentCardRooms({
         {user.status === 'online' ? (
           <>
             <TbPointFilled className="h-8 w-8 text-green-500" />
-            Online
+            En línea
           </>
         ) : user.status === 'available_call' ? (
           <>
             <TbPointFilled className="h-8 w-8 text-yellow-500" />
-            Available for call
+            Disponible para llamada
           </>
         ) : user.status === 'in_call' ? (
           <>
             <TbPointFilled className="h-8 w-8 text-red-500" />
-            On call with another user
+            En llamada con otro usuario
           </>
         ) : (
           <>
             <TbPointFilled className="h-8 w-8 text-gray-500" />
-            Offline
+            Desconectado
           </>
         )}
       </div>

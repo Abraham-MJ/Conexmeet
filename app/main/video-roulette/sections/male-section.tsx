@@ -95,11 +95,11 @@ const MaleViewVideo = () => {
       <div className="absolute left-9 top-9 z-20 text-sm text-white/70">
         <div className="flex items-center">
           <Play className="mr-2 h-4 w-4 text-white/70" />
-          <span>PLAY</span>
+          <span>REPRODUCIR</span>
         </div>
         <div className="flex items-center">
           <span className="mr-2 text-red-500">●</span>
-          <span>REC</span>
+          <span>GRABAR</span>
         </div>
       </div>
       <div className="absolute bottom-8 left-8 z-20 text-sm text-white/70">

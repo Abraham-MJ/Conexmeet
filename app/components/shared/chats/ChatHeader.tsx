@@ -133,7 +133,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
               )}
             >
               <span className={cn('h-2 w-2 rounded-full bg-green-500')}></span>
-              En linea
+              En línea
             </div>
           )}
         </div>

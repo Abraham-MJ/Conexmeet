@@ -18,7 +18,7 @@ const RankingPage: React.FC<RankingProps> = ({
   const columns: Column<RankingItem>[] = [
     {
       key: 'position',
-      header: 'Position',
+      header: 'Posición',
       align: 'center',
       width: 'w-[100px]',
       cell: (_item, index) => {
@@ -39,7 +39,7 @@ const RankingPage: React.FC<RankingProps> = ({
     },
     {
       key: 'profile_photo_path',
-      header: 'Photo',
+      header: 'Foto',
       align: 'center',
       width: 'w-[100px]',
       cell: (item) => (
@@ -54,7 +54,7 @@ const RankingPage: React.FC<RankingProps> = ({
     },
     {
       key: 'name',
-      header: 'Name',
+      header: 'Nombre',
       align: 'left',
       cell: (item) => (
         <span className="font-medium text-gray-800">{item.name}</span>
@@ -62,7 +62,7 @@ const RankingPage: React.FC<RankingProps> = ({
     },
     {
       key: 'minutes',
-      header: 'Minutes',
+      header: 'Minutos',
       align: 'right',
       highlightColor: true,
       cell: (item) => (
@@ -73,14 +73,14 @@ const RankingPage: React.FC<RankingProps> = ({
 
   let dynamicFooterContent: React.ReactNode = (
     <p className="flex items-center text-sm text-gray-500">
-      Calculating your position...
+      Calculando tu posición...
     </p>
   );
 
   if (isTableDataLoading) {
     dynamicFooterContent = (
       <p className="flex items-center text-sm text-gray-500">
-        Loading ranking...
+        Cargando ranking...
       </p>
     );
   } else if (
@@ -89,7 +89,7 @@ const RankingPage: React.FC<RankingProps> = ({
   ) {
     dynamicFooterContent = (
       <p className="flex items-center text-sm text-gray-500">
-        User information not available.
+        Información de usuario no disponible.
       </p>
     );
   } else {
@@ -100,13 +100,13 @@ const RankingPage: React.FC<RankingProps> = ({
     if (currentUserMinutesNumeric === null) {
       dynamicFooterContent = (
         <p className="flex items-center text-sm text-red-500">
-          Error processing your time.
+          Error procesando tu tiempo.
         </p>
       );
     } else if (!data || data.length === 0) {
       dynamicFooterContent = (
         <p className="flex items-center text-sm text-gray-500">
-          No ranking data available.
+          No hay datos de ranking disponibles.
         </p>
       );
     } else {
@@ -122,9 +122,9 @@ const RankingPage: React.FC<RankingProps> = ({
         if (currentUserRankingIndex === 0) {
           dynamicFooterContent = (
             <p className="flex flex-col text-sm text-gray-700">
-              <span className="font-medium">Congratulations! You are</span>
+              <span className="font-medium">¡Felicidades! Estás</span>
               <span className="mx-1 font-bold text-[#fc3d6b]">#1</span>
-              <span>in the rankings. Keep it up!</span>
+              <span>en el ranking. ¡Sigue así!</span>
             </p>
           );
         } else {
@@ -136,10 +136,10 @@ const RankingPage: React.FC<RankingProps> = ({
             dynamicFooterContent = (
               <p className="flex flex-col text-sm">
                 <span className="font-medium text-gray-700">
-                  Your ranking position is updating!
+                  ¡Tu posición en el ranking se está actualizando!
                 </span>
                 <span className="ml-1 rounded bg-[#fc3d6b] px-1.5 py-0.5 text-xs font-medium text-white">
-                  Prev. Rank: #{currentUserRank}
+                  Pos. Anterior: #{currentUserRank}
                 </span>
               </p>
             );
@@ -151,25 +151,25 @@ const RankingPage: React.FC<RankingProps> = ({
               dynamicFooterContent = (
                 <p className="flex items-center text-sm">
                   <span className="font-medium text-gray-700">
-                    You're in the Top {currentUserRank}! Need
+                    ¡Estás en el Top {currentUserRank}! Necesitas
                   </span>
                   <span className="mx-1 font-bold text-[#fc3d6b]">
                     {pointsNeededToDisplay}
                   </span>
                   <span className="text-gray-700">
-                    more points to reach #{rankToReach}.
+                    más puntos para alcanzar el #{rankToReach}.
                   </span>
                 </p>
               );
             } else {
               dynamicFooterContent = (
                 <p className="flex flex-col text-sm">
-                  <span className="font-medium text-gray-700">You: Need</span>
+                  <span className="font-medium text-gray-700">Tú: Necesitas</span>
                   <span className="mx-1 font-bold text-[#fc3d6b]">
                     {pointsNeededToDisplay}
                   </span>
                   <span className="text-gray-700">
-                    More points to move up the rankings.
+                    Más puntos para subir en el ranking.
                   </span>
                   <span className="ml-1 rounded bg-[#fc3d6b] px-1.5 py-0.5 text-xs font-medium text-white">
                     #{currentUserRank}
@@ -186,8 +186,8 @@ const RankingPage: React.FC<RankingProps> = ({
           dynamicFooterContent = (
             <p className="flex flex-col text-sm">
               <span className="font-medium text-gray-700">
-                You have {currentUserMinutesNumeric.toFixed(2)} points. Enough
-                to enter this top list! Updating...
+                Tienes {currentUserMinutesNumeric.toFixed(2)} puntos. ¡Suficientes
+                para entrar en esta lista! Actualizando...
               </span>
             </p>
           );
@@ -201,17 +201,17 @@ const RankingPage: React.FC<RankingProps> = ({
           dynamicFooterContent = (
             <p className="flex flex-col text-sm">
               <span className="font-medium text-gray-700">
-                You: Need{' '}
+                Tú: Necesitas{' '}
                 <span className="mx-1 font-bold text-[#fc3d6b]">
                   {pointsNeededToDisplay}
                 </span>
               </span>
 
               <span className="text-gray-700">
-                More points to enter the top {data.length} rankings.
+                Más puntos para entrar en el top {data.length} del ranking.
               </span>
               <span className="text-xs text-gray-600">
-                (Your points: {currentUserMinutesNumeric.toFixed(2)})
+                (Tus puntos: {currentUserMinutesNumeric.toFixed(2)})
               </span>
             </p>
           );

@@ -71,7 +71,7 @@ export const ChannelHoppingBlockedModal: React.FC = () => {
           <div className="mb-4 space-y-2 text-sm text-gray-600">
             <p>Has cambiado de modelo muy rápidamente varias veces seguidas.</p>
             <p>
-              Para mantener una experiencia de calidad, el videp chat está
+              Para mantener una experiencia de calidad, el video chat está
               temporalmente deshabilitado.
             </p>
           </div>

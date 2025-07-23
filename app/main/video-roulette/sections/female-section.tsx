@@ -118,7 +118,7 @@ const FemaleViewVideo = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="mb-5 select-none text-center text-3xl font-bold text-white"
             >
-              I want to find guys to chat with.
+              Quiero encontrar chicos para chatear.
             </motion.h1>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -150,12 +150,12 @@ const FemaleViewVideo = () => {
                   </div>
                 ) : (
                   <span className="relative z-10 flex items-center justify-center gap-2">
-                    Video chat
+                    Video Chat
                   </span>
                 )}
               </Button>
               <div className="mt-5 flex items-center justify-center gap-2 text-sm font-light text-white">
-                <span>Activate your camera to start searching.</span>
+                <span>Activa tu cámara para empezar la búsqueda.</span>
               </div>
             </motion.div>
           </div>
@@ -219,7 +219,7 @@ const FemaleViewVideo = () => {
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className="mb-5 text-center text-3xl font-bold text-gray-800"
                 >
-                  I want to find guys to chat with.
+                  Quiero encontrar chicos para chatear.
                 </motion.h1>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -256,13 +256,13 @@ const FemaleViewVideo = () => {
                             'h-5 w-5 transition-transform duration-300',
                           )}
                         />
-                        Video chat
+                        Video Chat
                       </span>
                     )}
                   </Button>
                   <div className="mt-5 flex items-center justify-center gap-2 text-sm font-light text-gray-500">
                     <Camera className="h-4 w-4" />
-                    <span>Activate your camera to start searching.</span>
+                    <span>Activa tu cámara para empezar la búsqueda.</span>
                   </div>
                 </motion.div>
               </div>

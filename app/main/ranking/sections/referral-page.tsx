@@ -11,7 +11,7 @@ const ReferralPage: React.FC<ReferralProps> = ({ data, isLoading }) => {
   const columns: Column<any>[] = [
     {
       key: 'sender_name',
-      header: 'Sender Name',
+      header: 'Nombre del Remitente',
       align: 'center',
       width: 'w-[100px]',
       cell: (item) => {
@@ -20,7 +20,7 @@ const ReferralPage: React.FC<ReferralProps> = ({ data, isLoading }) => {
     },
     {
       key: 'date',
-      header: 'Date',
+      header: 'Fecha',
       align: 'center',
       cell: (item) => (
         <span className="font-normal">{formatCustomDate(item.created_at)}</span>
