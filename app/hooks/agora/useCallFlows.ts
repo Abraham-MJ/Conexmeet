@@ -92,7 +92,7 @@ export const useCallFlows = (
   maleInitialMinutesInCall: number | null,
   maleGiftMinutesSpent: number,
   femaleTotalPointsEarnedInCall: number,
-  channelHoppingEntries: any[], 
+  channelHoppingEntries: any[],
 ) => {
   const { handleGetInformation, state: user } = useUser();
 
@@ -418,9 +418,9 @@ export const useCallFlows = (
         );
 
         if (localUserRole === 'male' && targetFemale) {
-          console.log(`[Male Join] Actualizando estado de female ${targetFemale.user_id} a 'in_call'`);
-
-          const femaleToUpdate = onlineFemalesList.find(f => f.host_id === determinedChannelName);
+          const femaleToUpdate = onlineFemalesList.find(
+            (f) => f.host_id === determinedChannelName,
+          );
           if (femaleToUpdate) {
             dispatch({
               type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
@@ -431,7 +431,6 @@ export const useCallFlows = (
                 host_id: determinedChannelName,
               },
             });
-            console.log(`[Male Join] Estado de female actualizado en lobby local`);
           }
 
           try {
@@ -440,9 +439,14 @@ export const useCallFlows = (
               channelName: determinedChannelName,
               timestamp: Date.now(),
             });
-            console.log(`[Male Join] Señal MALE_JOINED_SIGNAL enviada a female`);
+            console.log(
+              `[Male Join] Señal MALE_JOINED_SIGNAL enviada a female`,
+            );
           } catch (signalError) {
-            console.error('[Male Join] Error enviando MALE_JOINED_SIGNAL:', signalError);
+            console.error(
+              '[Male Join] Error enviando MALE_JOINED_SIGNAL:',
+              signalError,
+            );
           }
         }
 
@@ -722,6 +726,22 @@ export const useCallFlows = (
           { minutes: parsedMinutes, seconds: parsedSeconds },
           femaleTotalPointsEarnedInCall,
         );
+
+        const targetFemale = onlineFemalesList.find(
+          (female) => female.host_id === currentChannel,
+        );
+
+        dispatch({
+          type: AgoraActionType.SET_SHOW_MALE_RATING_MODAL,
+          payload: {
+            show: true,
+            femaleInfo: {
+              femaleId: targetFemale?.user_id || currentChannel,
+              femaleName: targetFemale?.user_name,
+              femaleAvatar: targetFemale?.avatar,
+            },
+          },
+        });
 
         if (isRtmChannelJoined) {
           try {

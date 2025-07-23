@@ -12,6 +12,7 @@ import ModalInsufficientMinutes from '../components/shared/modals/ModalInsuffici
 import ModalCallEndedFemaleSummary from '../components/shared/modals/ModalCallEndedFemaleSummary';
 import ModalMinutesExhausted from '../components/shared/modals/ModalMinutesExhausted';
 import { ChannelHoppingBlockedModal } from '../components/shared/modals/ChannelHoppingBlockedModal';
+import ModalRatingCall from '../components/shared/modals/ModalRatingCall';
 
 const baseRoutes = {
   female: {
@@ -105,6 +106,7 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
       <ModalInsufficientMinutes />
       <ModalMinutesExhausted />
       <ChannelHoppingBlockedModal />
+      <ModalRatingCall />
     </>
   );
 };

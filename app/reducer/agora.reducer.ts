@@ -59,6 +59,8 @@ export const initialState: AgoraState = {
   },
   showChannelHoppingBlockedModal: false,
   isChannelHoppingLoading: false,
+  showMaleRatingModal: false,
+  maleRatingInfo: null,
 };
 
 export function agoraReducer(
@@ -564,6 +566,13 @@ export function agoraReducer(
       return {
         ...state,
         isChannelHoppingLoading: action.payload,
+      };
+
+    case AgoraActionType.SET_SHOW_MALE_RATING_MODAL:
+      return {
+        ...state,
+        showMaleRatingModal: action.payload.show,
+        maleRatingInfo: action.payload.femaleInfo || null,
       };
 
     default:

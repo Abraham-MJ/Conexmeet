@@ -73,6 +73,14 @@ const AgoraContext = createContext<{
   showChannelHoppingBlockedModal: boolean;
   openChannelHoppingBlockedModal: () => void;
   isChannelHoppingLoading: boolean;
+  showMaleRatingModal: boolean;
+  maleRatingInfo: {
+    femaleId: string | number;
+    femaleName?: string;
+    femaleAvatar?: string;
+  } | null;
+  closeMaleRatingModal: () => void;
+  submitMaleRating: (rating: number, comment?: string) => Promise<void>;
 }>({
   state: initialState,
   dispatch: () => undefined,
@@ -108,6 +116,10 @@ const AgoraContext = createContext<{
   openChannelHoppingBlockedModal: () => {},
   showChannelHoppingBlockedModal: false,
   isChannelHoppingLoading: false,
+  showMaleRatingModal: false,
+  maleRatingInfo: null,
+  closeMaleRatingModal: () => {},
+  submitMaleRating: async () => {},
 });
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
@@ -290,7 +302,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.maleInitialMinutesInCall,
     state.maleGiftMinutesSpent,
     state.femaleTotalPointsEarnedInCall,
-    state.channelHopping.entries, 
+    state.channelHopping.entries,
   );
 
   useEffect(() => {
@@ -304,34 +316,42 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const currentRemoteUsersCount = state.remoteUsers.length;
     const currentIsCallTimerActive = isCallTimerActive;
-    
-    if (prevIsCallTimerActive.current && !currentIsCallTimerActive && state.isRtcJoined) {
-      console.log('[AgoraContext] Timer se desactivó (alguien se fue), reseteando mensajes y timer');
-      
+
+    if (
+      prevIsCallTimerActive.current &&
+      !currentIsCallTimerActive &&
+      state.isRtcJoined
+    ) {
       dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
-      
+
       resetCallTimer();
     }
-    
-    if (prevRemoteUsersCount.current > currentRemoteUsersCount && state.isRtcJoined) {
-      console.log('[AgoraContext] Usuario remoto se fue, reseteando mensajes y timer');
-      
+
+    if (
+      prevRemoteUsersCount.current > currentRemoteUsersCount &&
+      state.isRtcJoined
+    ) {
       dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
-      
+
       resetCallTimer();
     }
-    
+
     if (!state.isRtcJoined && state.chatMessages.length > 0) {
-      console.log('[AgoraContext] Usuario local salió del canal, reseteando mensajes y timer');
-      
       dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
-      
+
       resetCallTimer();
     }
-    
+
     prevRemoteUsersCount.current = currentRemoteUsersCount;
     prevIsCallTimerActive.current = currentIsCallTimerActive;
-  }, [state.remoteUsers.length, isCallTimerActive, state.isRtcJoined, state.chatMessages.length, dispatch, resetCallTimer]);
+  }, [
+    state.remoteUsers.length,
+    isCallTimerActive,
+    state.isRtcJoined,
+    state.chatMessages.length,
+    dispatch,
+    resetCallTimer,
+  ]);
 
   const loadingStatus = useMemo<LoadingStatus>(() => {
     const { activeLoadingMessage } = state;
@@ -437,6 +457,28 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     router,
   );
 
+  const closeMaleRatingModal = useCallback(() => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_MALE_RATING_MODAL,
+      payload: { show: false, femaleInfo: null },
+    });
+  }, [dispatch]);
+
+  const submitMaleRating = useCallback(
+    async (rating: number, comment?: string) => {
+      try {
+        if (!state.maleRatingInfo) {
+          return;
+        }
+
+        closeMaleRatingModal();
+      } catch (error) {
+        console.error('[Rating] Error al enviar calificación:', error);
+      }
+    },
+    [state.maleRatingInfo, agoraBackend, closeMaleRatingModal],
+  );
+
   return (
     <AgoraContext.Provider
       value={{
@@ -469,6 +511,10 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         openChannelHoppingBlockedModal,
         showChannelHoppingBlockedModal,
         isChannelHoppingLoading: state.isChannelHoppingLoading,
+        showMaleRatingModal: state.showMaleRatingModal,
+        maleRatingInfo: state.maleRatingInfo,
+        closeMaleRatingModal,
+        submitMaleRating,
       }}
     >
       {children}
