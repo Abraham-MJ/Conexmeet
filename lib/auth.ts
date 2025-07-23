@@ -10,6 +10,7 @@ export const authOptions: AuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.AUTH_SECRET,
   callbacks: {
     async session({ session, token }: { session: Session; token: JWT }) {
@@ -23,4 +24,18 @@ export const authOptions: AuthOptions = {
     signIn: '/auth/sign-in',
     error: '/auth/sign-in',
   },
+  ...(process.env.NODE_ENV === 'production' && {
+    useSecureCookies: true,
+    cookies: {
+      sessionToken: {
+        name: `__Secure-next-auth.session-token`,
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: true,
+        },
+      },
+    },
+  }),
 };

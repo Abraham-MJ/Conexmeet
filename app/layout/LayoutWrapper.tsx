@@ -14,6 +14,10 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
     return <FallBackSpinner />;
   }
 
+  if (typeof window === 'undefined') {
+    return <RenderChildren children={children} />;
+  }
+
   return (
     <>
       <AgoraProvider>

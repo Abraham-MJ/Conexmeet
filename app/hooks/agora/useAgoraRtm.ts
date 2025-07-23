@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import AgoraRTM, { RtmClient } from 'agora-rtm-sdk';
+import { RtmClient } from 'agora-rtm-sdk';
 import {
   AgoraAction,
   AgoraActionType,
@@ -66,6 +66,7 @@ export const useAgoraRtm = (
         }
 
         if (!currentRtmClient) {
+          const AgoraRTM = (await import('agora-rtm-sdk')).default;
           currentRtmClient = AgoraRTM.createInstance(appID, {
             logFilter: AgoraRTM.LOG_FILTER_ERROR,
           });

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import AgoraRTC, {
+import {
   IAgoraRTCClient,
   IMicrophoneAudioTrack,
   ICameraVideoTrack,
@@ -11,8 +11,6 @@ import {
 } from '@/app/types/streams';
 import { useAgoraServer } from './useAgoraServer';
 import { LOG_PREFIX_PROVIDER } from '@/lib/constants';
-
-AgoraRTC.setLogLevel(4);
 
 export const useAgoraRtc = (
   dispatch: React.Dispatch<AgoraAction>,
@@ -120,6 +118,8 @@ export const useAgoraRtc = (
     });
 
     try {
+      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+      AgoraRTC.setLogLevel(4); 
       const [audioTrack, videoTrack] = await Promise.all([
         AgoraRTC.createMicrophoneAudioTrack(),
         AgoraRTC.createCameraVideoTrack(),
@@ -165,7 +165,10 @@ export const useAgoraRtc = (
       roleForToken: 'publisher' | 'subscriber',
       publishTracksFlag: boolean,
       loadingMessage?: string,
-      preCreatedTracks?: { audioTrack: IMicrophoneAudioTrack; videoTrack: ICameraVideoTrack } | null,
+      preCreatedTracks?: {
+        audioTrack: IMicrophoneAudioTrack;
+        videoTrack: ICameraVideoTrack;
+      } | null,
     ) => {
       if (!appID) {
         const msg = 'AppID no disponible para RTC.';
@@ -196,6 +199,8 @@ export const useAgoraRtc = (
           payload: { tokenRtc: rtcToken, tokenRtm: null },
         });
 
+        const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+        AgoraRTC.setLogLevel(4); 
         const tempRtcClient = AgoraRTC.createClient({
           mode: 'rtc',
           codec: 'vp8',

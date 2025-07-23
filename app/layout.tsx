@@ -21,9 +21,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <SessionProviderWrapper>
-        <body className={`${poppins.variable} antialiased`}>{children}</body>
-      </SessionProviderWrapper>
+      <body className={`${poppins.variable} antialiased`}>
+        <SessionProviderWrapper>
+          {children}
+        </SessionProviderWrapper>
+      </body>
     </html>
   );
 }

@@ -19,8 +19,12 @@ const Header = () => {
                 alt="Conexmeet"
                 width={140}
                 height={40}
-                className="h-10 w-auto"
-                priority
+                sizes="140px"
+                style={{ 
+                  width: 'auto', 
+                  height: '40px',
+                  maxWidth: '140px'
+                }}
               />
             </Link>
           </div>

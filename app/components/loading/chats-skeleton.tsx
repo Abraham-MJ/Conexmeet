@@ -86,15 +86,16 @@ export const SkeletonLoadingMessages = () => {
 
         return (
           <div
+            key={item.sender_id}
             className={cn(
               'group flex items-center gap-2',
               isMyMessage ? 'justify-end' : 'justify-start',
             )}
           >
             <div className={cn('max-w-xs rounded-xl p-3 md:max-w-md')}>
-              <p className={cn('break-words text-sm')}>
+              <div className={cn('break-words text-sm')}>
                 <div className="h-12 w-full flex-shrink-0 animate-pulse overflow-hidden rounded-2xl bg-gray-300"></div>
-              </p>
+              </div>
               <div className="mt-1 flex items-center justify-end gap-1">
                 <span className="text-xs opacity-70">
                   <div className="h-24 w-52 flex-shrink-0 animate-pulse overflow-hidden rounded-2xl bg-gray-300"></div>

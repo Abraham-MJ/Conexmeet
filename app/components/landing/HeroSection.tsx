@@ -134,9 +134,12 @@ const HeroSection = () => {
                   alt="Conexmeet - Video Chat Platform"
                   width={450}
                   height={450}
-                  className="relative h-auto w-full"
-                  style={{ filter: 'url(#edge-grain)' }}
-                  priority
+                  className="relative"
+                  style={{ 
+                    filter: 'url(#edge-grain)',
+                    width: '100%',
+                    height: 'auto'
+                  }}
                 />
 
                 <div
