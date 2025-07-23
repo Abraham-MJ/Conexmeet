@@ -112,6 +112,7 @@ export function agoraReducer(
         showNoChannelsAvailableModalForMale: false,
         showChannelIsBusyModal: false,
         showUnexpectedErrorModal: false,
+        isChannelHoppingLoading: false,
       };
 
     case AgoraActionType.RTC_SETUP_SUCCESS:
@@ -159,6 +160,7 @@ export function agoraReducer(
         maleGiftMinutesSpent: 0,
         showInsufficientMinutesModal: false,
         femaleTotalPointsEarnedInCall: 0,
+        isChannelHoppingLoading: false,
       };
 
     case AgoraActionType.RTM_SETUP_START:
@@ -549,6 +551,7 @@ export function agoraReducer(
           blockStartTime: null,
           visitedChannelsInSession: new Set(),
         },
+        isChannelHoppingLoading: false,
       };
 
     case AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL:
