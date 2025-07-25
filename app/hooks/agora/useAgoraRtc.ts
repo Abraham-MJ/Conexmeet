@@ -11,6 +11,7 @@ import {
 } from '@/app/types/streams';
 import { useAgoraServer } from './useAgoraServer';
 import { LOG_PREFIX_PROVIDER } from '@/lib/constants';
+import { shouldShowPermissionsModal } from '@/lib/media-permissions';
 
 export const useAgoraRtc = (
   dispatch: React.Dispatch<AgoraAction>,
@@ -107,10 +108,15 @@ export const useAgoraRtc = (
   );
 
   const requestMediaPermissions = useCallback(async () => {
-    dispatch({
-      type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
-      payload: true,
-    });
+    const shouldShowModal = await shouldShowPermissionsModal();
+    
+    if (shouldShowModal) {
+      dispatch({
+        type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
+        payload: true,
+      });
+    }
+    
     setRequestingMediaPermissions(true);
     dispatch({
       type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
@@ -222,10 +228,15 @@ export const useAgoraRtc = (
             setLocalAudioTrack(audioTrack);
             setLocalVideoTrack(videoTrack);
           } else {
-            dispatch({
-              type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
-              payload: true,
-            });
+            const shouldShowModal = await shouldShowPermissionsModal();
+            
+            if (shouldShowModal) {
+              dispatch({
+                type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
+                payload: true,
+              });
+            }
+            
             setRequestingMediaPermissions(true);
             dispatch({
               type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
