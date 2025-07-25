@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/app/context/useClientContext';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface UpdateProfileUser {
   user: {
@@ -25,6 +26,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
   onClose,
   user,
 }) => {
+  const { t } = useTranslation();
   const { handleGetInformation } = useUser();
   const {
     credentials,
@@ -94,14 +96,14 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
               <div className="relative h-36 w-36">
                 <img
                   src={photoPreview || '/path/to/default/avatar.png'}
-                  alt="Foto de perfil"
+                  alt={t('profile.photo')}
                   className="h-full w-full rounded-full border object-cover"
                 />
                 <button
                   onClick={triggerImageUpload}
                   type="button"
                   className="absolute -right-1 bottom-1 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white transition-colors hover:bg-[#e8356a]"
-                  aria-label="Cambiar foto de perfil"
+                  aria-label={t('profile.changePhoto')}
                 >
                   <Camera className="h-6 w-6" />
                 </button>
@@ -119,7 +121,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
               <StyledInputs
                 name="name"
                 type="text"
-                label="@Username:"
+                label={`@${t('form.username')}:`}
                 value={credentials.name}
                 handleChange={changeFormField}
                 error={formErrors.name}
@@ -129,41 +131,41 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
               <StyledInputs
                 name="email"
                 type="email"
-                label="Correo electrónico:"
+                label={`${t('form.email')}:`}
                 value={credentials.email}
                 handleChange={changeFormField}
                 error={formErrors.email}
-                placeholder="Correo electrónico"
+                placeholder={t('form.email')}
                 onFocus={() => clearFormFieldError('email')}
               />
               <StyledInputs
                 name="password_old"
                 type="password"
-                label="Contraseña actual:"
+                label={`${t('form.currentPassword')}:`}
                 value={credentials.password_old}
                 handleChange={changeFormField}
                 error={formErrors.password_old}
-                placeholder="Contraseña actual"
+                placeholder={t('form.currentPassword')}
                 onFocus={() => clearFormFieldError('password_old')}
               />
               <StyledInputs
                 name="password"
                 type="password"
-                label="Nueva contraseña:"
+                label={`${t('form.newPassword')}:`}
                 value={credentials.password}
                 handleChange={changeFormField}
                 error={formErrors.password}
-                placeholder="Nueva contraseña"
+                placeholder={t('form.newPassword')}
                 onFocus={() => clearFormFieldError('password')}
               />
               <StyledInputs
                 name="password_confirmation"
                 type="password"
-                label="Confirmar contraseña:"
+                label={`${t('form.confirmPassword')}:`}
                 value={credentials.password_confirmation}
                 handleChange={changeFormField}
                 error={formErrors.password_confirmation}
-                placeholder="Confirmar nueva contraseña"
+                placeholder={t('form.confirmPassword')}
                 onFocus={() => clearFormFieldError('password_confirmation')}
               />
             </div>
@@ -177,7 +179,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
                 disabled={isLoading}
                 onClick={handleModalClose}
               >
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button
                 type="button"
@@ -189,7 +191,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
               >
                 {isLoading ? (
                   <div className="text-md flex items-center justify-center font-latosans">
-                    Cargando
+                    {t('common.loading')}
                     {[1, 2, 3].map((index) => (
                       <motion.span
                         key={index}
@@ -206,7 +208,7 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
                     ))}
                   </div>
                 ) : (
-                  'Actualizar'
+                  t('common.save')
                 )}
               </Button>
             </div>

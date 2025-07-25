@@ -3,12 +3,14 @@
 import { EmojiPickerButton } from '@/app/components/UI/StyledEmoji';
 import { EmojiStyle, Theme } from 'emoji-picker-react';
 import React, { useState } from 'react';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface InputMessagesProps {
   sendMessage: (message: string) => void;
 }
 
 const InputMessages: React.FC<InputMessagesProps> = ({ sendMessage }) => {
+  const { t } = useTranslation();
   const [message, setMessage] = useState<string>('');
 
   const handleSendMessage = async (e: React.KeyboardEvent) => {
@@ -18,7 +20,7 @@ const InputMessages: React.FC<InputMessagesProps> = ({ sendMessage }) => {
         await sendMessage(message);
         setMessage('');
       } catch (error) {
-        console.error('SectionChat: Error al enviar mensaje:', error);
+        console.error(`SectionChat: ${t('errors.sendMessage')}:`, error);
       }
     }
   };
@@ -29,7 +31,7 @@ const InputMessages: React.FC<InputMessagesProps> = ({ sendMessage }) => {
         await sendMessage(message);
         setMessage('');
       } catch (error) {
-        console.error('SectionChat: Error al enviar mensaje:', error);
+        console.error(`SectionChat: ${t('errors.sendMessage')}:`, error);
       }
     }
   };
@@ -38,7 +40,7 @@ const InputMessages: React.FC<InputMessagesProps> = ({ sendMessage }) => {
     <div className="relative mx-2 mb-0 mt-1 box-border flex min-h-12 flex-row items-end rounded-3xl bg-[#ffffff29] p-2 ps-1 backdrop-blur-[12px] transition-colors duration-300 ease-in-out">
       <input
         className="m-0 mx-9 ml-3 mr-14 box-border !h-[20px] w-full flex-1 resize-none self-center border-none bg-transparent pr-3 text-sm leading-tight text-white outline-none"
-        placeholder="Di algo..."
+        placeholder={t('video.saySomething')}
         data-testid="textarea"
         value={message}
         onChange={(e) => {

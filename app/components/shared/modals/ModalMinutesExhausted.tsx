@@ -7,8 +7,10 @@ import { FaHourglassEnd } from 'react-icons/fa';
 import ModalPackage from './ModalPackage';
 import StyledModal from '../../UI/StyledModal';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const ModalMinutesExhausted = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const { state, closeMinutesExhaustedModal } = useAgoraContext();
@@ -42,15 +44,14 @@ const ModalMinutesExhausted = () => {
             </div>
 
             <h2 className="mb-3 text-2xl font-bold text-gray-800">
-              ¡Se Han Agotado tus Minutos!
+              {t('modal.minutesExhausted.title')}
             </h2>
 
             <p className="mb-6 max-w-md text-gray-600">
-              Tu tiempo en esta videollamada ha finalizado. Para seguir
-              disfrutando de nuestras transmisiones
+              {t('modal.minutesExhausted.description')}
             </p>
             <p className="text-md mb-8 max-w-md text-gray-500">
-              por favor, recarga tu saldo. ¡No te pierdas de nada!
+              {t('modal.minutesExhausted.instruction')}
             </p>
 
             <div className="flex w-full flex-col space-y-3">
@@ -61,7 +62,7 @@ const ModalMinutesExhausted = () => {
                 }}
                 className="w-full rounded-xl bg-[#fc3d6b] px-6 py-3 text-lg font-semibold text-white outline-none transition-all duration-300 hover:bg-[#e03762]"
               >
-                Recargar Ahora
+                {t('modal.minutesExhausted.rechargeNow')}
               </button>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import StyledInputPhone from '@/app/components/UI/StyledInputPhone';
 import { useCountries } from '@/app/hooks/api/useCountris';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface Props {
   changeField: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -24,6 +25,8 @@ const SectionTwoStep: React.FC<Props> = ({
   errors,
 }) => {
   const { countries } = useCountries();
+  const { t } = useTranslation();
+  
   return (
     <>
       <StyledDate
@@ -31,8 +34,8 @@ const SectionTwoStep: React.FC<Props> = ({
         value={credentials.date_of_birth}
         handleChange={changeField}
         error={errors.date_of_birth}
-        label="Fecha de nacimiento:"
-        placeholder="DD/MM/AAAA"
+        label={t('auth.signUp.step2.birthDate')}
+        placeholder={t('auth.signUp.step2.birthDatePlaceholder')}
         onFocus={() => clearError('date_of_birth')}
       />
 
@@ -42,8 +45,8 @@ const SectionTwoStep: React.FC<Props> = ({
         value={credentials.password}
         handleChange={changeField}
         error={errors.password}
-        label="Contraseña:"
-        placeholder="Contraseña"
+        label={t('auth.signUp.step2.password')}
+        placeholder={t('auth.signUp.step2.passwordPlaceholder')}
         onFocus={() => clearError('password')}
       />
       <StyledInputs
@@ -52,8 +55,8 @@ const SectionTwoStep: React.FC<Props> = ({
         value={credentials.confirm_password}
         handleChange={changeField}
         error={errors.confirm_password}
-        label="Confirmar contraseña:"
-        placeholder="Confirmar contraseña"
+        label={t('auth.signUp.step2.confirmPassword')}
+        placeholder={t('auth.signUp.step2.confirmPasswordPlaceholder')}
         onFocus={() => clearError('confirm_password')}
       />
       <StyledSelect
@@ -61,8 +64,8 @@ const SectionTwoStep: React.FC<Props> = ({
         value={credentials.country_id}
         handleChange={changeField}
         error={errors.country_id}
-        label="País:"
-        placeholder="Selecciona tu país"
+        label={t('auth.signUp.step2.country')}
+        placeholder={t('auth.signUp.step2.countryPlaceholder')}
         onFocus={() => clearError('country_id')}
         itemList={countries?.map((item) => {
           return {
@@ -74,14 +77,14 @@ const SectionTwoStep: React.FC<Props> = ({
       <StyledInputPhone
         name="number_phone"
         handleChange={changeField}
-        placeholder="Número de teléfono"
+        placeholder={t('auth.signUp.step2.phonePlaceholder')}
         error={errors.number_phone}
         code_value={`+${
           countries?.filter(
             (item) => item?.id.toString() === credentials?.country_id,
           )?.[0]?.phonecode ?? '57'
         }`}
-        label="Número de teléfono (opcional):"
+        label={t('auth.signUp.step2.phone')}
         value={credentials.number_phone}
         onFocus={() => clearError('number_phone')}
         type="text"
@@ -102,12 +105,12 @@ const SectionTwoStep: React.FC<Props> = ({
             onFocus={() => clearError('privacity')}
           />
           <label htmlFor="privacity" className="text-sm text-gray-700">
-            Acepto las{' '}
+            {t('auth.signUp.step2.privacy')}{' '}
             <Link
               href="#"
               className="text-[#3de0ff] transition duration-300 ease-in-out hover:text-[#ff00fe]"
             >
-              políticas de privacidad
+              {t('auth.signUp.step2.privacyLink')}
             </Link>
           </label>
         </motion.div>

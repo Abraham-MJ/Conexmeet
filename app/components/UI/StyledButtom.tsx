@@ -2,6 +2,7 @@ import { itemVariants } from '@/app/utils/animations';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import React from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const StyledButton = ({
   text,
@@ -25,6 +26,7 @@ const StyledButton = ({
   type?: 'button' | 'submit' | 'reset';
   size?: 'default' | 'sm' | 'lg' | 'icon';
 }) => {
+  const { t } = useTranslation();
   return (
     <motion.div variants={itemVariants}>
       <Button
@@ -34,7 +36,7 @@ const StyledButton = ({
         onClick={onPress}
         disabled={isLoading}
       >
-        <span>{isLoading ? 'Cargando...' : text}</span>
+        <span>{isLoading ? t('common.loading') : text}</span>
       </Button>
     </motion.div>
   );

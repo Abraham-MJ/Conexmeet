@@ -3,6 +3,7 @@ import StyledModal from '../../UI/StyledModal';
 import { cn } from '@/lib/utils';
 import { IoMdClose } from 'react-icons/io';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const DeniedIcon = () => (
   <svg
@@ -20,6 +21,7 @@ const DeniedIcon = () => (
 );
 
 const ModalRejectPermission = () => {
+  const { t } = useTranslation();
   const { state, closeMediaPermissionsDeniedModal } = useAgoraContext();
 
   return (
@@ -50,30 +52,26 @@ const ModalRejectPermission = () => {
           </div>
 
           <h2 className="mb-3 text-2xl font-bold text-gray-800">
-            Permisos Denegados
+            {t('modal.permissionDenied.title')}
           </h2>
 
           <p className="mb-6 max-w-md text-base text-gray-600">
-            No pudimos acceder a tu cámara o micrófono. Para continuar,
-            necesitamos que otorgues los permisos necesarios.
+            {t('modal.permissionDenied.description')}
           </p>
 
           <div className="mb-6 flex w-full flex-col gap-4 rounded-lg bg-gray-100 p-4 text-left">
             <p className="mb-2 text-sm font-semibold text-gray-700">
-              Posibles soluciones:
+              {t('modal.permissionDenied.solutionsTitle')}:
             </p>
             <ol className="list-inside list-disc space-y-3 text-sm text-gray-600">
               <li>
-                Asegúrate de haber aceptado los permisos en la ventana emergente
-                de tu navegador.
+                {t('modal.permissionDenied.solution1')}
               </li>
               <li>
-                Verifica la configuración de privacidad de tu navegador y
-                sistema operativo.
+                {t('modal.permissionDenied.solution2')}
               </li>
               <li>
-                Asegúrate de que tus dispositivos (cámara/micrófono) estén
-                conectados y no siendo usados por otra aplicación.
+                {t('modal.permissionDenied.solution3')}
               </li>
             </ol>
           </div>

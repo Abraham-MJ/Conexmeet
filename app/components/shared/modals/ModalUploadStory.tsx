@@ -14,6 +14,7 @@ import { Trash2, UploadCloud } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useVideoRouletteFemale } from '@/app/hooks/api/useVideoRouletteFemale';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface ModalUploadStoryProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,7 +104,7 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
         )}
       >
         <div className="flex items-center justify-between border-b p-4 pb-4">
-          <span className="text-lg font-medium">Subir historia:</span>
+          <span className="text-lg font-medium">{t('modal.uploadStory.title')}:</span>
           <div
             className="h-12 w-12 cursor-pointer rounded-full border p-3 transition-all duration-300 hover:scale-110"
             onClick={onClose}
@@ -134,9 +136,9 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
                   <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
                   <p className="mt-2 text-sm text-gray-600">
                     <span className="font-semibold text-[#ff465d]">
-                      Haz clic para subir
+                      {t('modal.uploadStory.clickToUpload')}
                     </span>{' '}
-                    o arrastra y suelta
+                    {t('modal.uploadStory.orDragDrop')}
                   </p>
                   <p className="text-xs text-gray-500">
                     MP4, MOV, AVI (max. 500MB)
@@ -160,7 +162,7 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
                       ? 'cursor-not-allowed opacity-0'
                       : 'opacity-0 group-hover:opacity-100',
                   )}
-                  aria-label="Quitar video"
+                  aria-label={t('modal.uploadStory.removeVideo')}
                   disabled={isLoadingUpload}
                 >
                   <Trash2 size={18} />
@@ -182,7 +184,7 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
                   disabled={isLoadingUpload}
                   onClick={resetState}
                 >
-                  Cancelar
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -194,7 +196,7 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
                 >
                   {isLoadingUpload ? (
                     <div className="text-md flex items-center justify-center font-latosans">
-                      Cargando
+                      {t('common.loading')}
                       {[1, 2, 3].map((index) => (
                         <motion.span
                           key={index}
@@ -211,7 +213,7 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
                       ))}
                     </div>
                   ) : (
-                    'Subir'
+                    t('modal.uploadStory.upload')
                   )}
                 </Button>
               </div>

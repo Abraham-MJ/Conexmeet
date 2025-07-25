@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 import { useForm } from '@/app/hooks/useForm';
 import ImageBrand from '@/public/images/conexmeet.png';
@@ -20,6 +21,7 @@ export default function RecoveryPasswordScreen() {
     useForm({
       email: '',
     });
+  const { t } = useTranslation();
 
   const sendEmailVerification = async (e: any) => {
     e.preventDefault();
@@ -42,7 +44,7 @@ export default function RecoveryPasswordScreen() {
     const forgot_data = await sendEmailRecovery(credentials.email);
 
     if (forgot_data === undefined) {
-      setFieldError('email', 'El email no existe');
+      setFieldError('email', t('auth.recovery.emailNotExists'));
     }
   };
 
@@ -84,8 +86,8 @@ export default function RecoveryPasswordScreen() {
 
           <motion.p className="select-none p-2 text-center font-latosans text-gray-400">
             {!successEmail
-              ? 'Ingresa tu correo electrónico para recuperar tu contraseña'
-              : 'Hemos enviado un enlace de recuperación a tu correo electrónico. Revisa tu bandeja de entrada y spam.'}
+              ? t('auth.recovery.instruction')
+              : t('auth.recovery.successMessage')}
           </motion.p>
 
           <motion.form
@@ -101,13 +103,13 @@ export default function RecoveryPasswordScreen() {
               value={credentials.email}
               handleChange={changeField}
               error={errors.email}
-              label="Correo electrónico:"
-              placeholder="Correo electrónico"
+              label={t('auth.recovery.email')}
+              placeholder={t('auth.recovery.emailPlaceholder')}
               onFocus={() => clearError('email')}
             />
 
             <StyledButton
-              text={'Enviar'}
+              text={t('auth.recovery.send')}
               isLoading={sendIsLoading}
               onPress={sendEmailVerification}
               type="submit"
@@ -119,7 +121,7 @@ export default function RecoveryPasswordScreen() {
               variants={itemVariants}
               className="flex flex-col items-center justify-center gap-3 text-sm font-medium"
             >
-              <StyledLink text="Iniciar sesión" href="/auth/sign-in" />
+              <StyledLink text={t('auth.recovery.signIn')} href="/auth/sign-in" />
             </motion.div>
           </motion.form>
         </div>

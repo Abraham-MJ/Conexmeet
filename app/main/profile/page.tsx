@@ -7,11 +7,13 @@ import { useMobile } from '@/app/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { AtSign, Check, Copy, Edit3, Link, Mail } from 'lucide-react';
 import React, { useState } from 'react';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
 
 const ProfileScreen = () => {
+  const { t } = useTranslation();
   const isMobile = useMobile(920);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [copied, setCopied] = useState(false);
@@ -45,7 +47,7 @@ const ProfileScreen = () => {
             <div className="relative">
               <img
                 src={user.user.profile_photo_path}
-                alt="Foto de perfil"
+                alt={t('profile.photo')}
                 className="h-32 w-32 rounded-full border-4 border-white object-cover shadow-lg"
               />
             </div>
@@ -74,7 +76,7 @@ const ProfileScreen = () => {
                 <Mail className="h-5 w-5 text-[#fc3d6b]" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-gray-500">Email</p>
+                <p className="text-sm text-gray-500">{t('form.email')}</p>
                 <p className="font-medium text-gray-900">{user.user.email}</p>
               </div>
             </div>
@@ -84,7 +86,7 @@ const ProfileScreen = () => {
                 <AtSign className="h-5 w-5 text-[#fc3d6b]" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-gray-500">Usuario</p>
+                <p className="text-sm text-gray-500">{t('form.username')}</p>
                 <p className="font-medium text-gray-900">@{user.user.name}</p>
               </div>
             </div>
@@ -94,13 +96,13 @@ const ProfileScreen = () => {
             <div className="mb-3 flex items-center space-x-2">
               <Link className="h-5 w-5 text-[#fc3d6b]" />
               <h3 className="text-lg font-semibold text-gray-900">
-                Link de Referido
+                {t('profile.referralLink')}
               </h3>
             </div>
 
             <div className="rounded-xl border border-pink-100 bg-gradient-to-r from-pink-50 to-rose-50 p-4">
               <p className="mb-3 text-sm text-gray-600">
-                Comparte tu link y gana recompensas por cada referido
+                {t('profile.shareLink')}
               </p>
 
               <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3">
@@ -126,12 +128,12 @@ const ProfileScreen = () => {
                   {copied ? (
                     <>
                       <Check className="h-4 w-4" />
-                      <span>¡Copiado!</span>
+                      <span>{t('profile.copied')}</span>
                     </>
                   ) : (
                     <>
                       <Copy className="h-4 w-4" />
-                      <span>Copiar</span>
+                      <span>{t('profile.copy')}</span>
                     </>
                   )}
                 </button>

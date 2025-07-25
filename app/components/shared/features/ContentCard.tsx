@@ -13,6 +13,7 @@ import ModalStories from '../modals/ModalStories';
 import { FemaleWithStatus } from '@/app/api/agora/host/route';
 import { cn } from '@/lib/utils';
 import { useMobile } from '@/app/hooks/useMobile';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface ContentStoriesProps {
   user: HistoryData;
@@ -38,6 +39,7 @@ export const ContentCardStories = React.memo(function ContentCardStories({
   onSetPlayingVideoUrl,
   stories,
 }: ContentStoriesProps) {
+  const { t } = useTranslation();
   const isMobile = useMobile(920);
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -123,7 +125,7 @@ export const ContentCardStories = React.memo(function ContentCardStories({
         {!showVideo && (
           <img
             src={user.user.profile_photo_path}
-            alt={`Vista previa de la historia de ${user.user.name}`}
+            alt={`${t('content.storyPreview')} ${user.user.name}`}
             className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
           />
@@ -132,9 +134,8 @@ export const ContentCardStories = React.memo(function ContentCardStories({
         <video
           ref={videoRef}
           src={user.url}
-          className={`h-full w-full object-cover transition-opacity duration-300 ${
-            showVideo ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`h-full w-full object-cover transition-opacity duration-300 ${showVideo ? 'opacity-100' : 'opacity-0'
+            }`}
           playsInline
           onPlay={onVideoPlay}
           onPause={onVideoPause}
@@ -176,9 +177,8 @@ export const ContentCardStories = React.memo(function ContentCardStories({
         </div>
 
         <div
-          className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 via-black/40 to-transparent p-3 transition-opacity duration-300 group-hover:from-black/60 group-hover:via-black/30 ${
-            isPlaying ? 'opacity-80 group-hover:opacity-50' : 'opacity-100'
-          }`}
+          className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 via-black/40 to-transparent p-3 transition-opacity duration-300 group-hover:from-black/60 group-hover:via-black/30 ${isPlaying ? 'opacity-80 group-hover:opacity-50' : 'opacity-100'
+            }`}
         >
           <div className="flex items-center gap-2">
             <div className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-white/50 bg-gray-700">
@@ -253,6 +253,7 @@ export function ContentCardRooms({
   isLoadingCall,
   rolUser,
 }: ContentRoomsProps) {
+  const { t } = useTranslation();
   const isMobile = useMobile(920);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://avatar.iran.liara.run/`;
@@ -302,22 +303,22 @@ export function ContentCardRooms({
         {user.status === 'online' ? (
           <>
             <TbPointFilled className="h-8 w-8 text-green-500" />
-            En línea
+            {t('status.online')}
           </>
         ) : user.status === 'available_call' ? (
           <>
             <TbPointFilled className="h-8 w-8 text-yellow-500" />
-            Disponible para llamada
+            {t('status.availableForCall')}
           </>
         ) : user.status === 'in_call' ? (
           <>
             <TbPointFilled className="h-8 w-8 text-red-500" />
-            En llamada con otro usuario
+            {t('status.inCallWithOther')}
           </>
         ) : (
           <>
             <TbPointFilled className="h-8 w-8 text-gray-500" />
-            Desconectado
+            {t('status.disconnected')}
           </>
         )}
       </div>

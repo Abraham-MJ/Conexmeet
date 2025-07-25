@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 import { useForm } from '@/app/hooks/useForm';
 import useLogin from '@/app/hooks/api/useLogin';
@@ -23,6 +24,7 @@ import { useSession } from 'next-auth/react';
 export default function SignInScreen() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
 
   const { login, isLoading, setIsLoading } = useLogin();
   const { credentials, errors, changeField, clearError, setFieldError } =
@@ -89,7 +91,7 @@ export default function SignInScreen() {
         case SESSION_ACTIVE:
           setFieldError(
             'password',
-            'Ya hay una sesión activa. Intente nuevamente',
+            t('auth.signIn.sessionActive'),
           );
           break;
         default:
@@ -144,30 +146,30 @@ export default function SignInScreen() {
               value={credentials.email}
               handleChange={changeField}
               error={errors.email}
-              label="Correo electrónico:"
-              placeholder="Correo electrónico"
+              label={t('auth.signIn.email')}
+              placeholder={t('auth.signIn.emailPlaceholder')}
               onFocus={() => clearError('email')}
             />
             <StyledInputs
               name="password"
               type="password"
-              label="Contraseña:"
+              label={t('auth.signIn.password')}
               value={credentials.password}
               handleChange={changeField}
               error={errors.password}
-              placeholder="Contraseña"
+              placeholder={t('auth.signIn.passwordPlaceholder')}
               onFocus={() => clearError('password')}
             />
 
             <motion.div variants={itemVariants}>
               <button
                 type="submit"
-                aria-label="Iniciar sesión"
+                aria-label={t('auth.signIn.submit')}
                 className="h-12 w-full rounded-lg bg-[#41f3f0]/90 px-4 py-3 font-latosans font-medium text-white shadow-lg transition-all duration-200 hover:bg-[#41f3ff]/90 hover:shadow-xl hover:shadow-[#41f3ff]/20"
               >
                 {isLoading ? (
                   <div className="text-md flex items-center justify-center font-latosans">
-                    Cargando
+                    {t('auth.signIn.loading')}
                     {[1, 2, 3].map((index) => {
                       return (
                         <motion.span
@@ -181,7 +183,7 @@ export default function SignInScreen() {
                     })}
                   </div>
                 ) : (
-                  'Iniciar sesión'
+                  t('auth.signIn.submit')
                 )}
               </button>
             </motion.div>
@@ -191,11 +193,11 @@ export default function SignInScreen() {
               className="flex flex-col items-center justify-center gap-3 text-sm font-medium"
             >
               <StyledLink
-                text="¿Olvidaste tu contraseña?"
+                text={t('auth.signIn.forgotPassword')}
                 href="/auth/password-recovery"
               />
               <StyledLink
-                text="¿No tienes cuenta?, Registrate"
+                text={t('auth.signIn.noAccount')}
                 href="/auth/sign-up"
               />
             </motion.div>

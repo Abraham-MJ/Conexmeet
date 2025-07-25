@@ -7,6 +7,7 @@ import { IoMdClose } from 'react-icons/io';
 import ModalPackage from './ModalPackage';
 import StyledModal from '../../UI/StyledModal';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const InsufficientMinutesIcon = () => (
   <svg
@@ -24,6 +25,7 @@ const InsufficientMinutesIcon = () => (
 );
 
 const ModalInsufficientMinutes = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const { state, closeInsufficientMinutesModal } = useAgoraContext();
@@ -57,16 +59,14 @@ const ModalInsufficientMinutes = () => {
             </div>
 
             <h2 className="mb-3 text-2xl font-bold text-gray-800">
-              Minutos Insuficientes
+              {t('modal.insufficientMinutes.title')}
             </h2>
 
             <p className="mb-6 max-w-md text-gray-600">
-              No tienes suficientes minutos disponibles para iniciar esta
-              conexión.
+              {t('modal.insufficientMinutes.description')}
             </p>
             <p className="text-md mb-8 max-w-md text-gray-500">
-              Por favor, recarga tu saldo para poder conectar con nuestras
-              modelos.
+              {t('modal.insufficientMinutes.instruction')}
             </p>
 
             <div className="flex w-full flex-col space-y-3">
@@ -77,7 +77,7 @@ const ModalInsufficientMinutes = () => {
                 }}
                 className="w-full rounded-xl bg-[#fc3d6b] px-6 py-3 text-lg font-semibold text-white outline-none transition-all duration-300 hover:bg-[#e03762]"
               >
-                Recargar Minutos
+                {t('modal.insufficientMinutes.recharge')}
               </button>
             </div>
           </div>

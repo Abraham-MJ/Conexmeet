@@ -7,6 +7,7 @@ import useFeatures from '@/app/hooks/api/useFeatures';
 import FeaturesSkeleton from '@/app/components/loading/features-skeleton';
 import { ContentCardContacts } from '@/app/components/shared/features/ContentCard';
 import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const cardItemVariants = {
   hidden: { opacity: 0, x: -30 },
@@ -34,13 +35,14 @@ const gridContainerVariants = {
 export const dynamic = 'force-dynamic';
 
 const ContactsScreen = () => {
+  const { t } = useTranslation();
   const { contacts } = useFeatures({ activeTabs: 'contacts' });
 
   return (
     <ContainerGlobal classNames="max-w-[1536px] px-4 mx-auto">
       <div className="mt-6 pb-12 md:px-0">
         <h2 className="mb-8 text-xl font-medium text-gray-800">
-          Tus contactos
+          {t('pages.contacts.title')}
         </h2>
         {contacts.loading ? (
           <FeaturesSkeleton />

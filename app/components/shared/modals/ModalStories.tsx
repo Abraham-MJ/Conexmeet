@@ -7,6 +7,7 @@ import { HistoryData } from '@/app/types/histories';
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useLikeStory } from '@/app/hooks/api/useLikeStories';
 import { useAddContacts } from '@/app/hooks/api/useAddContacts';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const ModalStories = ({
   isOpen,
@@ -19,6 +20,7 @@ const ModalStories = ({
   stories: HistoryData[];
   active_stories: HistoryData;
 }) => {
+  const { t } = useTranslation();
   const {
     error: errorLike,
     toggleLike,
@@ -218,7 +220,7 @@ const ModalStories = ({
               ) : (
                 <img
                   src={currentStory.url}
-                  alt="Story content"
+                  alt={t('video.storyContent')}
                   className="h-full w-full object-contain"
                 />
               )}
@@ -257,8 +259,8 @@ const ModalStories = ({
                     disabled={isContactLoading}
                     aria-label={
                       isContactAddedLocal
-                        ? 'Contacto agregado'
-                        : 'Agregar contacto'
+                        ? t('video.contactAdded')
+                        : t('video.addContact')
                     }
                   >
                     <User
@@ -294,8 +296,8 @@ const ModalStories = ({
                     disabled={isLikeLoading}
                     aria-label={
                       isLikedLocal
-                        ? 'Historia gustada'
-                        : 'Me gusta esta historia'
+                        ? t('video.storyLiked')
+                        : t('video.likeStory')
                     }
                   >
                     <Heart
@@ -317,7 +319,7 @@ const ModalStories = ({
                 <button
                   onClick={toggleMute}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white transition-all duration-300 hover:bg-black/70"
-                  aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
+                  aria-label={isMuted ? t('video.unmute') : t('video.mute')}
                 >
                   {isMuted ? (
                     <VolumeX className="h-5 w-5" />
@@ -334,14 +336,14 @@ const ModalStories = ({
               <button
                 onClick={handlePrevStory}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white transition-all duration-300 hover:scale-105 hover:bg-black/70 sm:h-12 sm:w-12"
-                aria-label="Historia anterior"
+                aria-label={t('video.previousStory')}
               >
                 <IoIosArrowBack className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
               <button
                 onClick={handleNextStory}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white transition-all duration-300 hover:scale-105 hover:bg-black/70 sm:h-12 sm:w-12"
-                aria-label="Siguiente historia"
+                aria-label={t('video.nextStory')}
               >
                 <IoIosArrowForward className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>

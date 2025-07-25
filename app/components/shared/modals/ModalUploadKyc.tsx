@@ -8,6 +8,7 @@ import { FileCheck2, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useKycUpload from '@/app/hooks/api/useUploadVerification';
 import { motion } from 'framer-motion';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface ModalUploadKycProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface ModalUploadKycProps {
 const TOTAL_STEPS = 3;
 
 const ModalUploadKyc: React.FC<ModalUploadKycProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const [step, setStep] = useState(0);
   const [passportFront, setPassportFront] = useState<File | null>(null);
   const [passportBack, setPassportBack] = useState<File | null>(null);
@@ -90,43 +92,39 @@ const ModalUploadKyc: React.FC<ModalUploadKycProps> = ({ isOpen, onClose }) => {
         return (
           <div className="flex w-full flex-col">
             <h3 className="mb-2 text-2xl font-bold">
-              Verificación de Identidad (KYC):
+              {t('modal.kyc.title')}
             </h3>
             <p className="text-sm text-gray-600">
-              Para cumplir con las regulaciones y mantener tu cuenta segura,
-              necesitamos verificar tu identidad. El proceso es rápido y
-              sencillo.
+              {t('modal.kyc.description')}
             </p>
             <div className="mt-8 w-full space-y-4 rounded-lg bg-gray-50 p-4 text-left">
               <div className="flex items-start gap-4">
                 <div>
                   <h4 className="font-medium text-gray-800">
-                    1- Frente del pasaporte
+                    1- {t('modal.kyc.front')}
                   </h4>
                   <p className="text-sm text-gray-500">
-                    Una foto clara y legible de la página principal de tu
-                    pasaporte.
+                    {t('modal.kyc.frontDescription')}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
                 <div>
                   <h4 className="font-medium text-gray-800">
-                    2- Reverso del pasaporte
+                    2- {t('modal.kyc.back')}
                   </h4>
                   <p className="text-sm text-gray-500">
-                    Una foto de la parte trasera de tu pasaporte.
+                    {t('modal.kyc.backDescription')}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
                 <div>
                   <h4 className="font-medium text-gray-800">
-                    3- Foto sosteniendo el pasaporte
+                    3- {t('modal.kyc.selfie')}
                   </h4>
                   <p className="text-sm text-gray-500">
-                    Una selfie tuya sosteniendo tu pasaporte abierto en la
-                    página de la foto.
+                    {t('modal.kyc.selfieDescription')}
                   </p>
                 </div>
               </div>
@@ -137,7 +135,7 @@ const ModalUploadKyc: React.FC<ModalUploadKycProps> = ({ isOpen, onClose }) => {
         return (
           <div className="w-full">
             <h3 className="mb-8 mt-2 text-xl font-medium text-gray-900">
-              Sube el frente de tu pasaporte
+              {t('modal.kyc.uploadFront')}
             </h3>
             <label
               htmlFor="file-upload-front"

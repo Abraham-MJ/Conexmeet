@@ -16,6 +16,7 @@ import { FemaleWithStatus } from '@/app/api/agora/host/route';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
 import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
 import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const gridContainerVariants = {
   hidden: { opacity: 0 },
@@ -42,6 +43,7 @@ const cardItemVariants = {
 export const dynamic = 'force-dynamic';
 
 const FeaturesScreen = () => {
+  const { t } = useTranslation();
   const {
     handleVideoChatMale,
     loadingStatus,
@@ -89,8 +91,8 @@ const FeaturesScreen = () => {
         {activeTab === 'online' && (
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
-              En línea ahora
-              {`${agora.channelHopping.isBlocked ? `🚫 Bloqueado ${formatTime(channelHoppingBlockTimeRemaining)}` : ''}`}
+              {t('features.onlineNow')}
+              {`${agora.channelHopping.isBlocked ? ` 🚫 ${t('features.blocked')} ${formatTime(channelHoppingBlockTimeRemaining)}` : ''}`}
             </h2>
             {online.loading ? (
               <FeaturesSkeleton />
@@ -137,7 +139,7 @@ const FeaturesScreen = () => {
         {activeTab === 'stories' && (
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
-              Historias
+              {t('features.stories')}
             </h2>
             {stories.loading ? (
               <FeaturesSkeleton />
@@ -169,7 +171,7 @@ const FeaturesScreen = () => {
         {activeTab === 'contacts' && (
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
-              Tus contactos
+              {t('features.yourContacts')}
             </h2>
             {contacts.loading ? (
               <FeaturesSkeleton />

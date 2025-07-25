@@ -16,10 +16,12 @@ import { useMobile } from '@/app/hooks/useMobile';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown } from 'lucide-react';
 import { useUser } from '@/app/context/useClientContext';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 export const dynamic = 'force-dynamic';
 
 const ChatScreen = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { state: user } = useUser();
 
@@ -141,7 +143,7 @@ const ChatScreen = () => {
           {showScrollToBottomButton && (
             <button
               onClick={() => scrollToBottom(true)}
-              aria-label="Ir al final"
+              aria-label={t('ui.goToEnd')}
               className="absolute bottom-20 right-6 z-10 transform animate-fade-in rounded-full bg-[#fc3d6b] p-2 text-white shadow-lg transition-all duration-300 ease-in-out hover:scale-110 hover:bg-[#fc3d6b]/90"
             >
               <ArrowDown className="h-6 w-6" />
@@ -153,9 +155,9 @@ const ChatScreen = () => {
           className={`h-full w-full flex-col overflow-hidden ${isMobile ? 'hidden' : ''}`}
         >
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="text-xl font-medium">Bienvenido,</p>
+            <p className="text-xl font-medium">{t('chat.welcome')},</p>
             <p className="mt-2 text-gray-500">
-              Selecciona una conversación de la lista para empezar a chatear.
+              {t('chat.selectConversation')}
             </p>
           </div>
         </div>

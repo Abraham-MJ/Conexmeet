@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 import { useForm } from '@/app/hooks/useForm';
 import SectionTwoStep from './sections/section-2';
@@ -23,6 +24,7 @@ import { formVariants, itemVariants } from '@/app/utils/animations';
 export default function SignUpScreen() {
   const { verifyOTP, requestOTP } = useOTP();
   const [currentStep, setCurrentStep] = useState(0);
+  const { t } = useTranslation();
 
   const { credentials, errors, changeField, clearError, setFieldError } =
     useForm({
@@ -101,7 +103,7 @@ export default function SignUpScreen() {
     if (response.data.status !== 200) {
       setFieldError(
         'code_otp',
-        'Ha ocurrido un error al validar el código. Inténtelo nuevamente.',
+        t('auth.signUp.congrats.errorMessage'),
       );
       return;
     } else {
@@ -148,7 +150,7 @@ export default function SignUpScreen() {
             <div className="flex justify-between">
               {currentStep !== 0 && currentStep !== 3 && (
                 <StyledButtom
-                  text="Atrás"
+                  text={t('auth.signUp.navigation.back')}
                   isLoading={false}
                   onPress={() =>
                     setCurrentStep((prev) => Math.max(0, prev - 1))
@@ -160,7 +162,7 @@ export default function SignUpScreen() {
               )}
               {currentStep !== 3 && (
                 <StyledButtom
-                  text={currentStep === 2 ? 'Validar código' : 'Siguiente'}
+                  text={currentStep === 2 ? t('auth.signUp.navigation.validateCode') : t('auth.signUp.navigation.next')}
                   isLoading={false}
                   onPress={() => {
                     if (currentStep === 2) validCodeEmail();
@@ -178,7 +180,7 @@ export default function SignUpScreen() {
               >
                 <StyledLink
                   href="/auth/sign-in"
-                  text="¿Ya tienes cuenta?, Inicia sesión"
+                  text={t('auth.signUp.hasAccount')}
                   className="flex items-center justify-center text-center text-sm"
                 />
               </motion.div>

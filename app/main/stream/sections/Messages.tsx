@@ -6,6 +6,7 @@ import { ChatMessage } from '@/app/types/streams';
 import { cn } from '@/lib/utils';
 import React, { useRef, useState, useEffect } from 'react';
 import { RiTranslate } from 'react-icons/ri';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface TranslatedChatMessage extends ChatMessage {
   isTranslating?: boolean;
@@ -29,6 +30,7 @@ interface MessagesProps {
 }
 
 const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
+  const { t } = useTranslation();
   const [messageGift, setMessageGift] = useState<MessageGift>({
     cost_in_minutes: 0,
     gift_image: '',
@@ -101,7 +103,7 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
       setChatMessages((prevMessages) =>
         prevMessages.map((msg, i) =>
           i === originalIndex
-            ? { ...msg, isTranslating: true, display_text: 'Traduciendo...' }
+            ? { ...msg, isTranslating: true, display_text: t('chat.translating') }
             : msg,
         ),
       );
@@ -181,7 +183,7 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
                         <span className="cursor-pointer font-normal">
                           {items.isTranslating ? (
                             <span className="text-sm text-white">
-                              Traduciendo...
+                              {t('chat.translating')}
                             </span>
                           ) : (
                             items.display_text

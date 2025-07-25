@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { Users, Video } from 'lucide-react';
 import { BiMessageDetail } from 'react-icons/bi';
 import { BsGift } from 'react-icons/bs';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const HeroSection = () => {
+  const { t } = useTranslation();
+  
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-white to-red-50">
       <div className="absolute inset-0">
@@ -21,15 +24,14 @@ const HeroSection = () => {
           <div className="order-2 space-y-6 lg:order-1 lg:space-y-8">
             <div className="space-y-4 lg:space-y-6">
               <h1 className="text-3xl font-bold leading-tight text-gray-900 sm:text-4xl md:text-5xl lg:text-6xl">
-                Una plataforma global{' '}
+                {t('landing.hero.title')}{' '}
                 <span className="bg-gradient-to-r from-[#f711ba] to-[#ff465d] bg-clip-text text-transparent">
-                  de video chat
+                  {t('landing.hero.titleHighlight')}
                 </span>
               </h1>
 
               <p className="text-lg leading-relaxed text-gray-600 sm:text-xl lg:text-2xl">
-                Para la interacción y comunicación entre personas de todo el
-                mundo
+                {t('landing.hero.subtitle')}
               </p>
             </div>
 
@@ -39,7 +41,7 @@ const HeroSection = () => {
                   <Video className="h-6 w-6 text-white sm:h-8 sm:w-8" />
                 </div>
                 <span className="text-xs font-medium text-white sm:text-sm md:text-base">
-                  Video Chat
+                  {t('landing.hero.videoChat')}
                 </span>
               </div>
 
@@ -48,7 +50,7 @@ const HeroSection = () => {
                   <BiMessageDetail className="h-6 w-6 text-white sm:h-8 sm:w-8" />
                 </div>
                 <span className="text-xs font-medium text-white sm:text-sm md:text-base">
-                  Mensajería
+                  {t('landing.hero.messaging')}
                 </span>
               </div>
 
@@ -57,7 +59,7 @@ const HeroSection = () => {
                   <BsGift className="h-6 w-6 text-white sm:h-8 sm:w-8" />
                 </div>
                 <span className="text-xs font-medium text-white sm:text-sm md:text-base">
-                  Regalos
+                  {t('landing.hero.gifts')}
                 </span>
               </div>
 
@@ -66,7 +68,7 @@ const HeroSection = () => {
                   <Users className="h-6 w-6 text-white sm:h-8 sm:w-8" />
                 </div>
                 <span className="text-xs font-medium text-white sm:text-sm md:text-base">
-                  Persona a Persona
+                  {t('landing.hero.personToPerson')}
                 </span>
               </div>
             </div>
@@ -76,7 +78,7 @@ const HeroSection = () => {
                 href="/auth/sign-in"
                 className="group inline-flex transform items-center justify-center rounded-full bg-gradient-to-r from-[#f711ba] to-[#ff465d] px-6 py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-pink-500/25 sm:px-8 sm:py-4 sm:text-base"
               >
-                Empezar Video Chat
+                {t('landing.hero.startVideoChat')}
               </Link>
             </div>
           </div>
@@ -131,7 +133,7 @@ const HeroSection = () => {
               <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl">
                 <Image
                   src="/images/banner-female.png"
-                  alt="Conexmeet - Video Chat Platform"
+                  alt={t('landing.hero.imageAlt')}
                   width={450}
                   height={450}
                   className="relative"

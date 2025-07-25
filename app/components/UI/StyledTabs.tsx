@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Users, BookOpen, Phone, BarChart3 } from 'lucide-react';
 import { IoGiftOutline } from 'react-icons/io5';
 import { GrUserManager } from 'react-icons/gr';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface TabNavigationProps {
   activeTab?:
@@ -32,6 +33,8 @@ export function TabNavigation({
   handleTabChange,
   items,
 }: TabNavigationProps) {
+  const { t } = useTranslation();
+  
   const getTabIcon = (
     tab: 'online' | 'stories' | 'contacts' | 'Ranking' | 'Referrals' | 'Gifts',
   ) => {
@@ -93,12 +96,12 @@ export function TabNavigation({
                   </motion.div>
                 )}
                 <span className="uppercase tracking-wide">
-                  {tab === 'online' ? 'EN LÍNEA' : 
-                   tab === 'stories' ? 'HISTORIAS' : 
-                   tab === 'contacts' ? 'CONTACTOS' : 
-                   tab === 'Ranking' ? 'RANKING' : 
-                   tab === 'Referrals' ? 'REFERIDOS' : 
-                   tab === 'Gifts' ? 'REGALOS' : tab}
+                  {tab === 'online' ? t('tabs.online') : 
+                   tab === 'stories' ? t('tabs.stories') : 
+                   tab === 'contacts' ? t('tabs.contacts') : 
+                   tab === 'Ranking' ? t('tabs.ranking') : 
+                   tab === 'Referrals' ? t('tabs.referrals') : 
+                   tab === 'Gifts' ? t('tabs.gifts') : tab}
                 </span>
               </div>
 

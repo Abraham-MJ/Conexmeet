@@ -8,6 +8,7 @@ import { Package } from '@/app/types/package';
 import ListPackagesView from '../payment/list-package';
 import PaymentPackageView from '../payment/payment';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const ModalPackage = ({
   isOpen,
@@ -16,6 +17,7 @@ const ModalPackage = ({
   isOpen: boolean;
   onClose: () => void;
 }) => {
+  const { t } = useTranslation();
   const {
     data: packages,
     error: errorPackage,
@@ -60,7 +62,7 @@ const ModalPackage = ({
           <div className="flex items-center gap-2">
             <FaCoins className="h-6 w-6 text-[#ffd000]" />
             <span className="font-medium text-white">
-              Minutos: {user.user.minutes}
+              {t('modal.package.minutes')} {user.user.minutes}
             </span>
           </div>
           <div

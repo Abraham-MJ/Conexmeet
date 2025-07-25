@@ -5,6 +5,7 @@ import StyledModal from '../../UI/StyledModal';
 import { cn } from '@/lib/utils';
 import { IoMdClose } from 'react-icons/io';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const ChannelBusyIcon = () => (
   <svg
@@ -22,6 +23,7 @@ const ChannelBusyIcon = () => (
 );
 
 const ModalChannelBusy = () => {
+  const { t } = useTranslation();
   const { state, closeChannelIsBusyModal } = useAgoraContext();
 
   return (
@@ -52,15 +54,14 @@ const ModalChannelBusy = () => {
           </div>
 
           <h2 className="mb-3 text-2xl font-bold text-gray-800">
-            Llamada Ocupada
+            {t('modal.channelBusy.title')}
           </h2>
 
           <p className="mb-6 max-w-md text-lg text-gray-600">
-            La conexión que intentaste establecer ya se encuentra activa con
-            otro usuario.
+            {t('modal.channelBusy.description')}
           </p>
           <p className="text-md mb-8 max-w-md text-gray-500">
-            Por favor, elige otra modelo o inténtalo con esta más tarde.
+            {t('modal.channelBusy.instruction')}
           </p>
         </div>
       </div>

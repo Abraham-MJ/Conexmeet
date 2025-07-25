@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import ModalGallery from '../modals/ModalGallery';
 import { Phone, PhoneCall, PhoneOffIcon } from 'lucide-react';
 import { IoIosArrowBack } from 'react-icons/io';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface ChatHeaderProps {
   user: ChatUserExternal;
@@ -21,30 +22,6 @@ interface ChatHeaderProps {
   role: string;
 }
 
-const statusConfig = {
-  available_call: {
-    text: 'Llamar',
-    icon: <Phone className="h-4 w-4" />,
-    className: 'bg-green-500 hover:bg-green-600 text-white animate-pulse-ring',
-    tooltip: 'Iniciar llamada',
-    disabled: false,
-  },
-  in_call: {
-    text: 'En llamada',
-    icon: <PhoneCall className="h-4 w-4" />,
-    className: 'bg-red-500 text-white cursor-not-allowed',
-    tooltip: 'Usuario en otra llamada',
-    disabled: true,
-  },
-  online: {
-    text: 'No disponible',
-    icon: <PhoneOffIcon className="h-4 w-4" />,
-    className: 'bg-gray-300  text-gray-600 cursor-not-allowed',
-    tooltip: 'Usuario no disponible para llamada',
-    disabled: true,
-  },
-};
-
 const ChatHeader: React.FC<ChatHeaderProps> = ({
   user,
   onBack,
@@ -52,6 +29,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   isActiveChat,
   role,
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [channel, setChannel] = useState<UserInformation>();
   const { online } = useFeatures({ activeTabs: 'online' });
@@ -60,6 +38,30 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   const isMobile = useMobile(1024);
   const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png`;
+
+  const statusConfig = {
+    available_call: {
+      text: t('video.call'),
+      icon: <Phone className="h-4 w-4" />,
+      className: 'bg-green-500 hover:bg-green-600 text-white animate-pulse-ring',
+      tooltip: t('video.startCall'),
+      disabled: false,
+    },
+    in_call: {
+      text: t('video.inCall'),
+      icon: <PhoneCall className="h-4 w-4" />,
+      className: 'bg-red-500 text-white cursor-not-allowed',
+      tooltip: t('status.inCallWithOther'),
+      disabled: true,
+    },
+    online: {
+      text: t('video.notAvailable'),
+      icon: <PhoneOffIcon className="h-4 w-4" />,
+      className: 'bg-gray-300  text-gray-600 cursor-not-allowed',
+      tooltip: t('video.notAvailableForCall'),
+      disabled: true,
+    },
+  };
 
   useEffect(() => {
     const checkIfChannel = () => {
@@ -112,12 +114,12 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
                 )}
               >
                 <span className={cn('h-2 w-2 rounded-full bg-gray-400')}></span>
-                Desconectado
+                {t('status.disconnected')}
               </div>
             </>
           ) : isActiveChat && isTyping ? (
             <div className="flex h-5 items-center gap-0.5 text-green-500">
-              <span className="text-sm">Escribiendo</span>
+              <span className="text-sm">{t('chat.typing')}</span>
               <span className="animate-bounce-dots [animation-delay:-0.3s]">
                 •
               </span>
@@ -133,7 +135,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
               )}
             >
               <span className={cn('h-2 w-2 rounded-full bg-green-500')}></span>
-              En línea
+              {t('status.online')}
             </div>
           )}
         </div>

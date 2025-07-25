@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useMobile } from '@/app/hooks/useMobile';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '../../hooks/useTranslation';
 
 type ModalPosition = 'left' | 'center' | 'right';
 
@@ -34,6 +35,7 @@ export default function StyledModal({
   noClose = false,
   noPadding = false,
 }: ModalProps) {
+  const { t } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
   const autoDetectedMobile = useMobile();
 
@@ -171,7 +173,7 @@ export default function StyledModal({
                 <button
                   onClick={onClose}
                   className="rounded-full p-1 transition-colors hover:bg-gray-100"
-                  aria-label="Cerrar"
+                  aria-label={t('aria.close')}
                 >
                   <X className="h-5 w-5" />
                 </button>

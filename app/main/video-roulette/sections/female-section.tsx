@@ -15,8 +15,10 @@ import ModalUploadStory from '@/app/components/shared/modals/ModalUploadStory';
 import VerifyDocuments, {
   StatusType,
 } from '@/app/components/shared/global/VerifyDocuments';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const FemaleViewVideo = () => {
+  const { t } = useTranslation();
   const isMobile = useMobile(920);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -84,7 +86,7 @@ const FemaleViewVideo = () => {
       {(histories?.[0]?.like ?? 0) > 0 && (
         <div className="absolute right-0 top-0 z-20 flex select-none items-center justify-between p-3">
           <div className="flex gap-1 rounded-full bg-white/20 px-2 py-1 text-xs font-medium text-white">
-            Likes {histories?.[0]?.like ?? 0}
+            {t('videoRoulette.likes')} {histories?.[0]?.like ?? 0}
             <FaHeart className="h-4 w-4 text-red-500" />
           </div>
         </div>
@@ -114,7 +116,7 @@ const FemaleViewVideo = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mb-5 select-none text-center text-3xl font-bold text-white"
           >
-            Quiero encontrar chicos para chatear.
+            {t('videoRoulette.female.title')}
           </motion.h1>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -124,14 +126,14 @@ const FemaleViewVideo = () => {
           >
             <Button
               className={cn(
-                'w-[90%] rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] py-7 text-lg font-medium transition-all duration-300 hover:bg-[#de2c7c]/80',
+                'w-full rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] py-7 text-lg font-medium transition-all duration-300',
               )}
               disabled={loadingStatus.isLoading}
               onClick={handleVideoChatFemale}
             >
               {loadingStatus.isLoading ? (
                 <div className="text-md flex items-center justify-center font-latosans">
-                  Cargando
+                  {t('common.loading')}
                   {[1, 2, 3].map((index) => {
                     return (
                       <motion.span
@@ -146,12 +148,12 @@ const FemaleViewVideo = () => {
                 </div>
               ) : (
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  Video Chat
+                  {t('videoRoulette.male.enterVideoChat')}
                 </span>
               )}
             </Button>
             <div className="mt-5 flex items-center justify-center gap-2 text-sm font-light text-white">
-              <span>Activa tu cámara para empezar la búsqueda.</span>
+              <span>{t('videoRoulette.female.instruction')}</span>
             </div>
           </motion.div>
         </div>

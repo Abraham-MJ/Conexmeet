@@ -4,6 +4,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export type Column<T> = {
   key: string;
@@ -29,15 +30,18 @@ interface DataTableProps<T> {
 export function StyledTable<T>({
   data,
   columns,
-  emptyMessage = 'No hay datos disponibles',
+  emptyMessage,
   footer,
   className = '',
   highlightOnHover = true,
   isLoading = false,
   skeletonRows = 10,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  const defaultEmptyMessage = emptyMessage || t('common.noData');
 
   useEffect(() => {
     setCurrentPage(1);
@@ -168,7 +172,7 @@ export function StyledTable<T>({
                       >
                         {column.cell
                           ? column.cell(row, rowIndex)
-                          : renderCellContent(value)}
+                          : renderCellContent(value, t)}
                       </td>
                     );
                   })}
@@ -180,7 +184,7 @@ export function StyledTable<T>({
                   colSpan={columns.length}
                   className="px-6 py-8 text-center text-sm text-gray-500"
                 >
-                  {emptyMessage}
+                  {defaultEmptyMessage}
                 </td>
               </tr>
             )}
@@ -201,7 +205,7 @@ export function StyledTable<T>({
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Página anterior"
+              aria-label={t('pagination.previous')}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -230,7 +234,7 @@ export function StyledTable<T>({
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Página siguiente"
+              aria-label={t('pagination.next')}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -241,7 +245,7 @@ export function StyledTable<T>({
   );
 }
 
-function renderCellContent(content: any): React.ReactNode {
+function renderCellContent(content: any, t: (key: string) => string): React.ReactNode {
   if (content === null || content === undefined) {
     return '-';
   }
@@ -260,7 +264,7 @@ function renderCellContent(content: any): React.ReactNode {
         <div className="relative h-10 w-10 overflow-hidden rounded-full ring-2 ring-[#fc3d6b]/10">
           <Image
             src={content || '/placeholder.svg'}
-            alt="Imagen"
+            alt={t('aria.image')}
             fill
             sizes="40px"
             className="object-cover"
@@ -272,7 +276,7 @@ function renderCellContent(content: any): React.ReactNode {
   }
 
   if (typeof content === 'boolean') {
-    return content ? 'Sí' : 'No';
+    return content ? t('common.yes') : t('common.no');
   }
 
   if (content instanceof Date) {

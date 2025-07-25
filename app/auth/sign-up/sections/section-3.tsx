@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Credentials } from '@/app/types/sign-up';
 import StyledInputs from '@/app/components/UI/StyledInputs';
 import { useOTP } from '@/app/hooks/api/useSignUpOpt';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface Props {
   changeField: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -18,7 +19,7 @@ const SectionThreeStep: React.FC<Props> = ({
   errors,
 }) => {
   const { requestOTP } = useOTP();
-
+  const { t } = useTranslation();
   const [resendTimer, setResendTimer] = useState(180);
 
   const sendEmailVerification = async () => {
@@ -43,7 +44,7 @@ const SectionThreeStep: React.FC<Props> = ({
   return (
     <>
       <p className="text-center font-latosans text-gray-500">
-        Se ha enviado un código de verificación a tu correo electrónico.
+        {t('auth.signUp.step3.verificationSent')}
       </p>
 
       <StyledInputs
@@ -53,8 +54,8 @@ const SectionThreeStep: React.FC<Props> = ({
         handleChange={changeField}
         error={errors.code_otp}
         maxLength={4}
-        label="Código de verificación:"
-        placeholder="Ingresa el código"
+        label={t('auth.signUp.step3.verificationCode')}
+        placeholder={t('auth.signUp.step3.verificationCodePlaceholder')}
         onFocus={() => clearError('code_otp')}
       />
 
@@ -69,11 +70,11 @@ const SectionThreeStep: React.FC<Props> = ({
               : 'text-[#fb1efb] hover:text-indigo-500'
           } transition duration-150 ease-in-out`}
         >
-          Reenviar código
+          {t('auth.signUp.step3.resendCode')}
         </button>
         {resendTimer > 0 && (
           <span className="font-latosans text-sm text-gray-500">
-            Reenviar en: {Math.floor(resendTimer / 60)}:
+            {t('auth.signUp.step3.resendIn')} {Math.floor(resendTimer / 60)}:
             {(resendTimer % 60).toString().padStart(2, '0')}
           </span>
         )}

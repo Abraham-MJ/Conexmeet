@@ -8,8 +8,10 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
 import { useMobile } from '@/app/hooks/useMobile';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const MaleViewVideo = () => {
+  const { t } = useTranslation();
   const isMobile = useMobile(920);
   const {
     handleVideoChatMale,
@@ -95,11 +97,11 @@ const MaleViewVideo = () => {
       <div className="absolute left-9 top-9 z-20 text-sm text-white/70">
         <div className="flex items-center">
           <Play className="mr-2 h-4 w-4 text-white/70" />
-          <span>REPRODUCIR</span>
+          <span>{t('videoRoulette.play')}</span>
         </div>
         <div className="flex items-center">
           <span className="mr-2 text-red-500">●</span>
-          <span>GRABAR</span>
+          <span>{t('videoRoulette.record')}</span>
         </div>
       </div>
       <div className="absolute bottom-8 left-8 z-20 text-sm text-white/70">
@@ -112,14 +114,14 @@ const MaleViewVideo = () => {
         className="absolute"
       >
         <div className="relative z-20 w-full max-w-md text-center">
-          <h1 className="mb-2 text-4xl font-bold text-white">El video chat</h1>
+          <h1 className="mb-2 text-4xl font-bold text-white">{t('videoRoulette.male.title1')}</h1>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mb-10 text-3xl font-bold text-white"
           >
-            con mujeres número 1
+            {t('videoRoulette.male.title2')}
           </motion.h1>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -136,7 +138,7 @@ const MaleViewVideo = () => {
             >
               {loadingStatus.isLoading ? (
                 <div className="text-md flex items-center justify-center font-latosans">
-                  Cargando
+                  {t('common.loading')}
                   {[1, 2, 3].map((index) => {
                     return (
                       <motion.span
@@ -153,11 +155,11 @@ const MaleViewVideo = () => {
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   {isChannelHoppingBlocked ? (
                     <>
-                      🚫 Bloqueado (
+                      🚫 {t('videoRoulette.blocked')} (
                       {formatTime(channelHoppingBlockTimeRemaining)})
                     </>
                   ) : (
-                    <>Entrar al video chat</>
+                    <>{t('videoRoulette.male.enterVideoChat')}</>
                   )}
                 </span>
               )}
@@ -166,7 +168,7 @@ const MaleViewVideo = () => {
 
           <p className="flex items-center justify-center gap-2 text-sm text-white/70">
             <Camera className="h-4 w-4" />
-            Activa tu cámara para empezar la búsqueda
+            {t('videoRoulette.male.instruction')}
           </p>
         </div>
       </motion.div>

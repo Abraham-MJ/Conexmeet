@@ -17,6 +17,7 @@ import {
   IoChatbubbleEllipses,
   IoChatbubbleEllipsesOutline,
 } from 'react-icons/io5';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -36,6 +37,7 @@ const hiddenRoutes: RegExp[] = [
 ];
 
 const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { scrollY } = useScroll();
   const [isVisible, setIsVisible] = useState<boolean>(true);
@@ -80,7 +82,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: role === 'female' ? MdInsertChartOutlined : BiLike,
       iconActive: role === 'female' ? MdInsertChart : BiSolidLike,
-      label: role === 'female' ? 'Ranking' : 'Para Ti',
+      label: role === 'female' ? t('header.ranking') : t('header.forYou'),
       href: (currentRole) =>
         currentRole === 'female' ? routes.female.ranking : routes.male.forYou,
       disabled: role === 'female' && userState.user.confirmed !== 1,
@@ -88,7 +90,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: HiOutlineVideoCamera,
       iconActive: HiVideoCamera,
-      label: 'Video Chat',
+      label: t('header.videoChat'),
       href: (currentRole) =>
         currentRole === 'female'
           ? routes.female.videoChat
@@ -98,7 +100,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: RiContactsLine,
       iconActive: RiContactsFill,
-      label: 'Contactos',
+      label: t('header.contacts'),
       href: (currentRole) =>
         'contacts' in routes[currentRole]
           ? (routes[currentRole] as { contacts: string }).contacts
@@ -108,7 +110,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     },
     {
       icon: DollarSign,
-      label: 'Recargar',
+      label: t('header.recharge'),
       href: () => '#',
       show: (currentRole) => currentRole === 'male',
       onClick: () => setIsOpen(true),
@@ -117,7 +119,7 @@ const HeaderMobile: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: IoChatbubbleEllipsesOutline,
       iconActive: IoChatbubbleEllipses,
-      label: 'Chats',
+      label: t('header.chats'),
       href: (currentRole) => routes[currentRole].chats,
       badge: (chatTotalUnreadCount) => chatTotalUnreadCount,
       disabled: role === 'female' && userState.user.confirmed !== 1,

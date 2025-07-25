@@ -14,9 +14,11 @@ import { useEffect } from 'react';
 import { LoadingRegister } from '../../sign-up/sections/section-congrats';
 import { ForgotPasswordSchema } from '@/app/utils/validations/auth';
 import { AlertDanger, AlertSuccess } from '@/app/components/UI/StyledAlert';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 export default function PasswordRecovery() {
   const params = useParams();
+  const { t } = useTranslation();
 
   const {
     validToken,
@@ -81,7 +83,7 @@ export default function PasswordRecovery() {
         <div className="rounded-lg border border-white/20 bg-white/90 pb-10 pl-4 pr-4 pt-10 shadow-[0_0_40px_rgba(0,0,0,0.1)] backdrop-blur-sm">
           {isLoadingToken && !errorToken && (
             <div className="flex h-72 max-h-72 flex-col items-center justify-center">
-              <LoadingRegister message="Validando datos..." />
+              <LoadingRegister message={t('auth.reset.validating')} />
             </div>
           )}
 
@@ -89,18 +91,18 @@ export default function PasswordRecovery() {
             <>
               {errorToken ? (
                 <AlertDanger
-                  titleError="Ha ocurrido un error"
-                  bodyError="El token ya se venció o fue usado anteriormente. Inténtelo nuevamente."
-                  footerText="Volver al inicio"
+                  titleError={t('auth.reset.error')}
+                  bodyError={t('auth.reset.errorMessage')}
+                  footerText={t('auth.reset.backToRecovery')}
                   onPress={() => {
                     redirect('/auth/password-recovery');
                   }}
                 />
               ) : success ? (
                 <AlertSuccess
-                  title="Cambio de contraseña"
-                  body="Su contraseña ha sido cambiada exitosamente"
-                  footerText="Iniciar sesión"
+                  title={t('auth.reset.success')}
+                  body={t('auth.reset.successMessage')}
+                  footerText={t('auth.recovery.signIn')}
                   onPress={() => {
                     redirect('/auth/sign-in');
                   }}
@@ -138,8 +140,8 @@ export default function PasswordRecovery() {
                       value={credentials.password}
                       handleChange={changeField}
                       error={errors.password}
-                      label="Nueva contraseña:"
-                      placeholder="Nueva contraseña"
+                      label={t('auth.reset.newPassword')}
+                      placeholder={t('auth.reset.newPasswordPlaceholder')}
                       onFocus={() => clearError('password')}
                     />
 
@@ -149,13 +151,13 @@ export default function PasswordRecovery() {
                       value={credentials.confirm_password}
                       handleChange={changeField}
                       error={errors.confirm_password}
-                      label="Confirmar contraseña:"
-                      placeholder="Confirmar contraseña"
+                      label={t('auth.reset.confirmPassword')}
+                      placeholder={t('auth.reset.confirmPasswordPlaceholder')}
                       onFocus={() => clearError('confirm_password')}
                     />
 
                     <StyledButton
-                      text={'Recuperar contraseña'}
+                      text={t('auth.reset.submit')}
                       isLoading={forgotLoading}
                       onPress={handleResetPassword}
                       type="submit"
@@ -168,7 +170,7 @@ export default function PasswordRecovery() {
                       className="flex flex-col items-center justify-center gap-3 text-sm font-medium"
                     >
                       <StyledLink
-                        text="Iniciar sesión"
+                        text={t('auth.recovery.signIn')}
                         href="/auth/sign-in"
                       />
                     </motion.div>

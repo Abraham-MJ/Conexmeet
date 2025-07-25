@@ -5,6 +5,7 @@ import StyledModal from '../../UI/StyledModal';
 import { cn } from '@/lib/utils';
 import { IoMdClose } from 'react-icons/io';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const NoChannelsIcon = () => (
   <svg width="90" height="90" viewBox="0 0 24 24" fill="none">
@@ -22,6 +23,7 @@ const NoChannelsIcon = () => (
 );
 
 const ModalNotChannel = () => {
+  const { t } = useTranslation();
   const { state, closeNoChannelsAvailableModal } = useAgoraContext();
 
   return (
@@ -52,16 +54,14 @@ const ModalNotChannel = () => {
           </div>
 
           <h2 className="mb-3 text-2xl font-bold text-gray-800">
-            Modelos No Disponibles
+            {t('modal.noModels.title')}
           </h2>
 
           <p className="mb-6 max-w-md text-gray-600">
-            Lo sentimos, en este momento no hay modelos disponibles para iniciar
-            una conexión.
+            {t('modal.noModels.description')}
           </p>
           <p className="text-md mb-8 max-w-md text-gray-500">
-            Por favor, inténtalo de nuevo más tarde. Estamos trabajando para que
-            siempre tengas opciones.
+            {t('modal.noModels.instruction')}
           </p>
         </div>
       </div>

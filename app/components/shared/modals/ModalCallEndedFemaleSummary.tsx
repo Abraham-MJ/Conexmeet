@@ -6,25 +6,26 @@ import { cn } from '@/lib/utils';
 import { IoMdClose } from 'react-icons/io';
 import { FaDollarSign, FaHourglassEnd, FaInfoCircle } from 'react-icons/fa';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
-const CallEndedSummaryIcon = ({ reasonType }: { reasonType: string }) => {
+const CallEndedSummaryIcon = ({ reasonType, t }: { reasonType: string; t: (key: string) => string }) => {
   let icon;
   let color = '#a1a1aa';
 
   switch (reasonType) {
-    case 'Finalizada por ti':
+    case t('modal.callEnded.endedByYou'):
       icon = <FaHourglassEnd className="h-full w-full" />;
       color = '#22c55e';
       break;
-    case 'Usuario finalizó la llamada':
+    case t('modal.callEnded.userEnded'):
       icon = <FaHourglassEnd className="h-full w-full" />;
       color = '#f59e0b';
       break;
-    case 'Saldo agotado':
+    case t('modal.callEnded.balanceExhausted'):
       icon = <FaDollarSign className="h-full w-full" />;
       color = '#dc2626';
       break;
-    case 'Desconexión inesperada':
+    case t('modal.callEnded.unexpectedDisconnection'):
       icon = <FaInfoCircle className="h-full w-full" />;
       color = '#ef4444';
       break;
@@ -38,6 +39,7 @@ const CallEndedSummaryIcon = ({ reasonType }: { reasonType: string }) => {
 };
 
 const ModalCallEndedFemaleSummary = () => {
+  const { t } = useTranslation();
   const { state, closeFemaleCallEndedSummaryModal } = useAgoraContext();
   const { callSummaryInfo } = state;
 
@@ -74,27 +76,27 @@ const ModalCallEndedFemaleSummary = () => {
             className="mb-6 rounded-full p-4"
             style={{ width: '90px', height: '90px' }}
           >
-            <CallEndedSummaryIcon reasonType={reason} />
+            <CallEndedSummaryIcon reasonType={reason} t={t} />
           </div>
 
           <h2 className="mb-3 text-3xl font-bold text-gray-800">
-            Llamada Finalizada
+            {t('modal.callEnded.title')}
           </h2>
 
           <p className="mb-4 text-lg text-gray-700">
-            Motivo:{' '}
+            {t('modal.callEnded.reason')}:{' '}
             <span className="font-semibold text-[#fc3d6b]">{reason}</span>
           </p>
 
           <div className="mb-8 w-full space-y-3">
             <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-              <span className="font-medium text-gray-600">Duración:</span>
+              <span className="font-medium text-gray-600">{t('modal.callEnded.duration')}:</span>
               <span className="text-xl font-bold text-gray-800">
                 {duration}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-              <span className="font-medium text-gray-600">Ganancias:</span>
+              <span className="font-medium text-gray-600">{t('modal.callEnded.earnings')}:</span>
               <span className="text-xl font-bold text-green-600">
                 ${earnings}
               </span>

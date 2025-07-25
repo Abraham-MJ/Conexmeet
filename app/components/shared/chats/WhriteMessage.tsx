@@ -9,6 +9,7 @@ import { useUser } from '@/app/context/useClientContext';
 import { useParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { SelectedImage, WhriteMessageProps } from '@/app/types/chat';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const TYPING_TIMEOUT_DURATION = 2000;
 
@@ -18,6 +19,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
   sendTypingStarted,
   sendTypingStopped,
 }) => {
+  const { t } = useTranslation();
   const { chat_id } = useParams<{ chat_id: string }>();
   const { state: userState } = useUser();
 
@@ -174,7 +176,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
         accept="image/*"
         multiple
         style={{ display: 'none' }}
-        aria-label="File input"
+        aria-label={t('aria.fileInput')}
       />
 
       {selectedImages.length > 0 && (
@@ -186,13 +188,13 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
             >
               <img
                 src={image.previewUrl}
-                alt={`Previsualización ${image.file.name}`}
+                alt={`${t('chat.preview')} ${image.file.name}`}
                 className="h-full w-full cursor-pointer rounded-md object-cover"
               />
               <button
                 onClick={() => removeImageById(image.id)}
                 className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border bg-white p-1 text-gray-600 shadow-md transition-colors hover:bg-gray-100"
-                aria-label="Quitar imagen"
+                aria-label={t('aria.removeImage')}
               >
                 <IoMdClose className="h-4 w-4" />
               </button>
@@ -208,9 +210,9 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
           onBlur={handleInputBlur}
-          placeholder="Escribe un mensaje..."
+          placeholder={t('chat.typeMessage')}
           className="mr-2 flex-1 rounded-full w-full border-0 bg-[#f6f6f8] px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0 focus:ring-transparent"
-          aria-label="Message input"
+          aria-label={t('aria.messageInput')}
           disabled={!peerRtmUidForTyping}
         />
         <div className="flex items-center space-x-1">
@@ -227,7 +229,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
             <button
               type="button"
               className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-              aria-label="Abrir selector de emojis"
+              aria-label={t('aria.openEmojiPicker')}
             >
               <BsEmojiGrin size={20} />
             </button>
@@ -237,7 +239,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
             type="button"
             onClick={handleAttachmentClick}
             className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-            aria-label="Adjuntar archivo"
+            aria-label={t('aria.attachFile')}
           >
             <IoIosLink size={24} />
           </button>
@@ -251,7 +253,7 @@ const WhriteMessage: React.FC<WhriteMessageProps> = ({
                 ? 'bg-blue-500 text-white hover:bg-blue-600'
                 : 'cursor-not-allowed bg-gray-300 text-gray-500'
             }`}
-            aria-label="Enviar mensaje"
+            aria-label={t('aria.sendMessage')}
           >
             <IoMdSend size={20} />
           </button>

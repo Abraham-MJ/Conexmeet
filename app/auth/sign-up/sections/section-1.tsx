@@ -3,6 +3,7 @@ import React from 'react';
 import StyledInputs from '@/app/components/UI/StyledInputs';
 import StyledSelect from '@/app/components/UI/StyledSelect';
 import { Credentials } from '@/app/types/sign-up';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 export const getGender = [
   { id: 'male', label: 'Masculino' },
@@ -22,6 +23,13 @@ const SectionFirstStep: React.FC<Props> = ({
   clearError,
   errors,
 }) => {
+  const { t } = useTranslation();
+  
+  const getGenderTranslated = [
+    { id: 'male', label: t('auth.signUp.step1.male') },
+    { id: 'female', label: t('auth.signUp.step1.female') },
+  ];
+
   return (
     <>
       <StyledSelect
@@ -29,10 +37,10 @@ const SectionFirstStep: React.FC<Props> = ({
         value={credentials.gender}
         handleChange={changeField}
         error={errors.gender}
-        label="Sexo:"
-        placeholder="Escoge tu sexo"
+        label={t('auth.signUp.step1.gender')}
+        placeholder={t('auth.signUp.step1.genderPlaceholder')}
         onFocus={() => clearError('gender')}
-        itemList={getGender}
+        itemList={getGenderTranslated}
       />
       <StyledInputs
         name="name"
@@ -40,8 +48,8 @@ const SectionFirstStep: React.FC<Props> = ({
         value={credentials.name}
         handleChange={changeField}
         error={errors.name}
-        label="Nombre:"
-        placeholder="Nombre"
+        label={t('auth.signUp.step1.name')}
+        placeholder={t('auth.signUp.step1.namePlaceholder')}
         onFocus={() => clearError('name')}
       />
       <StyledInputs
@@ -50,8 +58,8 @@ const SectionFirstStep: React.FC<Props> = ({
         value={credentials.last_name}
         handleChange={changeField}
         error={errors.last_name}
-        label="Apellido:"
-        placeholder="Apellido"
+        label={t('auth.signUp.step1.lastName')}
+        placeholder={t('auth.signUp.step1.lastNamePlaceholder')}
         onFocus={() => clearError('last_name')}
       />
       <StyledInputs
@@ -60,8 +68,8 @@ const SectionFirstStep: React.FC<Props> = ({
         value={credentials.email}
         handleChange={changeField}
         error={errors.email}
-        label="Correo electrónico:"
-        placeholder="Correo@ejemplo.com"
+        label={t('auth.signUp.step1.email')}
+        placeholder={t('auth.signUp.step1.emailPlaceholder')}
         onFocus={() => clearError('email')}
       />
       <StyledInputs
@@ -70,8 +78,8 @@ const SectionFirstStep: React.FC<Props> = ({
         value={credentials.user_name}
         handleChange={changeField}
         error={errors.user_name}
-        label="Nombre de usuario:"
-        placeholder="@Usuario"
+        label={t('auth.signUp.step1.username')}
+        placeholder={t('auth.signUp.step1.usernamePlaceholder')}
         onFocus={() => clearError('user_name')}
       />
     </>

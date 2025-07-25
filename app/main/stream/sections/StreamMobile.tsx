@@ -10,6 +10,7 @@ import { useListGifts } from '@/app/hooks/api/useListGifts';
 import { GiftItem } from './GiftContainer';
 import { TbMessage2Heart, TbPlayerTrackNextFilled } from 'react-icons/tb';
 import { LuSendHorizontal } from 'react-icons/lu';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface StreamMobileProps {
   agora: AgoraState;
@@ -45,6 +46,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
   hopToRandomChannel,
   isChannelHoppingLoading,
 }) => {
+  const { t } = useTranslation();
   const { contentGifts } = useListGifts();
   const [isOpenChat, setIsOpenChat] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
@@ -365,7 +367,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                   <div className="flex flex-col items-center space-y-4">
                     <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-[#fc3d6b]"></div>
                     <p className="text-center font-medium text-white">
-                      Cambiando de canal...
+                      {t('video.changingChannel')}
                     </p>
                   </div>
                 </div>
@@ -433,7 +435,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                         >
                           <input
                             className="m-0 mx-9 ml-3 mr-14 box-border h-full w-full flex-1 resize-none self-center border-none bg-transparent pr-3 text-sm leading-tight text-white outline-none"
-                            placeholder="Di algo..."
+                            placeholder={t('video.saySomething')}
                             value={message}
                             onChange={(e) => {
                               setMessage(e.target.value);
@@ -444,7 +446,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                           <button
                             onClick={handleSendMessage}
                             className="pointer-events-auto absolute right-2.5 top-[9px] m-0 box-border flex h-8 items-center justify-center overflow-hidden rounded-[18px] border-none bg-transparent p-0 no-underline opacity-100 outline-none transition duration-300 ease-in-out"
-                            aria-label="Enviar mensaje"
+                            aria-label={t('aria.sendMessage')}
                           >
                             <span className="translate-z-0 relative flex max-w-full items-center justify-center">
                               <LuSendHorizontal className="h-7 w-7 text-white" />
@@ -458,7 +460,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                               setIsOpenChat(true);
                             }}
                             className="transition-border pointer-events-auto m-0 box-border flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-none bg-[#0000007a] text-white no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out"
-                            aria-label="Abrir chat"
+                            aria-label={t('video.openChat')}
                           >
                             <span className="translate-z-0 relative flex max-w-full flex-1 transform items-center justify-center">
                               <TbMessage2Heart className="h-8 w-8" />
@@ -468,7 +470,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                             <button
                               onClick={hopToRandomChannel}
                               className="transition-border pointer-events-auto m-0 box-border flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-none bg-[#0000007a] text-white no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out"
-                              aria-label="Siguiente canal"
+                              aria-label={t('video.nextChannel')}
                             >
                               <span className="translate-z-0 relative flex max-w-full flex-1 transform items-center justify-center">
                                 <TbPlayerTrackNextFilled className="h-8 w-8" />

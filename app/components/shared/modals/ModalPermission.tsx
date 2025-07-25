@@ -5,8 +5,10 @@ import StyledModal from '../../UI/StyledModal';
 import { cn } from '@/lib/utils';
 import { Camera, Mic } from 'lucide-react';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const ModalPermission = () => {
+  const { t } = useTranslation();
   const { state } = useAgoraContext();
 
   return (
@@ -26,12 +28,11 @@ const ModalPermission = () => {
       >
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <h2 className="mb-6 text-2xl font-bold text-gray-800">
-            Preparando tu Conexión
+            {t('modal.permission.title')}
           </h2>
 
           <p className="mb-6 text-gray-600">
-            Estamos preparando tu cámara y micrófono. Por favor, **acepta los
-            permisos** en la ventana emergente de tu navegador.
+            {t('modal.permission.description')}
           </p>
 
           <div className="mb-6 w-full">
@@ -41,10 +42,10 @@ const ModalPermission = () => {
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-gray-800">
-                  Acceso a la cámara
+                  {t('modal.permission.cameraAccess')}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Para que otros puedan verte durante la llamada.
+                  {t('modal.permission.cameraDescription')}
                 </p>
               </div>
             </div>
@@ -55,10 +56,10 @@ const ModalPermission = () => {
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-gray-800">
-                  Acceso al micrófono
+                  {t('modal.permission.micAccess')}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Para que otros puedan escucharte durante la llamada.
+                  {t('modal.permission.micDescription')}
                 </p>
               </div>
             </div>
@@ -66,9 +67,7 @@ const ModalPermission = () => {
 
           <div className="mt-2 w-full rounded-lg bg-gray-50 p-4">
             <p className="text-sm italic text-gray-600">
-              Estos permisos son esenciales para el video chat. Una vez
-              aceptados, puedes gestionarlos desde la configuración de tu
-              navegador.
+              {t('modal.permission.note')}
             </p>
           </div>
         </div>

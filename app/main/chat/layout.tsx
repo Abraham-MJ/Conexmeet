@@ -9,6 +9,7 @@ import { SkeletonChatLoading } from '@/app/components/loading/chats-skeleton';
 import { Search } from 'lucide-react';
 import { useMobile } from '@/app/hooks/useMobile';
 import { ProcessedChatData } from '@/app/types/chat';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const hiddenRoutes: RegExp[] = [/^\/main\/chat\/[^/]+$/];
 
@@ -33,6 +34,7 @@ export default function ChatsLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const { chat_id } = useParams<{ chat_id: string }>();
   const { state, loadChatList } = useChat();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -79,13 +81,13 @@ export default function ChatsLayout({
         <div className="flex h-full w-full flex-col bg-white">
           <div className="flex-shrink-0 border-b border-gray-200 p-4">
             <div className="flex items-center">
-              <h2 className="text-2xl font-semibold text-gray-900">Mensajes</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">{t('nav.messages')}</h2>
             </div>
             <div className="relative mt-4">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar en chats..."
+                placeholder={t('ui.searchInChats')}
                 className="focus:ring-brand h-10 w-full rounded-lg border border-gray-300 bg-gray-50 py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-0"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

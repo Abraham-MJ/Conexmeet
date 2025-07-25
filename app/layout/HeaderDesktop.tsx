@@ -19,6 +19,7 @@ import {
 } from 'react-icons/io5';
 import { RiContactsLine, RiContactsFill } from 'react-icons/ri';
 import { MdInsertChartOutlined, MdInsertChart } from 'react-icons/md';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface RouteConfig {
   icon: React.ElementType;
@@ -47,11 +48,12 @@ interface UserInfoConfig {
 const hiddenRoutes: RegExp[] = [/^\/main\/stream\/[^/]+$/];
 
 const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { state: userState } = useUser();
   const { state: chatState } = useChat();
   const pathname = usePathname();
-  const isMobile = useMobile();
+  const isMobile = useMobile(920);
 
   const { minutes, gender, sales } = userState?.user || {};
   const role = (gender as 'male' | 'female') ?? 'male';
@@ -76,7 +78,7 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: BiLike,
       iconActive: BiSolidLike,
-      label: 'Para ti',
+      label: t('header.forYou'),
       href: (currentRole) => routes.male.forYou,
       show: (currentRole) => currentRole === 'male',
       disabled: role === 'female' && userState.user.confirmed !== 1,
@@ -84,14 +86,14 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: HiOutlineVideoCamera,
       iconActive: HiVideoCamera,
-      label: 'Video Chat',
+      label: t('header.videoChat'),
       href: (currentRole) => routes[currentRole].videoChat,
       disabled: role === 'female' && userState.user.confirmed !== 1,
     },
     {
       icon: IoChatbubbleEllipsesOutline,
       iconActive: IoChatbubbleEllipses,
-      label: 'Chats',
+      label: t('header.chats'),
       href: (currentRole) => routes[currentRole].chats,
       badge: (totalUnreadCount) => totalUnreadCount,
       disabled: role === 'female' && userState.user.confirmed !== 1,
@@ -99,7 +101,7 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: MdInsertChartOutlined,
       iconActive: MdInsertChart,
-      label: 'Ranking',
+      label: t('header.ranking'),
       href: (currentRole) =>
         (routes[currentRole] as { ranking?: string }).ranking ?? '',
       show: (currentRole) => currentRole === 'female',
@@ -108,7 +110,7 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
     {
       icon: RiContactsLine,
       iconActive: RiContactsFill,
-      label: 'Mis Contactos',
+      label: t('header.myContacts'),
       href: (currentRole) =>
         (routes[currentRole] as { contacts?: string }).contacts ?? '',
       show: (currentRole) => currentRole === 'female',
@@ -120,8 +122,8 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
     {
       label: (currentRole, currentMinutes, currentSales) =>
         currentRole === 'female'
-          ? `Saldo: $${currentSales?.toFixed(2) || '0.00'}`
-          : `Minutos: ${converterMinutes(typeof currentMinutes === 'number' ? String(currentMinutes) : (currentMinutes ?? '00:00:00'))}`,
+          ? `${t('header.balance')}: $${currentSales?.toFixed(2) || '0.00'}`
+          : `${t('header.minutes')}: ${converterMinutes(typeof currentMinutes === 'number' ? String(currentMinutes) : (currentMinutes ?? '00:00:00'))}`,
       bgColor: (currentRole) =>
         currentRole === 'female'
           ? 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)]'
@@ -140,14 +142,14 @@ const HeaderDesktop: React.FC<HeaderProps> = ({ routes }) => {
               className="cursor-pointer rounded-full bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] px-4 py-2 text-sm font-medium text-white"
               onClick={() => setIsModalOpen(true)}
             >
-              Recargar
+              {t('header.recharge')}
             </div>
           );
         } else {
           return (
             <div className="flex items-center rounded-full bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] px-4 py-2">
               <span className="text-sm font-medium text-white">
-                Minutos: {converterMinutes(minutes) || '0.00'}
+                {t('header.minutes')}: {converterMinutes(minutes) || '0.00'}
               </span>
             </div>
           );

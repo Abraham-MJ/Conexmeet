@@ -4,6 +4,7 @@ import StyledModal from '../../UI/StyledModal';
 import { cn } from '@/lib/utils';
 import { IoVideocamOffOutline } from 'react-icons/io5';
 import { BellIcon } from 'lucide-react';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface ModalChannelNotFoundProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ const ModalChannelNotFound: React.FC<ModalChannelNotFoundProps> = ({
   name,
   status,
 }) => {
+  const { t } = useTranslation();
   let icon, title, message, iconBgColor, buttonBgColor, buttonHoverBgColor;
 
   if (status === 'in_call') {
@@ -25,12 +27,10 @@ const ModalChannelNotFound: React.FC<ModalChannelNotFoundProps> = ({
     iconBgColor = 'bg-red-100';
     buttonBgColor = 'bg-red-600';
     buttonHoverBgColor = 'hover:bg-red-700';
-    title = `${name} está en otra llamada`;
+    title = t('modal.channelBusy.title');
     message = (
       <>
-        En este momento <span className="font-semibold">{name}</span> se
-        encuentra ocupada. ¡No te preocupes! Podemos enviarte una notificación
-        en cuanto termine su llamada y esté disponible.
+        {t('modal.channelBusy.description')}
       </>
     );
   } else {
@@ -38,12 +38,10 @@ const ModalChannelNotFound: React.FC<ModalChannelNotFoundProps> = ({
     iconBgColor = 'bg-gray-100';
     buttonBgColor = 'bg-gray-600';
     buttonHoverBgColor = 'hover:bg-gray-700';
-    title = `¡Te avisamos cuando ${name} esté disponible!`;
+    title = t('modal.channelNotFound.title').replace('{name}', name);
     message = (
       <>
-        En este momento <span className="font-semibold">{name}</span> no se
-        encuentra en línea. Podemos enviarte una notificación justo cuando se
-        conecte.
+        {t('modal.channelNotFound.description').replace('{name}', name)}
       </>
     );
   }
@@ -93,14 +91,14 @@ const ModalChannelNotFound: React.FC<ModalChannelNotFoundProps> = ({
                 buttonHoverBgColor,
               )}
             >
-              Sí, avísame
+              {t('modal.channelNotFound.notify')}
             </button>
 
             <button
               onClick={onClose}
               className="w-full rounded-lg bg-gray-200 px-6 py-3 text-base font-semibold text-gray-700 transition-all duration-300 hover:bg-gray-300 focus:outline-none"
             >
-              No, gracias
+              {t('modal.channelNotFound.noThanks')}
             </button>
           </div>
         </div>

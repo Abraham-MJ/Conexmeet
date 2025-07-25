@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   Undo2,
 } from 'lucide-react';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 type RenderItem =
   | MessageContent
@@ -24,6 +25,7 @@ interface MessageContentProps {
 }
 
 const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
+  const { t } = useTranslation();
   const [translateText, setTranslateText] = useState<number | null>(null);
   const [translatingId, setTranslatingId] = useState<number | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -155,7 +157,7 @@ const ConversationContent: React.FC<MessageContentProps> = ({ messages }) => {
                     setIsOpen(true);
                   }}
                   src={message.file_url}
-                  alt={message.text || 'Imagen enviada'}
+                  alt={message.text || t('chat.imageSent')}
                   className="h-auto w-full cursor-pointer rounded-lg"
                 />
               )}

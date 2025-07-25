@@ -5,8 +5,10 @@ import StyledModal from '../../UI/StyledModal';
 import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 const ModalRatingCall = () => {
+  const { t } = useTranslation();
   const {
     showMaleRatingModal,
     maleRatingInfo,
@@ -52,12 +54,12 @@ const ModalRatingCall = () => {
       >
         <div className="space-y-2 text-center">
           <h2 className="text-2xl font-bold text-gray-900">
-            Califica tu experiencia
+            {t('modal.rating.title')}
           </h2>
           <p className="text-gray-500">
             {maleRatingInfo?.femaleName
-              ? `¿Cómo fue tu experiencia con ${maleRatingInfo.femaleName}?`
-              : 'Tu opinión nos ayuda a mejorar nuestro servicio.'}
+              ? `${t('modal.rating.experienceWith')} ${maleRatingInfo.femaleName}?`
+              : t('modal.rating.description')}
           </p>
         </div>
 
@@ -74,7 +76,7 @@ const ModalRatingCall = () => {
                 onClick={() => setRating(starValue)}
                 onMouseEnter={() => setHover(starValue)}
                 className="transform transition-transform duration-150 hover:scale-110 focus:outline-none"
-                aria-label={`Calificar con ${starValue} estrellas`}
+                aria-label={`${t('modal.rating.rateStars')} ${starValue} ${t('modal.rating.stars')}`}
               >
                 <Star
                   className={`h-12 w-12 transition-colors duration-200 ${
@@ -94,11 +96,11 @@ const ModalRatingCall = () => {
             htmlFor="comment"
             className="text-sm font-medium text-gray-600"
           >
-            Comentarios adicionales (opcional)
+            {t('modal.rating.comments')}
           </label>
           <textarea
             id="comment"
-            placeholder="Cuéntanos qué podemos mejorar..."
+            placeholder={t('modal.rating.commentsPlaceholder')}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={4}
@@ -114,7 +116,7 @@ const ModalRatingCall = () => {
             }
             disabled={rating === 0 || isSubmitting}
           >
-            {isSubmitting ? 'Enviando...' : 'Enviar Calificación'}
+            {isSubmitting ? t('modal.rating.sending') : t('modal.rating.submit')}
           </Button>
         </div>
       </div>

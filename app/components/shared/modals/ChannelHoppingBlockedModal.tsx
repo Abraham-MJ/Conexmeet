@@ -4,8 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useAgoraContext } from '../../../context/useAgoraContext';
 import StyledModal from '../../UI/StyledModal';
 import { FaRegCircleXmark } from 'react-icons/fa6';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 export const ChannelHoppingBlockedModal: React.FC = () => {
+  const { t } = useTranslation();
   const {
     showChannelHoppingBlockedModal,
     closeChannelHoppingBlockedModal,
@@ -65,20 +67,19 @@ export const ChannelHoppingBlockedModal: React.FC = () => {
           </div>
 
           <h3 className="mb-2 text-lg font-medium text-gray-900">
-            Acceso Temporalmente Bloqueado
+            {t('modal.channelHopping.title')}
           </h3>
 
           <div className="mb-4 space-y-2 text-sm text-gray-600">
-            <p>Has cambiado de modelo muy rápidamente varias veces seguidas.</p>
+            <p>{t('modal.channelHopping.description1')}</p>
             <p>
-              Para mantener una experiencia de calidad, el video chat está
-              temporalmente deshabilitado.
+              {t('modal.channelHopping.description2')}
             </p>
           </div>
 
           <div className="mb-4 rounded-lg bg-red-50 p-3">
             <p className="text-sm font-medium text-red-800">
-              Tiempo restante de bloqueo:
+              {t('modal.channelHopping.timeRemaining')}:
             </p>
             <p className="text-2xl font-bold text-red-600">
               {formatTime(timeRemaining)}
@@ -86,11 +87,11 @@ export const ChannelHoppingBlockedModal: React.FC = () => {
           </div>
 
           <div className="mb-4 rounded bg-gray-50 p-3 text-left text-xs text-gray-500">
-            <p className="mb-1 font-medium">💡 Consejos:</p>
+            <p className="mb-1 font-medium">💡 {t('modal.channelHopping.tips')}:</p>
             <ul className="space-y-1">
-              <li>• Permanece al menos 15 segundos con cada modelo</li>
-              <li>• Si permaneces 1+ minuto, el contador se reinicia</li>
-              <li>• Puedes seguir en tu llamada actual normalmente</li>
+              <li>• {t('modal.channelHopping.tip1')}</li>
+              <li>• {t('modal.channelHopping.tip2')}</li>
+              <li>• {t('modal.channelHopping.tip3')}</li>
             </ul>
           </div>
 
@@ -100,7 +101,7 @@ export const ChannelHoppingBlockedModal: React.FC = () => {
               'w-full rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] py-3 text-lg font-medium text-white transition-all duration-300'
             }
           >
-            Entendido
+            {t('modal.channelHopping.understood')}
           </button>
         </div>
       </div>

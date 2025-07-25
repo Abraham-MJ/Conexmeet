@@ -1,5 +1,6 @@
 import { Package } from '@/app/types/package';
 import React from 'react';
+import { useTranslation } from '@/app/hooks/useTranslation';
 
 interface PackagesProps {
   packages: Package[];
@@ -14,10 +15,11 @@ const ListPackagesView: React.FC<PackagesProps> = ({
   selectedPackage,
   handlePayment,
 }) => {
+  const { t } = useTranslation();
   return (
     <>
       <button className="glow-border -mx-4 transform cursor-default rounded-e-full bg-gradient-to-r from-orange-500 to-red-500 px-4 py-4 text-xl font-semibold text-white">
-        ¡Oferta Especial de Primera Vez! 🎉
+        {t('payment.specialOffer')} 🎉
       </button>
       <div className="py-8">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-2">
@@ -76,7 +78,7 @@ const ListPackagesView: React.FC<PackagesProps> = ({
             <>
               <div className="flex flex-col items-center">
                 <span className="font-medium tracking-wide text-white">
-                  Continuar Compra
+                  {t('payment.continuePurchase')}
                 </span>
                 <span className="text-sm font-medium text-white">
                   ${selectedPackage?.price} - {selectedPackage?.description}
@@ -86,10 +88,10 @@ const ListPackagesView: React.FC<PackagesProps> = ({
           ) : (
             <div className="flex flex-col items-center">
               <span className="text-lg font-medium text-white/80">
-                Selecciona un Paquete
+                {t('payment.selectPackage')}
               </span>
               <span className="text-sm text-white/60">
-                Elige tu paquete de monedas para continuar
+                {t('payment.selectPackageDescription')}
               </span>
             </div>
           )}

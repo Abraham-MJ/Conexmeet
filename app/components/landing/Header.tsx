@@ -4,9 +4,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Menu, X, Building2 } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
+import { Globe } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { t, language, setLanguage } = useTranslation();
 
   return (
     <header className="fixed left-0 right-0 top-0 z-50 backdrop-blur-md">
@@ -36,14 +39,25 @@ const Header = () => {
               className="flex items-center px-4 py-2 font-medium text-gray-600 transition-colors duration-200 hover:text-gray-900"
             >
               <Building2 className="mr-2 h-4 w-4 text-gray-400" />
-              Agencias
+              {t('landing.header.agencies')}
             </Link>
+
+            <div className="relative">
+              <button
+                onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+                className="flex items-center px-3 py-2 font-medium text-gray-600 transition-colors duration-200 hover:text-gray-900"
+                title={language === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+              >
+                <Globe className="mr-2 h-4 w-4 text-gray-400" />
+                {language === 'es' ? 'ES' : 'EN'}
+              </button>
+            </div>
 
             <Link
               href="/auth/sign-in"
               className="inline-flex items-center rounded-full bg-gradient-to-r from-[#f711ba] to-[#ff465d] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:from-[#ff465d] hover:to-[#f711ba] hover:shadow-lg"
             >
-              Iniciar Sesión / Registrarse
+              {t('landing.header.signInRegister')}
             </Link>
           </div>
 
@@ -62,7 +76,18 @@ const Header = () => {
             <div className="flex flex-col space-y-3">
               <button className="flex items-center rounded-lg px-4 py-3 text-left font-medium text-gray-600 transition-all duration-200">
                 <Building2 className="mr-3 h-4 w-4 text-gray-400" />
-                Agencias
+                {t('landing.header.agencies')}
+              </button>
+
+              <button
+                onClick={() => {
+                  setLanguage(language === 'es' ? 'en' : 'es');
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center rounded-lg px-4 py-3 text-left font-medium text-gray-600 transition-all duration-200"
+              >
+                <Globe className="mr-3 h-4 w-4 text-gray-400" />
+                {language === 'es' ? 'Cambiar a English' : 'Switch to Español'}
               </button>
 
               <Link
@@ -70,7 +95,7 @@ const Header = () => {
                 className="mx-2 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#f711ba] to-[#ff465d] px-6 py-3 text-sm font-semibold text-white transition-all duration-300 hover:shadow-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Iniciar Sesión / Registrarse
+                {t('landing.header.signInRegister')}
               </Link>
             </div>
           </div>

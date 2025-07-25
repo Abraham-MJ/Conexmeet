@@ -9,9 +9,11 @@ import { cn } from '@/lib/utils';
 import { AiOutlineGlobal } from 'react-icons/ai';
 import { MdGTranslate } from 'react-icons/md';
 import ModalTranslate from './modals/ModalTranslate';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function UserDropdown() {
   const [isOpenTranslate, setIsOpenTranslate] = useState(false);
+  const { t } = useTranslation();
 
   const { state } = useUser();
   const { logout } = useLogin();
@@ -113,7 +115,7 @@ export default function UserDropdown() {
                   >
                     <User className="h-4 w-4" />
                   </div>
-                  <span>Perfil</span>
+                  <span>{t('nav.profile')}</span>
                 </Link>
               </li>
               <li className="px-2">
@@ -132,7 +134,7 @@ export default function UserDropdown() {
                   >
                     <LogOut className="h-4 w-4" />
                   </div>
-                  <span>Cerrar Sesión</span>
+                  <span>{t('nav.logout')}</span>
                 </Link>
               </li>
             </ul>
