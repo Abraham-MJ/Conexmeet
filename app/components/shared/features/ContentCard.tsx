@@ -31,6 +31,7 @@ interface ContentRoomsProps {
   initialCall: (host_id: string) => void;
   isLoadingCall: boolean;
   rolUser: 'admin' | 'male' | 'female';
+  isUserInCall?: boolean;
 }
 
 export const ContentCardStories = React.memo(function ContentCardStories({
@@ -252,41 +253,62 @@ export function ContentCardRooms({
   initialCall,
   isLoadingCall,
   rolUser,
+  isUserInCall = false,
 }: ContentRoomsProps) {
   const { t } = useTranslation();
   const isMobile = useMobile(920);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [isProcessingCall, setIsProcessingCall] = useState(false);
   const GENERIC_IMAGE_ERROR_PLACEHOLDER = `https://avatar.iran.liara.run/`;
+
+  const isCardEnabled = () => {
+    if (rolUser === 'admin') {
+      return user.status === 'available_call' || user.status === 'in_call';
+    }
+
+    return (
+      user.status === 'available_call' &&
+      user.host_id !== null &&
+      !isLoadingCall &&
+      !isUserInCall &&
+      !isProcessingCall
+    );
+  };
+
+  const handleCardClick = async () => {
+    if (!isCardEnabled()) {
+      return;
+    }
+
+    if (isProcessingCall) {
+      return;
+    }
+
+    setIsProcessingCall(true);
+    setSelectedCard(String(user.user_id));
+
+    try {
+      await initialCall(user?.host_id ?? '');
+    } catch (error) {
+      console.error('Error al iniciar llamada:', error);
+    } finally {
+      setTimeout(() => {
+        setIsProcessingCall(false);
+        setSelectedCard(null);
+      }, 2000);
+    }
+  };
 
   return (
     <div
       className={cn(
         'group relative overflow-hidden bg-current shadow-lg',
-        user.status === 'available_call' && 'cursor-pointer',
+        isCardEnabled() && 'cursor-pointer',
         isMobile ? 'aspect-video rounded-2xl' : 'aspect-square rounded-3xl',
       )}
-      onClick={() => {
-        if (
-          user.status === 'available_call' &&
-          user.host_id !== null &&
-          !isLoadingCall &&
-          rolUser !== 'admin'
-        ) {
-          setSelectedCard(String(user.user_id));
-          initialCall(user.host_id);
-        } else if (
-          user.status === 'available_call' ||
-          (user.status === 'in_call' &&
-            user.host_id !== null &&
-            !isLoadingCall &&
-            rolUser === 'admin')
-        ) {
-          setSelectedCard(String(user.user_id));
-          initialCall(user?.host_id ?? '');
-        }
-      }}
+      onClick={handleCardClick}
     >
-      {isLoadingCall && selectedCard === String(user.user_id) && (
+      {(isLoadingCall || isProcessingCall) && selectedCard === String(user.user_id) && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-100 transition-all duration-300">
           <div className="h-24 w-24 animate-spin rounded-full border-4 border-b-transparent border-l-transparent border-r-[#ff00ff] border-t-[#ff00ff]" />
           <div className="absolute inset-0 flex items-center justify-center">

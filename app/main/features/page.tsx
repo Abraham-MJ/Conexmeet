@@ -17,6 +17,7 @@ import { useAgoraContext } from '@/app/context/useAgoraContext';
 import { StyledFloatAlert } from '@/app/components/UI/StyledFloatAlert';
 import ContainerGlobal from '@/app/components/shared/global/ContainerGlobal';
 import { useTranslation } from '@/app/hooks/useTranslation';
+import { useCallValidation } from '@/app/hooks/useCallValidation';
 
 const gridContainerVariants = {
   hidden: { opacity: 0 },
@@ -44,13 +45,21 @@ export const dynamic = 'force-dynamic';
 
 const FeaturesScreen = () => {
   const { t } = useTranslation();
+  const [validationError, setValidationError] = React.useState<string>('');
   const {
     handleVideoChatMale,
     loadingStatus,
     state: agora,
     channelHoppingBlockTimeRemaining,
     openChannelHoppingBlockedModal,
+    isChannelHoppingBlocked,
   } = useAgoraContext();
+
+  const { validateCallAttempt, setCallInProgress } = useCallValidation({
+    agoraState: agora,
+    isLoading: loadingStatus.isLoading,
+    isChannelHoppingBlocked,
+  });
 
   const {
     activeTab,
@@ -81,6 +90,8 @@ const FeaturesScreen = () => {
         animationDirection="top"
         variant="loading"
       />
+
+
       <TabNavigation
         activeTab={activeTab}
         handleTabChange={handleTabChange}
@@ -118,15 +129,46 @@ const FeaturesScreen = () => {
                     >
                       <ContentCardRooms
                         user={normalizedUser}
-                        initialCall={(host_id: string) => {
-                          if (agora.channelHopping.isBlocked) {
-                            openChannelHoppingBlockedModal();
-                          } else {
-                            handleVideoChatMale(host_id);
+                        initialCall={async (host_id: string) => {
+                          const validation = validateCallAttempt(host_id);
+
+                          if (!validation.isValid) {
+                            console.warn('Call attempt blocked:', validation.reason);
+
+                            if (validation.reason === 'Channel hopping is blocked') {
+                              openChannelHoppingBlockedModal();
+                            } else {
+                              const errorMessages: Record<string, string> = {
+                                'Call already in progress': t('errors.callAlreadyInProgress'),
+                                'Already connected to RTC channel': t('errors.alreadyConnectedRTC'),
+                                'Already connected to RTM channel': t('errors.alreadyConnectedRTM'),
+                                'Remote users already connected': t('errors.remoteUsersConnected'),
+                                'Invalid host ID': t('errors.invalidHostId'),
+                                'Local user not initialized': t('errors.localUserNotInitialized'),
+                              };
+
+                              const errorMessage = errorMessages[validation.reason || ''] || t('errors.cannotStartCall');
+                              setValidationError(errorMessage);
+                            }
+                            return;
+                          }
+
+                          setCallInProgress(true);
+
+                          try {
+                            await handleVideoChatMale(host_id);
+                          } catch (error) {
+                            console.error('Error during call initiation:', error);
+                            setValidationError(t('errors.callInitiationFailed'));
+                          } finally {
+                            setTimeout(() => {
+                              setCallInProgress(false);
+                            }, 3000);
                           }
                         }}
                         isLoadingCall={loadingStatus.isLoading}
                         rolUser={agora.localUser?.role ?? 'male'}
+                        isUserInCall={agora.isRtcJoined || agora.isRtmChannelJoined}
                       />
                     </motion.div>
                   );
