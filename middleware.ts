@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/sign-in', request.url));
   }
 
-  if (isAuthRoute && token && !pathname.includes('/logout') && !pathname.includes('/sign-in')) {
+  if (isAuthRoute && token && !pathname.includes('/logout') && !pathname.includes('/sign-in') && !pathname.includes('/password-recovery')) {
     return NextResponse.redirect(new URL('/main/video-roulette', request.url));
   }
 
