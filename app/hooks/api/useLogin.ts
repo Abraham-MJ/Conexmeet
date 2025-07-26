@@ -42,13 +42,24 @@ const useLogin = () => {
 
   const logout = async () => {
     try {
-      const response = await fetch('/api/auth/logout');
-      const data = await response.json();
+      // Primero llamar a nuestro endpoint de logout para limpiar cookies
+      await fetch('/api/auth/logout', {
+        method: 'GET',
+        credentials: 'include',
+      });
 
-      await signOut({ redirect: true, callbackUrl: '/auth/sign-in' });
+      // Luego usar signOut de NextAuth
+      await signOut({ 
+        redirect: true, 
+        callbackUrl: '/auth/sign-in' 
+      });
     } catch (error) {
       console.error('Error during logout:', error);
-      await signOut({ redirect: true, callbackUrl: '/auth/sign-in' });
+      // En caso de error, forzar el signOut
+      await signOut({ 
+        redirect: true, 
+        callbackUrl: '/auth/sign-in' 
+      });
     }
   };
 

@@ -6,6 +6,8 @@ const PROTECTED_ROUTES = ['/main'];
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
+  const nextAuthToken = request.cookies.get('next-auth.session-token')?.value || 
+                       request.cookies.get('__Secure-next-auth.session-token')?.value;
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/api') || pathname.startsWith('/_next')) {
@@ -18,11 +20,15 @@ export function middleware(request: NextRequest) {
 
   const isAuthRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 
+  if (!token && !nextAuthToken && isAuthRoute) {
+    return NextResponse.next();
+  }
+
   if (isProtected && !token) {
     return NextResponse.redirect(new URL('/auth/sign-in', request.url));
   }
 
-  if (isAuthRoute && token && !pathname.includes('/logout')) {
+  if (isAuthRoute && token && !pathname.includes('/logout') && !pathname.includes('/sign-in')) {
     return NextResponse.redirect(new URL('/main/video-roulette', request.url));
   }
 

@@ -134,9 +134,9 @@ export default function UserDropdown() {
               </li>
               <li className="px-2">
                 <Link
-                  href="*"
+                  href="/auth/logout"
                   className="flex items-center gap-3 rounded-md px-2 py-2 text-gray-700 transition-colors hover:bg-gray-100"
-                  onClick={logout}
+                  onClick={() => setIsOpen(false)}
                 >
                   <div
                     className={cn(
