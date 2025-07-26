@@ -6,10 +6,10 @@ import { User, LogOut, CircleUserRound, Menu } from 'lucide-react';
 import { useUser } from '@/app/context/useClientContext';
 import useLogin from '@/app/hooks/api/useLogin';
 import { cn } from '@/lib/utils';
-import { AiOutlineGlobal } from 'react-icons/ai';
 import { MdGTranslate } from 'react-icons/md';
 import ModalTranslate from './modals/ModalTranslate';
 import { useTranslation } from '../../hooks/useTranslation';
+import { LiaUserAstronautSolid } from "react-icons/lia";
 
 export default function UserDropdown() {
   const [isOpenTranslate, setIsOpenTranslate] = useState(false);
@@ -108,14 +108,28 @@ export default function UserDropdown() {
                   <div
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full',
-                      state?.user?.gender === 'male'
-                        ? 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white'
-                        : 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white',
                     )}
                   >
-                    <User className="h-4 w-4" />
+                    <User className="h-7 w-7" />
                   </div>
                   <span>{t('nav.profile')}</span>
+                </Link>
+              </li>
+              <li className="px-2">
+                <Link
+                  href="/main/support"
+                  className="flex items-center gap-3 rounded-md px-2 py-2 text-gray-700 transition-colors hover:bg-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full',
+
+                    )}
+                  >
+                    <LiaUserAstronautSolid className="h-7 w-7" />
+                  </div>
+                  <span>{t('nav.support')}</span>
                 </Link>
               </li>
               <li className="px-2">
@@ -127,12 +141,9 @@ export default function UserDropdown() {
                   <div
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full',
-                      state?.user?.gender === 'male'
-                        ? 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white'
-                        : 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] text-white',
                     )}
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-6 w-6" />
                   </div>
                   <span>{t('nav.logout')}</span>
                 </Link>
@@ -140,13 +151,14 @@ export default function UserDropdown() {
             </ul>
           </nav>
         </div>
-      )}
+      )
+      }
       <ModalTranslate
         isOpen={isOpenTranslate}
         onClose={() => {
           setIsOpenTranslate(false);
         }}
       />
-    </div>
+    </div >
   );
 }

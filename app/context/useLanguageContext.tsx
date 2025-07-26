@@ -12,7 +12,7 @@ import { Language, Translations, LanguageTranslations } from '../types/translati
 interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (key: string) => string;
+    t: (key: string, params?: Record<string, any>) => string;
 }
 
 const translations: LanguageTranslations = {
@@ -50,6 +50,7 @@ const translations: LanguageTranslations = {
         // Navigation & UI
         'nav.home': 'Inicio',
         'nav.profile': 'Perfil',
+        'nav.support': 'Soporte',
         'nav.settings': 'Configuración',
         'nav.logout': 'Cerrar sesión',
         'nav.login': 'Iniciar sesión',
@@ -435,6 +436,82 @@ const translations: LanguageTranslations = {
         'modal.permissionDenied.solution1': 'Asegúrate de haber aceptado los permisos en la ventana emergente de tu navegador.',
         'modal.permissionDenied.solution2': 'Verifica la configuración de privacidad de tu navegador y sistema operativo.',
         'modal.permissionDenied.solution3': 'Asegúrate de que tus dispositivos (cámara/micrófono) estén conectados y no siendo usados por otra aplicación.',
+
+        // Support System
+        'support.title': 'Panel de Soporte',
+        'support.subtitle': 'Gestiona y responde a los tickets de los clientes.',
+        'support.createTicket': 'Crear Ticket',
+        'support.noTickets': 'No hay tickets disponibles',
+        'support.noTicketsDescription': 'Los tickets aparecerán aquí cuando se creen.',
+        'support.stats.total': 'Total',
+        'support.stats.open': 'Abiertos',
+        'support.stats.inProgress': 'En Progreso',
+        'support.stats.urgent': 'Urgentes',
+        'support.moreCategories': 'más',
+
+        // Ticket Status
+        'ticket.status.open': 'Abierto',
+        'ticket.status.inProgress': 'En Progreso',
+        'ticket.status.resolved': 'Resuelto',
+        'ticket.status.closed': 'Cerrado',
+        'ticket.status.all': 'Todos',
+
+        // Ticket Priority
+        'ticket.priority.low': 'Baja',
+        'ticket.priority.medium': 'Media',
+        'ticket.priority.high': 'Alta',
+        'ticket.priority.urgent': 'Urgente',
+        'ticket.priority.all': 'Todas',
+
+        // Ticket Categories
+        'ticket.category.uncategorized': 'Sin categoría',
+        'ticket.category.payment': 'Pago',
+        'ticket.category.profile': 'Perfil',
+        'ticket.category.shipping': 'Envío',
+        'ticket.category.videoChat': 'Video Chat',
+        'ticket.category.connection': 'Conexión',
+
+        // Ticket Filters
+        'ticket.filters.status': 'Estado:',
+        'ticket.filters.priority': 'Prioridad:',
+        'ticket.filters.selectStatus': 'Selecciona un Estado',
+        'ticket.filters.selectPriority': 'Selecciona una Prioridad',
+
+        // Ticket Creation Modal
+        'ticket.create.title': 'Crear Ticket',
+        'ticket.create.titleField': 'Título',
+        'ticket.create.titlePlaceholder': 'Ej: El sistema no inicia',
+        'ticket.create.priority': 'Prioridad',
+        'ticket.create.priorityPlaceholder': 'Elige una prioridad',
+        'ticket.create.category': 'Categorías',
+        'ticket.create.categoryPlaceholder': 'Elige una categoría',
+        'ticket.create.description': 'Descripción',
+        'ticket.create.descriptionPlaceholder': 'Describe el problema detalladamente...',
+        'ticket.create.submit': 'Crear ticket',
+        'ticket.create.sending': 'Enviando',
+        'ticket.create.requiredFields': 'Por favor completa todos los campos requeridos',
+        'ticket.create.error': 'Error al crear el ticket. Por favor intenta nuevamente.',
+        'ticket.create.success': 'Ticket creado exitosamente',
+
+        // Ticket Detail Modal
+        'ticket.detail.loading': 'Cargando ticket...',
+        'ticket.detail.error': 'Error al cargar el ticket',
+        'ticket.detail.errorDescription': 'No se pudo cargar el ticket',
+        'ticket.detail.retry': 'Reintentar',
+        'ticket.detail.details': 'Detalles del Ticket',
+        'ticket.detail.status': 'Estado',
+        'ticket.detail.priority': 'Prioridad',
+        'ticket.detail.category': 'Categoría',
+        'ticket.detail.createdAt': 'Fecha de Creación',
+        'ticket.detail.assignedAgent': 'Agente Asignado',
+        'ticket.detail.originalDescription': 'Descripción Original',
+        'ticket.detail.writeResponse': 'Escribe tu respuesta...',
+        'ticket.detail.sendError': 'Error enviando mensaje:',
+
+        // Time formatting
+        'time.lessThanHour': 'Hace menos de 1 hora',
+        'time.hoursAgo': 'Hace {hours} horas',
+        'time.oneDayAgo': 'Hace 1 día',
     },
     en: {
         // Modal Translate
@@ -470,6 +547,8 @@ const translations: LanguageTranslations = {
         // Navigation & UI
         'nav.home': 'Home',
         'nav.profile': 'Profile',
+        'nav.support': 'Support',
+
         'nav.settings': 'Settings',
         'nav.logout': 'Logout',
         'nav.login': 'Login',
@@ -819,6 +898,82 @@ const translations: LanguageTranslations = {
         'video.notAvailable': 'Not available',
         'video.notAvailableForCall': 'User not available for call',
 
+        // Support System
+        'support.title': 'Support Panel',
+        'support.subtitle': 'Manage and respond to customer tickets.',
+        'support.createTicket': 'Create Ticket',
+        'support.noTickets': 'No tickets available',
+        'support.noTicketsDescription': 'Tickets will appear here when created.',
+        'support.stats.total': 'Total',
+        'support.stats.open': 'Open',
+        'support.stats.inProgress': 'In Progress',
+        'support.stats.urgent': 'Urgent',
+        'support.moreCategories': 'more',
+
+        // Ticket Status
+        'ticket.status.open': 'Open',
+        'ticket.status.inProgress': 'In Progress',
+        'ticket.status.resolved': 'Resolved',
+        'ticket.status.closed': 'Closed',
+        'ticket.status.all': 'All',
+
+        // Ticket Priority
+        'ticket.priority.low': 'Low',
+        'ticket.priority.medium': 'Medium',
+        'ticket.priority.high': 'High',
+        'ticket.priority.urgent': 'Urgent',
+        'ticket.priority.all': 'All',
+
+        // Ticket Categories
+        'ticket.category.uncategorized': 'Uncategorized',
+        'ticket.category.payment': 'Payment',
+        'ticket.category.profile': 'Profile',
+        'ticket.category.shipping': 'Shipping',
+        'ticket.category.videoChat': 'Video Chat',
+        'ticket.category.connection': 'Connection',
+
+        // Ticket Filters
+        'ticket.filters.status': 'Status:',
+        'ticket.filters.priority': 'Priority:',
+        'ticket.filters.selectStatus': 'Select a Status',
+        'ticket.filters.selectPriority': 'Select a Priority',
+
+        // Ticket Creation Modal
+        'ticket.create.title': 'Create Ticket',
+        'ticket.create.titleField': 'Title',
+        'ticket.create.titlePlaceholder': 'E.g: System won\'t start',
+        'ticket.create.priority': 'Priority',
+        'ticket.create.priorityPlaceholder': 'Choose a priority',
+        'ticket.create.category': 'Categories',
+        'ticket.create.categoryPlaceholder': 'Choose a category',
+        'ticket.create.description': 'Description',
+        'ticket.create.descriptionPlaceholder': 'Describe the problem in detail...',
+        'ticket.create.submit': 'Create ticket',
+        'ticket.create.sending': 'Sending',
+        'ticket.create.requiredFields': 'Please complete all required fields',
+        'ticket.create.error': 'Error creating ticket. Please try again.',
+        'ticket.create.success': 'Ticket created successfully',
+
+        // Ticket Detail Modal
+        'ticket.detail.loading': 'Loading ticket...',
+        'ticket.detail.error': 'Error loading ticket',
+        'ticket.detail.errorDescription': 'Could not load ticket',
+        'ticket.detail.retry': 'Retry',
+        'ticket.detail.details': 'Ticket Details',
+        'ticket.detail.status': 'Status',
+        'ticket.detail.priority': 'Priority',
+        'ticket.detail.category': 'Category',
+        'ticket.detail.createdAt': 'Creation Date',
+        'ticket.detail.assignedAgent': 'Assigned Agent',
+        'ticket.detail.originalDescription': 'Original Description',
+        'ticket.detail.writeResponse': 'Write your response...',
+        'ticket.detail.sendError': 'Error sending message:',
+
+        // Time formatting
+        'time.lessThanHour': 'Less than 1 hour ago',
+        'time.hoursAgo': '{hours} hours ago',
+        'time.oneDayAgo': '1 day ago',
+
         // Chat Additional
         'chat.typing': 'Typing',
 
@@ -876,8 +1031,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('language', lang);
     };
 
-    const t = (key: string): string => {
-        return translations[language][key] || key;
+    const t = (key: string, params?: Record<string, any>): string => {
+        let translation = translations[language][key] || key;
+        
+        if (params) {
+            Object.keys(params).forEach(param => {
+                translation = translation.replace(`{${param}}`, params[param]);
+            });
+        }
+        
+        return translation;
     };
 
     return (
