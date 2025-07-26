@@ -17,16 +17,25 @@ import VerifyDocuments, {
 } from '@/app/components/shared/global/VerifyDocuments';
 import { useTranslation } from '@/app/hooks/useTranslation';
 
+import { useValidHoursStories } from '@/app/hooks/useValidHoursStories';
+
 const FemaleViewVideo = () => {
   const { t } = useTranslation();
   const isMobile = useMobile(920);
 
   const [isOpen, setIsOpen] = useState(false);
 
+
   const { handleVideoChatFemale, loadingStatus } = useAgoraContext();
   const { state: user } = useUser();
   const { histories, deleteHistoryById, isLoadingDelete } =
     useVideoRouletteFemale();
+
+  const { has48HoursPassed, timeRemaining, isDeleting } = useValidHoursStories({
+    date_history: histories?.[0]?.created_at || '',
+    historyId: histories?.[0]?.id,
+    onDeleteHistory: deleteHistoryById
+  })
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 

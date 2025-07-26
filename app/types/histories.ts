@@ -18,4 +18,5 @@ export interface HistoryData {
   url: string;
   user: User;
   user_id: number;
+  created_at: string;
 }
