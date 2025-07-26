@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-interface ToggleContactApiResponse {
+export interface ToggleContactApiResponse {
   success: boolean;
   message: string;
   data?: any;

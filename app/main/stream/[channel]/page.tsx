@@ -13,6 +13,7 @@ import GiftContainer from '../sections/GiftContainer';
 import StreamsVideo from '../sections/StreamsVideo';
 import StreamMobile from '../sections/StreamMobile';
 import { TbPlayerTrackNextFilled } from 'react-icons/tb';
+import { useAddContacts } from '@/app/hooks/api/useAddContacts';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,11 @@ const PageStreamVideo = () => {
   const { contentGifts } = useListGifts();
 
   const isMobile = useMobile(1024);
+
+  const {
+    toggleContact,
+    isLoading,
+  } = useAddContacts();
 
   const {
     state: agora,
@@ -138,6 +144,13 @@ const PageStreamVideo = () => {
                 <ControlsStream
                   isLocalAudioMuted={agora.isLocalAudioMuted}
                   toggleLocalAudio={toggleLocalAudio}
+                  toggleContact={toggleContact}
+                  isLoading={isLoading}
+                  remoteUser={
+                    agora?.localUser?.role === 'admin'
+                      ? agora?.remoteUsers
+                      : (agora?.remoteUsers[0] ?? [])
+                  }
                 />
                 <div className="relative mr-6 flex min-h-0 flex-1 flex-col">
                   {agora.localUser?.role === 'male' && (
