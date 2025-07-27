@@ -49,6 +49,13 @@ const PageStreamVideo = () => {
         sendGift={sendGift}
         hopToRandomChannel={hopToRandomChannel}
         isChannelHoppingLoading={isChannelHoppingLoading}
+        toggleContact={toggleContact}
+        isLoading={isLoading}
+        remoteUser={
+          agora?.localUser?.role === 'admin'
+            ? agora?.remoteUsers
+            : (agora?.remoteUsers[0] ?? [])
+        }
       />
     );
   }
