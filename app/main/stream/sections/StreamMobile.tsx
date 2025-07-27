@@ -328,21 +328,15 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                     </button>
                   </div>
                 </div>
-                {agora?.localUser?.role === 'female' && (
-                  <div className="relative z-10 mt-4 box-border flex h-8 items-center justify-between rounded-full bg-[#0000007a] px-3">
-                    <span className="translate-z-0 relative flex max-w-full flex-1 items-center justify-center font-semibold text-white">
-                      {callTimer}
-                    </span>
-                  </div>
-                )}
+
                 <div className="to-black/24 relative z-10 box-border flex h-16 items-center justify-between bg-gradient-to-t from-transparent pl-3">
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-3">
                     {remoteUser.length !== 0 && <button
                       onClick={() => {
                         toggleContact(remoteUser.user_id)
                       }}
                       disabled={isLoading || findContacts !== undefined}
-                      className={cn("pointer-events-auto relative m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none  text-base text-white no-underline opacity-100 outline-none backdrop-blur-[12px] transition duration-300 ease-in-out  ", findContacts === undefined ? 'bg-[#ffffff29] hover:bg-[#ffffff3d] hover:scale-105 hover:cursor-pointer' : 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)]')}
+                      className={cn("transition-border pointer-events-auto m-0 box-border flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-none  text-white no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out", findContacts === undefined ? 'bg-[#0000007a]' : 'bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)]')}
                     >
                       {!isLoading ? <RiContactsLine className="h-6 w-6" /> : <div role="status">
                         <svg aria-hidden="true" className="w-8 h-8 text-gray-200 animate-spin fill-[#fff]" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -392,6 +386,14 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                   </div>
                 </div>
               </div>
+
+              {agora?.localUser?.role === 'female' && (
+                <div className="absolute right-2 top-[200px] z-10 mt-4 box-border flex h-8 items-center justify-between rounded-full  px-3">
+                  <span className="translate-z-0 relative flex max-w-full flex-1 items-center justify-center font-semibold text-white">
+                    {callTimer}
+                  </span>
+                </div>
+              )}
 
               {isChannelHoppingLoading && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm">
