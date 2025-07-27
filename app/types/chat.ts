@@ -48,7 +48,16 @@ export type Action =
   | {
       type: 'SET_INITIAL_UNREAD_COUNTS';
       payload: Record<string | number, number>;
-    };
+    }
+  | {
+      type: 'ADD_NOTIFICATION';
+      payload: NotificationPayload;
+    }
+  | {
+      type: 'REMOVE_NOTIFICATION';
+      payload: { id: number };
+    }
+  | { type: 'CLEAR_ALL_NOTIFICATIONS' };
 
 export interface State {
   conversations: ProcessedChatData[];
@@ -62,6 +71,7 @@ export interface State {
   peerOnlineInChatStatus: Record<string | number, boolean>;
   unreadCountByConversationId: Record<string | number, number>;
   totalUnreadCount: number;
+  notifications: ChatNotification[];
 }
 
 export interface ChatContextType {
@@ -79,6 +89,8 @@ export interface ChatContextType {
   sendUserActiveInChatStatus: (peerRtmUid: string) => void;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   markMessagesAsRead: (conversationId: string | number) => Promise<void>;
+  removeNotification: (notificationId: number) => void;
+  clearAllNotifications: () => void;
 }
 
 export interface ProcessedChatData {
@@ -191,4 +203,22 @@ export interface WhriteMessageProps {
   sendTypingStopped: (peerRtmUid: string) => void;
   isMobile?: boolean;
   isRtmLoggedIn?: boolean;
+}
+
+export interface ChatNotification {
+  id: number;
+  conversationId: string | number;
+  message: MessageContent;
+  senderName: string;
+  senderAvatar: string | null;
+  type: 'message' | 'typing' | 'system';
+  timestamp: string;
+}
+
+export interface NotificationPayload {
+  conversationId: string | number;
+  message: MessageContent;
+  senderName: string;
+  senderAvatar: string | null;
+  type: 'message' | 'typing' | 'system';
 }

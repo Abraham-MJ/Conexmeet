@@ -22,6 +22,11 @@ import {
 } from '../types/chat';
 import { useUser } from './useClientContext';
 import { useAgoraContext } from './useAgoraContext';
+import {
+  requestNotificationPermission,
+  showBrowserNotification,
+  isDocumentHidden
+} from '../utils/notifications';
 
 const initialState: State = {
   conversations: [],
@@ -35,6 +40,7 @@ const initialState: State = {
   peerOnlineInChatStatus: {},
   unreadCountByConversationId: {},
   totalUnreadCount: 0,
+  notifications: [],
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -229,6 +235,37 @@ function reducer(state: State, action: Action): State {
         totalUnreadCount: newTotalUnreadCount,
       };
     }
+    case 'ADD_NOTIFICATION': {
+      const newNotification = {
+        id: Date.now() + Math.random(),
+        ...action.payload,
+        timestamp: new Date().toISOString(),
+      };
+      
+      const updatedNotifications = [...state.notifications, newNotification];
+      if (updatedNotifications.length > 5) {
+        updatedNotifications.shift(); 
+      }
+      
+      return {
+        ...state,
+        notifications: updatedNotifications,
+      };
+    }
+    case 'REMOVE_NOTIFICATION': {
+      return {
+        ...state,
+        notifications: state.notifications.filter(
+          (notification) => notification.id !== action.payload.id,
+        ),
+      };
+    }
+    case 'CLEAR_ALL_NOTIFICATIONS': {
+      return {
+        ...state,
+        notifications: [],
+      };
+    }
     default:
       return state;
   }
@@ -242,6 +279,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const markedChatsRef = useRef<Set<string | number>>(new Set());
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      requestNotificationPermission();
+    }
+  }, []);
 
   let activeChatId: string | null = null;
   if (params?.chat_id) {
@@ -326,6 +369,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                   type: 'INCREMENT_UNREAD_COUNT',
                   payload: { conversationId: messageConvId },
                 });
+
+                const senderConversation = state.conversations.find(
+                  (conv) => String(conv.chat_id) === messageConvId,
+                );
+
+                dispatch({
+                  type: 'ADD_NOTIFICATION',
+                  payload: {
+                    conversationId: messageConvId,
+                    message: newMessage,
+                    senderName: senderConversation?.user_info?.name || 'Usuario desconocido',
+                    senderAvatar: senderConversation?.user_info?.profile_photo_path || null,
+                    type: 'message',
+                  },
+                });
+
+                if (isDocumentHidden()) {
+                  showBrowserNotification(
+                    senderConversation?.user_info?.name || 'Nuevo mensaje',
+                    {
+                      body: newMessage.text,
+                      icon: senderConversation?.user_info?.profile_photo_path || '/default-avatar.png',
+                      tag: `chat-${messageConvId}`,
+                      data: { conversationId: messageConvId }
+                    }
+                  );
+                }
               }
               break;
             case 'TYPING_STARTED':
@@ -596,7 +666,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             { text: JSON.stringify(payload) },
             peerRtmUid.toString(),
           );
-        } catch (err) {}
+        } catch (err) { }
       }
     },
     [rtmClient, isLoggedIn, userState.user?.id],
@@ -615,7 +685,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             { text: JSON.stringify(payload) },
             peerRtmUid.toString(),
           );
-        } catch (err) {}
+        } catch (err) { }
       }
     },
     [rtmClient, isLoggedIn, userState.user?.id],
@@ -634,7 +704,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             { text: JSON.stringify(payload) },
             peerRtmUid.toString(),
           );
-        } catch (err) {}
+        } catch (err) { }
       }
     },
     [rtmClient, isLoggedIn, userState.user?.id],
@@ -799,6 +869,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     sendUserInactiveInChatStatus,
   ]);
 
+  const removeNotification = useCallback((notificationId: number) => {
+    dispatch({
+      type: 'REMOVE_NOTIFICATION',
+      payload: { id: notificationId },
+    });
+  }, [dispatch]);
+
+  const clearAllNotifications = useCallback(() => {
+    dispatch({ type: 'CLEAR_ALL_NOTIFICATIONS' });
+  }, [dispatch]);
+
   useEffect(() => {
     if (prevChatIdRef.current && prevChatIdRef.current !== activeChatId) {
       markedChatsRef.current.delete(prevChatIdRef.current);
@@ -811,9 +892,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         markMessagesAsRead(activeChatId);
       }, 100);
 
+      const notificationsToRemove = state.notifications.filter(
+        (notification) => String(notification.conversationId) === String(activeChatId)
+      );
+
+      notificationsToRemove.forEach((notification) => {
+        removeNotification(notification.id);
+      });
+
       return () => clearTimeout(timer);
     }
-  }, [activeChatId, state.messagesByConversationId, markMessagesAsRead]);
+  }, [activeChatId, state.messagesByConversationId, state.notifications, markMessagesAsRead, removeNotification]);
 
   useEffect(() => {
     const previousChatIdString = prevChatIdRef.current;
@@ -862,6 +951,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     sendUserActiveInChatStatus,
     scrollContainerRef,
     markMessagesAsRead,
+    removeNotification,
+    clearAllNotifications,
   };
 
   return (
