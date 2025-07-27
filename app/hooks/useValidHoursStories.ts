@@ -10,9 +10,14 @@ export const useValidHoursStories = ({ date_history, historyId, onDeleteHistory 
     const [has48HoursPassed, setHas48HoursPassed] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [hasBeenDeleted, setHasBeenDeleted] = useState(false);
 
     useEffect(() => {
-        if (!date_history) return;
+        setHasBeenDeleted(false);
+    }, [historyId]);
+
+    useEffect(() => {
+        if (!date_history || hasBeenDeleted) return;
 
         const checkTime = () => {
             const creationDate = new Date(date_history);
@@ -25,12 +30,13 @@ export const useValidHoursStories = ({ date_history, historyId, onDeleteHistory 
                 setHas48HoursPassed(true);
                 setTimeRemaining(0);
 
-                if (historyId && onDeleteHistory && !isDeleting) {
+                if (historyId && onDeleteHistory && !isDeleting && !hasBeenDeleted) {
                     setIsDeleting(true);
                     console.log("Eliminando historia automáticamente (ya habían pasado 48 horas)");
                     onDeleteHistory(historyId).then(() => {
                         console.log("Historia eliminada automáticamente (ya habían pasado 48 horas)");
                         setIsDeleting(false);
+                        setHasBeenDeleted(true);
                     }).catch((error) => {
                         console.error("Error al eliminar la historia automáticamente:", error);
                         setIsDeleting(false);
@@ -41,19 +47,19 @@ export const useValidHoursStories = ({ date_history, historyId, onDeleteHistory 
                 const remaining = fortyEightHoursInMs - differenceInMs;
                 setTimeRemaining(remaining);
 
-
                 const timer = setTimeout(async () => {
                     setHas48HoursPassed(true);
                     setTimeRemaining(0);
                     console.log("¡Han pasado 48 horas desde el historial!");
 
-                    if (historyId && onDeleteHistory && !isDeleting) {
+                    if (historyId && onDeleteHistory && !isDeleting && !hasBeenDeleted) {
                         setIsDeleting(true);
                         try {
                             console.log("Eliminando historia automáticamente después de 48 horas");
                             await onDeleteHistory(historyId);
                             console.log("Historia eliminada automáticamente después de 48 horas");
                             setIsDeleting(false);
+                            setHasBeenDeleted(true);
                         } catch (error) {
                             console.error("Error al eliminar la historia automáticamente:", error);
                             setIsDeleting(false);
@@ -67,7 +73,7 @@ export const useValidHoursStories = ({ date_history, historyId, onDeleteHistory 
 
         checkTime();
 
-    }, [date_history, historyId, onDeleteHistory, isDeleting]);
+    }, [date_history, historyId, onDeleteHistory]);
 
     return {
         has48HoursPassed,
