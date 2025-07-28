@@ -5,6 +5,7 @@ import { useUser } from '../context/useClientContext';
 import FallBackSpinner from '../components/loading/fallback-spinner';
 import { AgoraProvider } from '../context/useAgoraContext';
 import { ChatProvider } from '../context/useChatContext';
+import { ContactsProvider } from '../context/useContactsContext';
 import RenderChildren from './RenderChildren';
 import NotificationContainer from '../components/chat/NotificationContainer';
 
@@ -23,8 +24,10 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
     <>
       <AgoraProvider>
         <ChatProvider>
-          <RenderChildren children={children} />
-          <NotificationContainer />
+          <ContactsProvider>
+            <RenderChildren children={children} />
+            <NotificationContainer />
+          </ContactsProvider>
         </ChatProvider>
       </AgoraProvider>
     </>

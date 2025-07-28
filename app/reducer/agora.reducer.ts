@@ -362,10 +362,6 @@ export function agoraReducer(
     case AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST:
       const updatedFemaleData = action.payload as UserInformation;
       let newOnlineFemalesList: UserInformation[];
-      console.log(
-        '[Reducer] UPDATE_ONE_FEMALE_IN_LIST - Payload recibido:',
-        updatedFemaleData,
-      );
 
       if (
         updatedFemaleData.is_active === 0 ||

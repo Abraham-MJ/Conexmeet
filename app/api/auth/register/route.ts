@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log('RESPONSE BACK', body);
 
     const {
       email,
@@ -41,7 +40,6 @@ export async function POST(request: Request) {
     });
 
     const data = await response.json();
-    console.log('DIRECTAMENTE DEL BACK', data, email);
 
     if (!response.ok) {
       return NextResponse.json(

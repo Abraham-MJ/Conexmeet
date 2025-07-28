@@ -46,13 +46,10 @@ export async function POST(request: NextRequest) {
     const formdata = new FormData();
     formdata.append('user_id', String(maleUserId));
     formdata.append('host_id', String(targetHostId));
-    formdata.append('id', String(roomId)); 
+    formdata.append('id', String(roomId));
 
     const externalCloseRoomApiUrl =
       'https://app.conexmeet.live/api/v1/closed-room';
-    console.log(
-      `[API close-channel-male] Intentando cerrar la sala ${roomId} para male ${maleUserId} vía POST ${externalCloseRoomApiUrl}.`,
-    );
 
     const externalApiResponse = await fetch(externalCloseRoomApiUrl, {
       method: 'POST',
@@ -110,9 +107,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `[API close-channel-male] Éxito al cerrar la sala ${roomId} para male ${maleUserId} vía POST ${externalCloseRoomApiUrl}.`,
-    );
     return NextResponse.json(
       {
         success: true,

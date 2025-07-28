@@ -208,17 +208,21 @@ export interface WhriteMessageProps {
 export interface ChatNotification {
   id: number;
   conversationId: string | number;
-  message: MessageContent;
+  message?: MessageContent;
   senderName: string;
   senderAvatar: string | null;
-  type: 'message' | 'typing' | 'system';
+  type: 'message' | 'typing' | 'system' | 'contact_added' | 'contact_removed';
   timestamp: string;
+  contactAction?: 'added' | 'removed';
+  userId?: string | number;
 }
 
 export interface NotificationPayload {
   conversationId: string | number;
-  message: MessageContent;
+  message?: MessageContent;
   senderName: string;
   senderAvatar: string | null;
-  type: 'message' | 'typing' | 'system';
+  type: 'message' | 'typing' | 'system' | 'contact_added' | 'contact_removed';
+  contactAction?: 'added' | 'removed';
+  userId?: string | number;
 }

@@ -14,6 +14,6 @@ export const createHost = () => {
 
     return host_id;
   } catch (error) {
-    console.log('ERROR GENERATE TOKEN', error);
+    console.error('ERROR GENERATE TOKEN', error);
   }
 };

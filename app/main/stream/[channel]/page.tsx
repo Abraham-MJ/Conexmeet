@@ -14,6 +14,7 @@ import StreamsVideo from '../sections/StreamsVideo';
 import StreamMobile from '../sections/StreamMobile';
 import { TbPlayerTrackNextFilled } from 'react-icons/tb';
 import { useAddContacts } from '@/app/hooks/api/useAddContacts';
+import useFeatures from '@/app/hooks/api/useFeatures';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,8 @@ const PageStreamVideo = () => {
   const { contentGifts } = useListGifts();
 
   const isMobile = useMobile(1024);
+  const { contacts } = useFeatures({ activeTabs: 'contacts' })
+
 
   const {
     toggleContact,

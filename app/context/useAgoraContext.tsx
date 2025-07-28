@@ -81,6 +81,11 @@ const AgoraContext = createContext<{
   } | null;
   closeMaleRatingModal: () => void;
   submitMaleRating: (rating: number, comment?: string) => Promise<void>;
+  sendContactNotificationThroughLobby: (
+    targetUserId: string | number,
+    targetUserName: string,
+    action: 'added' | 'removed',
+  ) => Promise<boolean>;
 }>({
   state: initialState,
   dispatch: () => undefined,
@@ -120,6 +125,7 @@ const AgoraContext = createContext<{
   maleRatingInfo: null,
   closeMaleRatingModal: () => {},
   submitMaleRating: async () => {},
+  sendContactNotificationThroughLobby: async () => false,
 });
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
@@ -194,6 +200,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     joinLobby: joinLobbyForRealtimeUpdates,
     leaveLobby: leaveLobbyChannel,
     broadcastLocalFemaleStatusUpdate,
+    sendContactNotificationThroughLobby,
   } = useAgoraLobby(
     dispatch,
     state.appID,
@@ -515,6 +522,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         maleRatingInfo: state.maleRatingInfo,
         closeMaleRatingModal,
         submitMaleRating,
+        sendContactNotificationThroughLobby,
       }}
     >
       {children}

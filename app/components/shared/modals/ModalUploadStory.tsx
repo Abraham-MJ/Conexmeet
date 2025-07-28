@@ -64,7 +64,6 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
     if (videoFile) {
       const result = await uploadStory(videoFile);
       if (result.success) {
-        console.log('Historia subida con éxito:', result.message);
         onClose();
       } else {
         console.error('Error al subir historia:', result.message);
@@ -104,7 +103,9 @@ const ModalUploadStory: React.FC<ModalUploadStoryProps> = ({
         )}
       >
         <div className="flex items-center justify-between border-b p-4 pb-4">
-          <span className="text-lg font-medium">{t('modal.uploadStory.title')}:</span>
+          <span className="text-lg font-medium">
+            {t('modal.uploadStory.title')}:
+          </span>
           <div
             className="h-12 w-12 cursor-pointer rounded-full border p-3 transition-all duration-300 hover:scale-110"
             onClick={onClose}

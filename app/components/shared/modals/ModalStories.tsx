@@ -8,6 +8,7 @@ import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useLikeStory } from '@/app/hooks/api/useLikeStories';
 import { useAddContacts } from '@/app/hooks/api/useAddContacts';
 import { useTranslation } from '../../../hooks/useTranslation';
+import useFeatures from '@/app/hooks/api/useFeatures';
 
 const ModalStories = ({
   isOpen,
@@ -128,8 +129,6 @@ const ModalStories = ({
         );
         setIsLikedLocal(originalIsLiked);
         if (newIsLikedState) setShowHearts(false);
-      } else {
-        console.log('Like/Unlike exitoso:', response.message);
       }
     } catch (e) {
       console.error('Excepción al dar like/unlike:', e);
@@ -162,11 +161,6 @@ const ModalStories = ({
         );
         setIsContactAddedLocal(originalIsContactAdded);
         if (newIsContactState) setShowContactPulse(false);
-      } else {
-        console.log(
-          'Contacto agregado/quitado exitosamente:',
-          response.message,
-        );
       }
     } catch (e) {
       console.error('Excepción al agregar/quitar contacto:', e);

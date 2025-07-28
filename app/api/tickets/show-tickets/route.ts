@@ -5,7 +5,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const ticketId = searchParams.get('id')
 
-    console.log('Ticket ID recibido:', ticketId)
 
     if (!ticketId) {
       return NextResponse.json(
@@ -34,12 +33,9 @@ export async function GET(request: NextRequest) {
     }
 
     const apiUrl = `https://app.conexmeet.live/api/v1/ticket/${ticketId}`
-    console.log('Llamando a la API:', apiUrl)
 
     const response = await fetch(apiUrl, requestOptions)
 
-    console.log('Status de respuesta:', response.status)
-    console.log('Headers de respuesta:', Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -66,7 +62,6 @@ export async function GET(request: NextRequest) {
     }
 
     const responseText = await response.text()
-    console.log('Respuesta de la API:', responseText)
 
     let result
     try {

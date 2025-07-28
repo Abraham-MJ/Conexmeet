@@ -59,10 +59,7 @@ export async function POST(request: NextRequest) {
 
     const externalSendGiftApiUrl =
       'https://app.conexmeet.live/api/v1/send-gifs';
-    console.log(
-      `[API send-gift] Intentando enviar regalo ${gif_id} de ${user_id_sends} a ${user_id_receives} en canal ${host_id}.`,
-    );
-
+    
     const externalApiResponse = await fetch(externalSendGiftApiUrl, {
       method: 'POST',
       headers: {
@@ -121,9 +118,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `[API send-gift] Éxito al enviar regalo ${gif_id} de ${user_id_sends} a ${user_id_receives}. Costo: ${gift_cost_in_minutes} minutos.`,
-    );
     return NextResponse.json(
       {
         success: true,

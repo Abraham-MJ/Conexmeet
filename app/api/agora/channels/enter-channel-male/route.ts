@@ -83,9 +83,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!targetRoomPreCheck) {
-      console.log(
-        `[API enter-channel-male] Canal ${targetHostId} no encontrado o no está en estado 'waiting' (pre-check).`,
-      );
+     
       return NextResponse.json(
         {
           success: false,
@@ -96,9 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (targetRoomPreCheck.another_user_id !== null) {
-      console.log(
-        `[API enter-channel-male] Canal ${targetHostId} ya está ocupado por another_user_id: ${targetRoomPreCheck.another_user_id} (pre-check).`,
-      );
+  
       return NextResponse.json(
         {
           success: false,
@@ -107,14 +103,7 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
-
-    console.log(
-      `[API enter-channel-male] Canal ${targetHostId} está disponible según pre-check.`,
-    );
-
-    console.log(
-      `[API enter-channel-male] Intentando ocupar el canal ${targetHostId} para male ${maleUserId} vía POST /api/v1/enter-room.`,
-    );
+ 
     const formdata = new FormData();
     formdata.append('user_id', String(maleUserId));
     formdata.append('host_id', String(targetHostId));
@@ -192,9 +181,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `[API enter-channel-male] Ingreso a la sala exitoso para male ${maleUserId}.`,
-    );
     return NextResponse.json(
       {
         success: true,

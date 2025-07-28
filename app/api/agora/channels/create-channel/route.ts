@@ -26,8 +26,6 @@ export async function GET(request: NextRequest) {
     };
 
     const { host_id } = params;
-    console.log('PARAMS:', params);
-    console.log('host_id:', host_id);
 
     if (!host_id) {
       return NextResponse.json(

@@ -43,6 +43,11 @@ export default function ChatNotificationComponent({
   };
 
   const handleClick = () => {
+    if (notification.type === 'contact_added' || notification.type === 'contact_removed') {
+      handleRemove();
+      return;
+    }
+    
     router.push(`/main/chat/${notification.conversationId}`);
     handleRemove();
   };
@@ -55,11 +60,18 @@ export default function ChatNotificationComponent({
   };
 
   const getNotificationIcon = () => {
-    if (notification.message.text && notification.message.text.trim() !== '') {
+    if (notification.type === 'contact_added') {
+      return '👥';
+    }
+    if (notification.type === 'contact_removed') {
+      return '👤';
+    }
+
+    if (notification.message?.text && notification.message.text.trim() !== '') {
       return '';
     }
 
-    switch (notification.message.type) {
+    switch (notification.message?.type) {
       case 'image':
         return '📷';
       case 'file':
@@ -132,15 +144,26 @@ export default function ChatNotificationComponent({
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm text-gray-700 leading-relaxed break-words">
-                  {notification.message.text && notification.message.text.trim() !== ''
+                  {notification.type === 'contact_added' 
+                    ? (notification.senderName === 'Tú' 
+                        ? 'Agregaste este contacto' 
+                        : 'Te agregó como contacto')
+                    : notification.type === 'contact_removed'
+                    ? (notification.senderName === 'Tú' 
+                        ? 'Eliminaste este contacto' 
+                        : 'Te eliminó de sus contactos')
+                    : notification.message?.text && notification.message.text.trim() !== ''
                     ? formatMessagePreview(notification.message.text)
-                    : `Envió ${notification.message.type === 'image' ? 'una imagen' :
-                      notification.message.type === 'file' ? 'un archivo' :
-                        notification.message.type === 'audio' ? 'un audio' : 'un archivo'}`
+                    : `Envió ${notification.message?.type === 'image' ? 'una imagen' :
+                      notification.message?.type === 'file' ? 'un archivo' :
+                        notification.message?.type === 'audio' ? 'un audio' : 'un archivo'}`
                   }
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {notification.message.time}
+                  {notification.type === 'contact_added' || notification.type === 'contact_removed'
+                    ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : notification.message?.time
+                  }
                 </p>
               </div>
             </div>

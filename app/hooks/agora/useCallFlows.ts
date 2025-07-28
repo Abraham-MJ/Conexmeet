@@ -201,53 +201,49 @@ export const useCallFlows = (
     [dispatch, onlineFemalesList],
   );
 
-  const cleanupConnectionsOnError = useCallback(async (
-    preCreatedTracks: {
-      audioTrack: IMicrophoneAudioTrack;
-      videoTrack: ICameraVideoTrack;
-    } | null,
-    localUserRole: string,
-    channelToJoin: string | undefined,
-    current_room_id: string | null,
-    determinedChannelName: string,
-    localUser: UserInformation,
-    agoraBackend: ReturnType<typeof useAgoraServer>,
-    leaveCallChannel: () => Promise<void>
-  ) => {
-    console.log('[Cleanup] Iniciando limpieza de conexiones...');
-
-    if (preCreatedTracks) {
-      try {
-        preCreatedTracks.audioTrack?.close();
-        preCreatedTracks.videoTrack?.close();
-        console.log('[Cleanup] Tracks de media cerrados');
-      } catch (cleanupError) {
-        console.warn('[Cleanup] Error limpiando tracks:', cleanupError);
+  const cleanupConnectionsOnError = useCallback(
+    async (
+      preCreatedTracks: {
+        audioTrack: IMicrophoneAudioTrack;
+        videoTrack: ICameraVideoTrack;
+      } | null,
+      localUserRole: string,
+      channelToJoin: string | undefined,
+      current_room_id: string | null,
+      determinedChannelName: string,
+      localUser: UserInformation,
+      agoraBackend: ReturnType<typeof useAgoraServer>,
+      leaveCallChannel: () => Promise<void>,
+    ) => {
+      if (preCreatedTracks) {
+        try {
+          preCreatedTracks.audioTrack?.close();
+          preCreatedTracks.videoTrack?.close();
+        } catch (cleanupError) {
+          console.warn('[Cleanup] Error limpiando tracks:', cleanupError);
+        }
       }
-    }
 
-    try {
-      await leaveCallChannel();
-      console.log('[Cleanup] Canal RTM cerrado');
-    } catch (cleanupError) {
-      console.warn('[Cleanup] Error cerrando canal RTM:', cleanupError);
-    }
-
-    if (localUserRole === 'male' && channelToJoin && current_room_id) {
       try {
-        await agoraBackend.closeMaleChannel(
-          String(localUser.user_id),
-          determinedChannelName,
-          current_room_id,
-        );
-        console.log('[Cleanup] Canal backend cerrado');
+        await leaveCallChannel();
       } catch (cleanupError) {
-        console.warn('[Cleanup] Error cerrando canal backend:', cleanupError);
+        console.warn('[Cleanup] Error cerrando canal RTM:', cleanupError);
       }
-    }
 
-    console.log('[Cleanup] Limpieza completada');
-  }, []);
+      if (localUserRole === 'male' && channelToJoin && current_room_id) {
+        try {
+          await agoraBackend.closeMaleChannel(
+            String(localUser.user_id),
+            determinedChannelName,
+            current_room_id,
+          );
+        } catch (cleanupError) {
+          console.warn('[Cleanup] Error cerrando canal backend:', cleanupError);
+        }
+      }
+    },
+    [],
+  );
 
   const handleVideoChatMale = useCallback(
     async (channelToJoin?: string) => {
@@ -331,30 +327,48 @@ export const useCallFlows = (
 
       if (publishTracksFlag) {
         try {
-          console.log('[Media Permissions] Solicitando permisos de cámara y micrófono...');
           preCreatedTracks = await requestMediaPermissions();
-          console.log('[Media Permissions] Permisos concedidos exitosamente');
         } catch (permissionError: any) {
-          console.error('[Media Permissions] Error en permisos:', permissionError);
+          console.error(
+            '[Media Permissions] Error en permisos:',
+            permissionError,
+          );
 
           const errorName = permissionError?.name || '';
           const errorMessage = permissionError?.message || '';
 
-          let userFriendlyMessage = 'Error desconocido con permisos de cámara/micrófono';
+          let userFriendlyMessage =
+            'Error desconocido con permisos de cámara/micrófono';
           let shouldShowPermissionsDeniedModal = true;
 
-          if (errorName === 'NotAllowedError' || errorMessage.includes('Permission denied')) {
-            userFriendlyMessage = 'Permisos de cámara y micrófono denegados. Por favor, permite el acceso y vuelve a intentar.';
-          } else if (errorName === 'NotFoundError' || errorMessage.includes('not found')) {
-            userFriendlyMessage = 'No se encontraron dispositivos de cámara o micrófono. Verifica que estén conectados.';
-          } else if (errorName === 'NotReadableError' || errorMessage.includes('not readable') || errorMessage.includes('Could not start video source')) {
-            userFriendlyMessage = 'Los dispositivos de cámara o micrófono están siendo usados por otra aplicación. Cierra otras aplicaciones que puedan estar usando la cámara.';
+          if (
+            errorName === 'NotAllowedError' ||
+            errorMessage.includes('Permission denied')
+          ) {
+            userFriendlyMessage =
+              'Permisos de cámara y micrófono denegados. Por favor, permite el acceso y vuelve a intentar.';
+          } else if (
+            errorName === 'NotFoundError' ||
+            errorMessage.includes('not found')
+          ) {
+            userFriendlyMessage =
+              'No se encontraron dispositivos de cámara o micrófono. Verifica que estén conectados.';
+          } else if (
+            errorName === 'NotReadableError' ||
+            errorMessage.includes('not readable') ||
+            errorMessage.includes('Could not start video source')
+          ) {
+            userFriendlyMessage =
+              'Los dispositivos de cámara o micrófono están siendo usados por otra aplicación. Cierra otras aplicaciones que puedan estar usando la cámara.';
           } else if (errorName === 'OverconstrainedError') {
-            userFriendlyMessage = 'Los dispositivos de cámara o micrófono no cumplen con los requisitos técnicos.';
+            userFriendlyMessage =
+              'Los dispositivos de cámara o micrófono no cumplen con los requisitos técnicos.';
           } else if (errorName === 'SecurityError') {
-            userFriendlyMessage = 'Error de seguridad al acceder a cámara y micrófono. Verifica la configuración del navegador.';
+            userFriendlyMessage =
+              'Error de seguridad al acceder a cámara y micrófono. Verifica la configuración del navegador.';
           } else if (errorMessage.includes('timeout')) {
-            userFriendlyMessage = 'Tiempo agotado al solicitar permisos. Intenta nuevamente.';
+            userFriendlyMessage =
+              'Tiempo agotado al solicitar permisos. Intenta nuevamente.';
           } else {
             shouldShowPermissionsDeniedModal = false;
             dispatch({
@@ -390,8 +404,10 @@ export const useCallFlows = (
           targetFemale = onlineFemalesList.find(
             (female) => female.host_id === determinedChannelName,
           );
-        }
-        else if (localUserRole === 'male' && channelResult === 'RANDOM_SELECTION_NEEDED') {
+        } else if (
+          localUserRole === 'male' &&
+          channelResult === 'RANDOM_SELECTION_NEEDED'
+        ) {
           const availableFemales = onlineFemalesList.filter(
             (female) =>
               female.status === 'available_call' &&
@@ -406,17 +422,23 @@ export const useCallFlows = (
           const maxAttempts = Math.min(availableFemales.length, 5);
           let attemptCount = 0;
 
-          while (attemptedChannels.size < maxAttempts && !connectionSuccessful && attemptCount < maxAttempts) {
+          while (
+            attemptedChannels.size < maxAttempts &&
+            !connectionSuccessful &&
+            attemptCount < maxAttempts
+          ) {
             attemptCount++;
             const remainingFemales = availableFemales.filter(
-              (female) => !attemptedChannels.has(female.host_id!)
+              (female) => !attemptedChannels.has(female.host_id!),
             );
 
             if (remainingFemales.length === 0) {
               break;
             }
 
-            const randomIndex = Math.floor(Math.random() * remainingFemales.length);
+            const randomIndex = Math.floor(
+              Math.random() * remainingFemales.length,
+            );
             const selectedFemale = remainingFemales[randomIndex];
             determinedChannelName = selectedFemale.host_id!;
             targetFemale = selectedFemale;
@@ -428,7 +450,6 @@ export const useCallFlows = (
             );
 
             if (!currentFemale || currentFemale.status !== 'available_call') {
-              console.log(`[Random Selection] Canal ${determinedChannelName} ya no disponible, intentando otro...`);
               continue;
             }
 
@@ -453,14 +474,11 @@ export const useCallFlows = (
                   payload: minutesAvailable,
                 });
 
-                console.log(`[Random Selection] Conexión exitosa al canal ${determinedChannelName}`);
                 break;
               } else {
-                console.log(`[Random Selection] Backend rechazó canal ${determinedChannelName}, intentando otro...`);
                 continue;
               }
             } catch (backendError) {
-              console.log(`[Random Selection] Error en backend para canal ${determinedChannelName}, intentando otro...`, backendError);
               continue;
             }
           }
@@ -522,10 +540,12 @@ export const useCallFlows = (
             ? 'Accediendo a la transmisión de video...'
             : '¡Un momento! Estableciendo la videollamada...';
 
-
-        if (localUserRole === 'male' && channelToJoin && determinedChannelName) {
+        if (
+          localUserRole === 'male' &&
+          channelToJoin &&
+          determinedChannelName
+        ) {
           try {
-            console.log(`[Backend Connection] Notificando unión al canal específico: ${determinedChannelName}`);
             const backendJoinResponse = await agoraBackend.notifyMaleJoining(
               determinedChannelName,
               String(appUserId),
@@ -533,7 +553,9 @@ export const useCallFlows = (
 
             if (!backendJoinResponse.success) {
               if (
-                backendJoinResponse.message?.toLowerCase().includes('ocupado') ||
+                backendJoinResponse.message
+                  ?.toLowerCase()
+                  .includes('ocupado') ||
                 backendJoinResponse.message
                   ?.toLowerCase()
                   .includes('ya está ocupado') ||
@@ -552,7 +574,7 @@ export const useCallFlows = (
 
               throw new Error(
                 backendJoinResponse.message ||
-                'El servidor rechazó la entrada al canal.',
+                  'El servidor rechazó la entrada al canal.',
               );
             }
 
@@ -571,11 +593,11 @@ export const useCallFlows = (
               type: AgoraActionType.SET_MALE_INITIAL_MINUTES_IN_CALL,
               payload: minutesAvailable,
             });
-            console.log(
-              `[Male Join] Minutos iniciales del male en llamada guardados: ${minutesAvailable}`,
-            );
           } catch (backendError) {
-            console.error('[Backend Connection] Error en conexión al backend:', backendError);
+            console.error(
+              '[Backend Connection] Error en conexión al backend:',
+              backendError,
+            );
             if (preCreatedTracks) {
               try {
                 preCreatedTracks.audioTrack?.close();
@@ -609,9 +631,7 @@ export const useCallFlows = (
         const channelName: string = determinedChannelName;
 
         try {
-          console.log(`[RTM Connection] Conectando al canal RTM: ${channelName}`);
           await joinCallChannel(channelName);
-          console.log(`[RTM Connection] Conexión RTM exitosa`);
         } catch (rtmError) {
           console.error('[RTM Connection] Error en conexión RTM:', rtmError);
 
@@ -641,7 +661,9 @@ export const useCallFlows = (
             payload: true,
           });
 
-          throw new Error(`Error de conexión de chat: ${(rtmError as any)?.message || rtmError}`);
+          throw new Error(
+            `Error de conexión de chat: ${(rtmError as any)?.message || rtmError}`,
+          );
         }
 
         if (localUserRole === 'male') {
@@ -649,8 +671,13 @@ export const useCallFlows = (
             (female) => female.host_id === channelName,
           );
 
-          if (!finalFemaleCheck || finalFemaleCheck.status !== 'available_call') {
-            console.warn(`[Final Check] Modelo ${channelName} cambió de estado antes de RTC`);
+          if (
+            !finalFemaleCheck ||
+            finalFemaleCheck.status !== 'available_call'
+          ) {
+            console.warn(
+              `[Final Check] Modelo ${channelName} cambió de estado antes de RTC`,
+            );
             await leaveCallChannel();
 
             if (!channelToJoin) {
@@ -670,24 +697,32 @@ export const useCallFlows = (
         }
 
         try {
-          console.log(`[User Profile] Esperando perfil de usuario: ${targetFemale.rtcUid}`);
           await waitForUserProfile(targetFemale.rtcUid);
-          console.log(`[User Profile] Perfil de usuario recibido`);
         } catch (profileError) {
           console.error('[User Profile] Error esperando perfil:', profileError);
 
-          await cleanupConnectionsOnError(preCreatedTracks, localUserRole, channelToJoin, current_room_id, channelName, localUser, agoraBackend, leaveCallChannel);
+          await cleanupConnectionsOnError(
+            preCreatedTracks,
+            localUserRole,
+            channelToJoin,
+            current_room_id,
+            channelName,
+            localUser,
+            agoraBackend,
+            leaveCallChannel,
+          );
 
           dispatch({
             type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
             payload: true,
           });
 
-          throw new Error(`Error esperando perfil de usuario: ${(profileError as any)?.message || profileError}`);
+          throw new Error(
+            `Error esperando perfil de usuario: ${(profileError as any)?.message || profileError}`,
+          );
         }
 
         try {
-          console.log(`[RTC Connection] Inicializando cliente RTC para canal: ${channelName}`);
           await initRtcClient(
             channelName,
             String(rtcUid),
@@ -696,18 +731,26 @@ export const useCallFlows = (
             rtcLoadingMsg,
             preCreatedTracks,
           );
-          console.log(`[RTC Connection] Cliente RTC inicializado exitosamente`);
         } catch (rtcError) {
-          console.error('[RTC Connection] Error en conexión RTC:', rtcError);
-
-          await cleanupConnectionsOnError(preCreatedTracks, localUserRole, channelToJoin, current_room_id, channelName, localUser, agoraBackend, leaveCallChannel);
+          await cleanupConnectionsOnError(
+            preCreatedTracks,
+            localUserRole,
+            channelToJoin,
+            current_room_id,
+            channelName,
+            localUser,
+            agoraBackend,
+            leaveCallChannel,
+          );
 
           dispatch({
             type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
             payload: true,
           });
 
-          throw new Error(`Error de conexión de video/audio: ${(rtcError as any)?.message || rtcError}`);
+          throw new Error(
+            `Error de conexión de video/audio: ${(rtcError as any)?.message || rtcError}`,
+          );
         }
 
         if (localUserRole === 'male' && targetFemale) {
@@ -732,9 +775,6 @@ export const useCallFlows = (
               channelName: channelName,
               timestamp: Date.now(),
             });
-            console.log(
-              `[Male Join] Señal MALE_JOINED_SIGNAL enviada a female`,
-            );
           } catch (signalError) {
             console.error(
               '[Male Join] Error enviando MALE_JOINED_SIGNAL:',
@@ -753,7 +793,9 @@ export const useCallFlows = (
           error.message?.toLowerCase().includes('permisos') ||
           error.message?.toLowerCase().includes('dispositivos') ||
           error.message?.toLowerCase().includes('error de conexión de chat') ||
-          error.message?.toLowerCase().includes('error de conexión de video/audio') ||
+          error.message
+            ?.toLowerCase()
+            .includes('error de conexión de video/audio') ||
           error.message?.toLowerCase().includes('error esperando perfil');
 
         if (!isAlreadyHandledModal) {
@@ -1011,9 +1053,9 @@ export const useCallFlows = (
 
         if (
           initialMinutesInSeconds -
-          totalElapsedSeconds -
-          giftMinutesSpentInSeconds <=
-          0 &&
+            totalElapsedSeconds -
+            giftMinutesSpentInSeconds <=
+            0 &&
           maleInitialMinutesInCall !== null
         ) {
           disconnectReason = 'Saldo agotado';
@@ -1053,10 +1095,6 @@ export const useCallFlows = (
               host_id: currentChannel,
             };
             await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
-            console.log(
-              '[Male] Señal MALE_CALL_SUMMARY_SIGNAL enviada a la female:',
-              summaryPayload,
-            );
           } catch (error) {
             console.error(
               '[Male] Error enviando MALE_CALL_SUMMARY_SIGNAL:',
@@ -1067,9 +1105,6 @@ export const useCallFlows = (
 
         if (localUser.user_id && currentChannel && current_room_id) {
           try {
-            console.log(
-              `[Male] Llamando a closeMaleChannel para user ${String(localUser.user_id)}, channel ${currentChannel}, room ${current_room_id}`,
-            );
             if (!hostEndedCallInfo?.ended) {
               await agoraBackend.closeChannel(currentChannel, 'waiting');
             }
@@ -1079,7 +1114,6 @@ export const useCallFlows = (
               currentChannel,
               current_room_id,
             );
-            console.log('[Male] Canal cerrado en el backend.');
           } catch (error) {
             console.error(
               '[Male] Error al cerrar el canal en el backend:',
@@ -1142,9 +1176,6 @@ export const useCallFlows = (
 
   useEffect(() => {
     if (!isRtcJoined && hasTriggeredOutOfMinutesRef.current) {
-      console.log(
-        '[useCallFlows] Resetting hasTriggeredOutOfMinutesRef.current as RTC is no longer joined.',
-      );
       hasTriggeredOutOfMinutesRef.current = false;
     }
   }, [isRtcJoined]);
@@ -1173,10 +1204,6 @@ export const useCallFlows = (
       initialMinutesInSeconds - totalElapsedSeconds - giftMinutesInSeconds;
 
     if (remainingSeconds <= 0) {
-      console.log(
-        `[Minutos Agotados] Male (${String(localUser.user_id)}) agotó sus minutos. Segundos restantes: ${remainingSeconds}. Tiempo transcurrido: ${callTimer}, Minutos iniciales: ${maleInitialMinutesInCall}, Minutos gastados en regalos: ${maleGiftMinutesSpent}`,
-      );
-
       hasTriggeredOutOfMinutesRef.current = true;
 
       dispatch({

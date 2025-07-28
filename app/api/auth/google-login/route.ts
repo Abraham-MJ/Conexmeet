@@ -63,10 +63,6 @@ export async function POST(request: NextRequest) {
     }
 
     const conexMeetAccessToken = responseBody.data.access_token;
-    console.log(
-      'Login con ConexMeet exitoso, token obtenido:',
-      conexMeetAccessToken.substring(0, 20) + '...',
-    );
 
     (await cookies()).set('auth_token', conexMeetAccessToken, {
       httpOnly: true,

@@ -44,7 +44,6 @@ export const useChannelHopping = (
 
       if (blockElapsed >= BLOCK_DURATION_MS) {
         dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
-        console.log('[Channel Hopping] Bloqueo expirado, reseteando estado');
       }
     }
   }, [
@@ -76,12 +75,6 @@ export const useChannelHopping = (
     );
 
     if (allShortVisits) {
-      console.log('[Channel Hopping] Detectado comportamiento abusivo:', {
-        recentEntries: recentEntries.map((e) => ({
-          hostId: e.hostId,
-          duration: e.duration,
-        })),
-      });
       return true;
     }
 
@@ -97,8 +90,6 @@ export const useChannelHopping = (
         type: AgoraActionType.CHANNEL_HOP_JOIN,
         payload: { hostId, joinTime },
       });
-
-      console.log(`[Channel Hopping] Registrado join a canal: ${hostId}`);
     },
     [dispatch],
   );
@@ -112,8 +103,6 @@ export const useChannelHopping = (
         type: AgoraActionType.CHANNEL_HOP_LEAVE,
         payload: { hostId, leaveTime },
       });
-
-      console.log(`[Channel Hopping] Registrado leave de canal: ${hostId}`);
 
       setTimeout(() => {
         const shouldBlock = evaluateChannelHoppingBehavior();
@@ -136,10 +125,6 @@ export const useChannelHopping = (
     checkBlockExpiration();
 
     if (state.channelHopping.isBlocked) {
-      console.log(
-        '[Channel Hopping] Usuario bloqueado intentó hacer hop - Forzando salida de la llamada',
-      );
-
       dispatch({
         type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
         payload: true,
@@ -147,13 +132,7 @@ export const useChannelHopping = (
 
       if (state.isRtcJoined && state.channelName) {
         try {
-          console.log(
-            '[Channel Hopping] Ejecutando handleLeaveCall por bloqueo...',
-          );
           await handleLeaveCall();
-          console.log(
-            '[Channel Hopping] Usuario removido de la llamada por estar bloqueado',
-          );
         } catch (error) {
           console.error(
             '[Channel Hopping] Error al forzar salida por bloqueo:',
@@ -192,10 +171,6 @@ export const useChannelHopping = (
     );
 
     if (availableChannels.length === 0) {
-      console.log(
-        '[Channel Hopping] No hay canales disponibles - Forzando salida de la llamada',
-      );
-
       dispatch({
         type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
         payload: true,
@@ -203,17 +178,8 @@ export const useChannelHopping = (
 
       if (state.isRtcJoined && state.channelName) {
         try {
-          console.log(
-            '[Channel Hopping] Ejecutando handleLeaveCall por falta de canales...',
-          );
           await handleLeaveCall();
-          console.log(
-            '[Channel Hopping] Usuario removido de la llamada por falta de canales disponibles',
-          );
 
-          console.log(
-            '[Channel Hopping] Reseteando estado para permitir reconexiones...',
-          );
           dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
         } catch (error) {
           console.error(
@@ -229,29 +195,16 @@ export const useChannelHopping = (
     const currentChannelName = state.channelName;
 
     try {
-      console.log(
-        `[Channel Hopping] Iniciando salida completa del canal actual: ${currentChannelName}`,
-      );
-
       registerChannelLeave(currentChannelName);
 
       const randomIndex = Math.floor(Math.random() * availableChannels.length);
       const selectedChannel = availableChannels[randomIndex];
-
-      console.log(
-        `[Channel Hopping] Canal seleccionado: ${selectedChannel.host_id}`,
-      );
-
-      console.log(
-        '[Channel Hopping] Ejecutando limpieza completa del canal anterior...',
-      );
 
       const originalPush = router.push;
       router.push = () => Promise.resolve(true);
 
       try {
         await handleLeaveCall();
-        console.log('[Channel Hopping] Limpieza completa exitosa');
       } finally {
         router.push = originalPush;
       }
@@ -260,12 +213,7 @@ export const useChannelHopping = (
 
       registerChannelJoin(selectedChannel.host_id!);
 
-      console.log(
-        `[Channel Hopping] Uniéndose al nuevo canal: ${selectedChannel.host_id}`,
-      );
       await handleVideoChatMale(selectedChannel.host_id!);
-
-      console.log('[Channel Hopping] Channel hopping completado exitosamente');
     } catch (error) {
       console.error(
         '[Channel Hopping] Error durante el channel hopping:',
@@ -314,9 +262,6 @@ export const useChannelHopping = (
     const lastEntry = entries[entries.length - 1];
 
     if (lastEntry && lastEntry.duration && lastEntry.duration >= 60) {
-      console.log(
-        '[Channel Hopping] Usuario permaneció 1+ minuto, reseteando contador',
-      );
       dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
     }
   }, [state.channelHopping.entries, dispatch]);

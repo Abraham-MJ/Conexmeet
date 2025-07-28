@@ -1,8 +1,5 @@
-// Utilidades para notificaciones del navegador
-
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
-    console.log('Este navegador no soporta notificaciones');
     return false;
   }
 
@@ -25,7 +22,7 @@ export const showBrowserNotification = (
     icon?: string;
     tag?: string;
     data?: any;
-  } = {}
+  } = {},
 ) => {
   if (Notification.permission === 'granted') {
     const notification = new Notification(title, {

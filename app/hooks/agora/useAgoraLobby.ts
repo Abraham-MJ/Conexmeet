@@ -6,6 +6,7 @@ import {
   UserInformation,
 } from '@/app/types/streams';
 import { useAgoraServer } from './useAgoraServer';
+import { useUser } from '@/app/context/useClientContext';
 import {
   LOBBY_RTM_CHANNEL_NAME,
   LOG_PREFIX_LOBBY,
@@ -21,6 +22,7 @@ export const useAgoraLobby = (
   agoraBackend: ReturnType<typeof useAgoraServer>,
   initializeRtmClient: (loadingMessage?: string) => Promise<RtmClient | null>,
 ) => {
+  const { state: userState } = useUser();
   const [lobbyRtmChannel, setLobbyRtmChannel] = useState<RtmChannel | null>(
     null,
   );
@@ -47,10 +49,6 @@ export const useAgoraLobby = (
         ({ text }: any, senderId: string) => {
           try {
             const receivedMsg = JSON.parse(text ?? '');
-            console.log(
-              `[Lobby Client] Received RTM ChannelMessage from ${senderId}:`,
-              receivedMsg,
-            );
 
             if (receivedMsg.type === 'FEMALE_FULL_STATUS_UPDATE') {
               const updatedFemale = receivedMsg.payload as UserInformation;
@@ -58,10 +56,6 @@ export const useAgoraLobby = (
                 type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
                 payload: updatedFemale,
               });
-              console.log(
-                '[Lobby Client] Dispatched UPDATE_ONE_FEMALE_IN_LIST with payload:',
-                receivedMsg.payload,
-              );
 
               setOnlineFemalesList((prevList) => {
                 const existingIndex = prevList.findIndex(
@@ -75,6 +69,28 @@ export const useAgoraLobby = (
                   return [...prevList, updatedFemale];
                 }
               });
+            } else if (
+              receivedMsg.type === 'CONTACT_ADDED_NOTIFICATION' ||
+              receivedMsg.type === 'CONTACT_REMOVED_NOTIFICATION'
+            ) {
+              const notification = receivedMsg.payload;
+
+              const currentUserId = userState.user?.id;
+
+              if (notification.toUserId === currentUserId) {
+                const action =
+                  receivedMsg.type === 'CONTACT_ADDED_NOTIFICATION'
+                    ? 'agregado'
+                    : 'eliminado';
+
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(
+                    new CustomEvent('contactNotificationReceived', {
+                      detail: notification,
+                    }),
+                  );
+                }
+              }
             }
           } catch (e) {
             console.error(
@@ -163,11 +179,6 @@ export const useAgoraLobby = (
           payload: payloadToSend,
         };
         try {
-          console.log(
-            '[Female Client] Intentando actualizar el backend y el lobby con el estado de la female:',
-            statusUpdatePayload,
-          );
-
           await lobbyRtmChannel.sendMessage({
             text: JSON.stringify(rtmMessage),
           });
@@ -288,6 +299,56 @@ export const useAgoraLobby = (
     broadcastLocalFemaleStatusUpdate,
   ]);
 
+  const sendContactNotificationThroughLobby = useCallback(
+    async (
+      targetUserId: string | number,
+      targetUserName: string,
+      action: 'added' | 'removed',
+    ) => {
+      if (!lobbyRtmChannel || !isLobbyJoined || !localUser) {
+        console.warn(
+          `[Lobby Client] No se puede enviar notificación de contacto. Lobby no disponible.`,
+          {
+            hasLobbyChannel: !!lobbyRtmChannel,
+            isLobbyJoined,
+            hasLocalUser: !!localUser,
+          },
+        );
+        return false;
+      }
+
+      try {
+        const notificationMessage = {
+          type:
+            action === 'added'
+              ? 'CONTACT_ADDED_NOTIFICATION'
+              : 'CONTACT_REMOVED_NOTIFICATION',
+          payload: {
+            fromUserId: localUser.user_id,
+            fromUserName: localUser.user_name || 'Usuario',
+            fromUserAvatar: localUser.avatar,
+            toUserId: targetUserId,
+            timestamp: Date.now(),
+            action,
+          },
+        };
+
+        await lobbyRtmChannel.sendMessage({
+          text: JSON.stringify(notificationMessage),
+        });
+
+        return true;
+      } catch (error) {
+        console.error(
+          `[Lobby Client] ❌ Error enviando notificación de contacto a través del lobby para ${targetUserName} (${targetUserId}):`,
+          error,
+        );
+        return false;
+      }
+    },
+    [lobbyRtmChannel, isLobbyJoined, localUser],
+  );
+
   return {
     lobbyRtmChannel,
     isLobbyJoined,
@@ -298,5 +359,6 @@ export const useAgoraLobby = (
     joinLobby,
     leaveLobby,
     broadcastLocalFemaleStatusUpdate,
+    sendContactNotificationThroughLobby,
   };
 };

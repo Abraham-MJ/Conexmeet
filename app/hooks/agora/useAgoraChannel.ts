@@ -246,25 +246,11 @@ export const useAgoraCallChannel = (
             } else if (receivedMsg.type === 'MALE_JOINED_SIGNAL') {
               if (localUser?.role === 'female') {
                 const joinData = receivedMsg.payload;
-                console.log(
-                  `[Female Client] 📨 RECIBIDA señal MALE_JOINED_SIGNAL:`,
-                  joinData,
-                );
 
                 const currentState = stateRef.current;
                 const currentLocalUser = currentState.localUser;
 
-                console.log(`[Female Client] 📊 Estado actual de la female:`, {
-                  currentLocalUser: currentLocalUser,
-                  channelName: joinData.channelName,
-                  isReconnection: joinData.isReconnection,
-                });
-
                 if (currentLocalUser && joinData.channelName) {
-                  console.log(
-                    `[Female Client] 🔄 ACTUALIZANDO estado local a 'in_call'...`,
-                  );
-
                   dispatch({
                     type: AgoraActionType.SET_LOCAL_USER_PROFILE,
                     payload: {
@@ -275,21 +261,13 @@ export const useAgoraCallChannel = (
                     },
                   });
 
-                  console.log(
-                    `[Female Client] 📡 ENVIANDO broadcast al lobby...`,
-                  );
-
                   broadcastLocalFemaleStatusUpdate({
                     in_call: 1,
                     status: 'in_call',
                     host_id: joinData.channelName,
                     is_active: 1,
                   })
-                    .then(() => {
-                      console.log(
-                        `[Female Client] ✅ Broadcast al lobby exitoso`,
-                      );
-                    })
+                    .then(() => {})
                     .catch((broadcastError) => {
                       console.error(
                         `[Female Client] ❌ Error en broadcast al lobby:`,
@@ -298,9 +276,6 @@ export const useAgoraCallChannel = (
                     });
 
                   if (joinData.isReconnection) {
-                    console.log(
-                      `[Female Client] 🔄 RECONEXIÓN detectada - Enviando broadcast adicional...`,
-                    );
                     setTimeout(async () => {
                       try {
                         await broadcastLocalFemaleStatusUpdate({
@@ -309,9 +284,6 @@ export const useAgoraCallChannel = (
                           host_id: joinData.channelName,
                           is_active: 1,
                         });
-                        console.log(
-                          `[Female Client] ✅ Broadcast adicional por reconexión exitoso`,
-                        );
                       } catch (error) {
                         console.error(
                           `[Female Client] ❌ Error en broadcast adicional:`,
@@ -324,7 +296,6 @@ export const useAgoraCallChannel = (
                   const logMessage = joinData.isReconnection
                     ? `[Female Client] ✅ Estado actualizado a 'in_call' por RECONEXIÓN de male`
                     : `[Female Client] ✅ Estado actualizado a 'in_call' por señal MALE_JOINED`;
-                  console.log(logMessage);
                 } else {
                   console.warn(
                     `[Female Client] ⚠️ No se pudo actualizar estado - Datos faltantes:`,
@@ -334,18 +305,10 @@ export const useAgoraCallChannel = (
                     },
                   );
                 }
-              } else {
-                console.log(
-                  `[Female Client] ℹ️ Señal MALE_JOINED_SIGNAL ignorada - Usuario no es female`,
-                );
               }
             } else if (receivedMsg.type === 'FORCE_STATUS_UPDATE') {
               if (localUser?.role === 'female') {
                 const forceData = receivedMsg.payload;
-                console.log(
-                  `[Female Client] Recibida señal FORCE_STATUS_UPDATE:`,
-                  forceData,
-                );
 
                 const currentState = stateRef.current;
                 const currentLocalUser = currentState.localUser;
@@ -355,10 +318,6 @@ export const useAgoraCallChannel = (
                   forceData.channelName &&
                   forceData.requiredStatus
                 ) {
-                  console.log(
-                    `[Female Client] FORZANDO actualización de estado a '${forceData.requiredStatus}'`,
-                  );
-
                   dispatch({
                     type: AgoraActionType.SET_LOCAL_USER_PROFILE,
                     payload: {
@@ -375,20 +334,12 @@ export const useAgoraCallChannel = (
                     host_id: forceData.channelName,
                     is_active: 1,
                   });
-
-                  console.log(
-                    `[Female Client] Estado FORZADO a '${forceData.requiredStatus}' por señal de emergencia`,
-                  );
                 }
               }
             } else if (receivedMsg.type === 'MALE_CALL_SUMMARY_SIGNAL') {
               if (localUser?.role === 'female') {
                 const summaryPayload =
                   receivedMsg.payload as FemaleCallSummaryInfo;
-                console.log(
-                  `[Female Client] Recibido resumen de llamada del male:`,
-                  summaryPayload,
-                );
 
                 if (summaryPayload.reason !== 'Finalizada por ti') {
                   broadcastLocalFemaleStatusUpdate({

@@ -116,7 +116,6 @@ const PlayStoriesView: React.FC<PlayStoriesProps> = ({
               className="rounded-full bg-white/90 p-2 text-gray-600 shadow-md transition duration-300 hover:bg-white hover:text-pink-500"
               onClick={() => {
                 onDelete(currentVideoData?.id);
-                console.log('Deleting story with ID:', currentVideoData?.id);
               }}
             >
               <Trash2 className="h-5 w-5" />

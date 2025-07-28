@@ -78,9 +78,6 @@ export const useAgoraRtc = (
       currentRtcClient.on(
         'user-unpublished',
         (remoteUserUnpublishing, mediaType) => {
-          console.log(
-            `[Female Client - RTC Event] User Unpublished: UID ${remoteUserUnpublishing.uid}, Media Type: ${mediaType}`,
-          );
           if (mediaType !== 'audio' && mediaType !== 'video') return;
           dispatch({
             type: AgoraActionType.UPDATE_REMOTE_USER_TRACK_STATE,
@@ -94,10 +91,6 @@ export const useAgoraRtc = (
       );
 
       currentRtcClient.on('user-left', (remoteUserLeaving) => {
-        console.log(
-          `[Female Client - RTC Event] User Left: UID ${remoteUserLeaving.uid}`,
-        );
-
         dispatch({
           type: AgoraActionType.REMOVE_REMOTE_USER,
           payload: { rtcUid: String(remoteUserLeaving.uid) },
@@ -109,14 +102,14 @@ export const useAgoraRtc = (
 
   const requestMediaPermissions = useCallback(async () => {
     const shouldShowModal = await shouldShowPermissionsModal();
-    
+
     if (shouldShowModal) {
       dispatch({
         type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
         payload: true,
       });
     }
-    
+
     setRequestingMediaPermissions(true);
     dispatch({
       type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
@@ -125,7 +118,7 @@ export const useAgoraRtc = (
 
     try {
       const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-      AgoraRTC.setLogLevel(4); 
+      AgoraRTC.setLogLevel(4);
       const [audioTrack, videoTrack] = await Promise.all([
         AgoraRTC.createMicrophoneAudioTrack(),
         AgoraRTC.createCameraVideoTrack(),
@@ -206,7 +199,7 @@ export const useAgoraRtc = (
         });
 
         const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-        AgoraRTC.setLogLevel(4); 
+        AgoraRTC.setLogLevel(4);
         const tempRtcClient = AgoraRTC.createClient({
           mode: 'rtc',
           codec: 'vp8',
@@ -229,14 +222,14 @@ export const useAgoraRtc = (
             setLocalVideoTrack(videoTrack);
           } else {
             const shouldShowModal = await shouldShowPermissionsModal();
-            
+
             if (shouldShowModal) {
               dispatch({
                 type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_MODAL,
                 payload: true,
               });
             }
-            
+
             setRequestingMediaPermissions(true);
             dispatch({
               type: AgoraActionType.SET_REQUESTING_MEDIA_PERMISSIONS,
