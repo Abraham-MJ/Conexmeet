@@ -88,6 +88,7 @@ const ModalPackage = ({
               isLoading={isLoadingPaymentIntent}
               selectedPackage={selectedPackage}
               handlePaymentRegistration={handlePaymentRegistration}
+              onClose={onClose}
             />
           )}
         </div>

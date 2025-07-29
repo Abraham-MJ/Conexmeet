@@ -24,6 +24,7 @@ interface PaymentIntentProps {
     data?: Package[];
     message?: string;
   }>;
+  onClose?: () => void;
 }
 
 const appearance: Appearance = {
@@ -42,6 +43,7 @@ const PaymentPackageView: React.FC<PaymentIntentProps> = ({
   isLoading,
   selectedPackage,
   handlePaymentRegistration,
+  onClose,
 }) => {
   const [message, setMessage] = useState<MessageObject | null>(null);
 
@@ -124,6 +126,7 @@ const PaymentPackageView: React.FC<PaymentIntentProps> = ({
           <StripeCheckoutForm
             selectedPackage={selectedPackage}
             setMessage={setMessage}
+            onClose={onClose}
           />
         )}
       </Elements>

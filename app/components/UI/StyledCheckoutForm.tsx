@@ -8,20 +8,41 @@ import {
 } from '@stripe/react-stripe-js';
 import { Package } from '@/app/types/package';
 import { MessageObject } from '../shared/payment/payment';
+import { useUser } from '@/app/context/useClientContext';
 
 interface StripeCheckoutFormProps {
   selectedPackage: Package;
   setMessage: (message: MessageObject | null) => void;
+  onClose?: () => void;
 }
 
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   selectedPackage,
   setMessage,
+  onClose,
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const { handleGetInformation } = useUser();
 
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const handlePaymentSuccess = async () => {
+    // Actualizar información del usuario
+    await handleGetInformation();
+    
+    // Limpiar el formulario
+    if (elements) {
+      elements.getElement('payment')?.clear();
+    }
+    
+    // Cerrar modal después de 3 segundos
+    if (onClose) {
+      setTimeout(() => {
+        onClose();
+      }, 3000);
+    }
+  };
 
   useEffect(() => {
     if (!stripe) {
@@ -36,51 +57,53 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
 
-    stripe
-      .retrievePaymentIntent(clientSecretFromUrl)
-      .then(({ paymentIntent, error: retrieveError }) => {
-        if (retrieveError) {
+    const handlePaymentIntentCheck = async () => {
+      const { paymentIntent, error: retrieveError } = await stripe.retrievePaymentIntent(clientSecretFromUrl);
+      if (retrieveError) {
+        setMessage({
+          text: `Error al recuperar el intento de pago: ${retrieveError.message}`,
+          type: 'error',
+        });
+        return;
+      }
+      if (!paymentIntent) {
+        setMessage({
+          text: 'Error al recuperar la información del pago después de la redirección (intento no encontrado).',
+          type: 'error',
+        });
+        return;
+      }
+      switch (paymentIntent.status) {
+        case 'succeeded':
           setMessage({
-            text: `Error al recuperar el intento de pago: ${retrieveError.message}`,
+            text: '¡Pago exitoso (verificado después de redirección)!',
+            type: 'success',
+          });
+          await handlePaymentSuccess();
+          break;
+        case 'processing':
+          setMessage({
+            text: 'Tu pago se está procesando (verificado después de redirección).',
+            type: 'info',
+          });
+          break;
+        case 'requires_payment_method':
+          setMessage({
+            text: 'Tu pago no fue exitoso, por favor intenta de nuevo (verificado después de redirección).',
             type: 'error',
           });
-          return;
-        }
-        if (!paymentIntent) {
+          break;
+        default:
           setMessage({
-            text: 'Error al recuperar la información del pago después de la redirección (intento no encontrado).',
+            text: `Algo salió mal con el pago (estado: ${paymentIntent.status}, verificado después de redirección).`,
             type: 'error',
           });
-          return;
-        }
-        switch (paymentIntent.status) {
-          case 'succeeded':
-            setMessage({
-              text: '¡Pago exitoso (verificado después de redirección)!',
-              type: 'success',
-            });
-            break;
-          case 'processing':
-            setMessage({
-              text: 'Tu pago se está procesando (verificado después de redirección).',
-              type: 'info',
-            });
-            break;
-          case 'requires_payment_method':
-            setMessage({
-              text: 'Tu pago no fue exitoso, por favor intenta de nuevo (verificado después de redirección).',
-              type: 'error',
-            });
-            break;
-          default:
-            setMessage({
-              text: `Algo salió mal con el pago (estado: ${paymentIntent.status}, verificado después de redirección).`,
-              type: 'error',
-            });
-            break;
-        }
-      });
-  }, [stripe, setMessage]);
+          break;
+      }
+    };
+
+    handlePaymentIntentCheck();
+  }, [stripe, setMessage, handleGetInformation]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -111,6 +134,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       switch (paymentIntent.status) {
         case 'succeeded':
           setMessage({ text: '¡Pago confirmado y exitoso!', type: 'success' });
+          await handlePaymentSuccess();
           break;
         case 'processing':
           setMessage({
@@ -149,16 +173,19 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement options={{ layout: 'tabs' }} />
+      <PaymentElement
+        options={{
+          layout: 'tabs'
+        }}
+      />
 
       <button
         type="submit"
         disabled={!stripe || !elements || isProcessing}
-        className={`active:scale-[0.98]' group relative mt-8 w-full transform overflow-hidden rounded-full bg-gradient-to-b from-orange-300/90 to-orange-400/90 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-gray-500/25 ${
-          !stripe || !elements || isProcessing
-            ? 'cursor-not-allowed opacity-50'
-            : ''
-        }`}
+        className={`active:scale-[0.98]' group relative mt-8 w-full transform overflow-hidden rounded-full bg-gradient-to-b from-orange-300/90 to-orange-400/90 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-gray-500/25 ${!stripe || !elements || isProcessing
+          ? 'cursor-not-allowed opacity-50'
+          : ''
+          }`}
       >
         <div className="relative flex items-center justify-center gap-3 px-2 py-3">
           <div className="flex flex-col items-center">
