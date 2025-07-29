@@ -35,14 +35,193 @@ export const useAgoraLobby = (
     null,
   );
 
+  const presenceCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const verifyLobbyPresence = useCallback(
+    async (channelInstance: RtmChannel, reason = 'manual') => {
+      try {
+        const currentMembers = await channelInstance.getMembers();
+        setOnlineFemalesList((prevList) => {
+          const updatedList = prevList.map((female) => {
+            if (female.role === 'female') {
+              const isPresent = currentMembers.includes(String(female.rtmUid));
+              const currentStatus = female.status;
+
+              if (!isPresent && currentStatus !== 'offline') {
+                const updatedFemale = {
+                  ...female,
+                  status: 'offline',
+                } as typeof female;
+
+                dispatch({
+                  type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+                  payload: updatedFemale,
+                });
+
+                return updatedFemale;
+              } else if (isPresent && currentStatus === 'offline') {
+                const newStatus =
+                  female.in_call === 1
+                    ? 'in_call'
+                    : female.host_id
+                      ? 'available_call'
+                      : 'online';
+
+                const updatedFemale = {
+                  ...female,
+                  status: newStatus,
+                } as typeof female;
+
+                dispatch({
+                  type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+                  payload: updatedFemale,
+                });
+
+                return updatedFemale;
+              }
+            }
+            return female;
+          });
+
+          const hasChanges = updatedList.some(
+            (female, index) => female.status !== prevList[index]?.status,
+          );
+
+          if (hasChanges) {
+            dispatch({
+              type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
+              payload: updatedList,
+            });
+          }
+
+          return updatedList;
+        });
+      } catch (error) {
+        console.warn(
+          `${LOG_PREFIX_LOBBY} Error en verificación de presencia (${reason}):`,
+          error,
+        );
+      }
+    },
+    [dispatch, setOnlineFemalesList],
+  );
+
   const onlineFemalesListRef = useRef<UserInformation[]>([]);
   useEffect(() => {
     onlineFemalesListRef.current = onlineFemalesList;
   }, [onlineFemalesList]);
 
+  useEffect(() => {
+    return () => {
+      if (presenceCheckIntervalRef.current) {
+        clearInterval(presenceCheckIntervalRef.current);
+        presenceCheckIntervalRef.current = null;
+      }
+    };
+  }, []);
+
   const setupLobbyRtmChannelListeners = useCallback(
-    (rtmChannelInstance: RtmChannel) => {
+    (rtmChannelInstance: RtmChannel, rtmClientInstance: RtmClient) => {
       rtmChannelInstance.removeAllListeners('ChannelMessage');
+      rtmChannelInstance.removeAllListeners('MemberJoined');
+      rtmChannelInstance.removeAllListeners('MemberLeft');
+
+      rtmClientInstance.removeAllListeners('ConnectionStateChanged');
+
+      rtmChannelInstance.on('MemberJoined', (memberId: string) => {
+        setOnlineFemalesList((prevList) => {
+          const updatedList = prevList.map((female) => {
+            if (
+              String(female.rtmUid) === memberId &&
+              female.role === 'female'
+            ) {
+              const updatedFemale = {
+                ...female,
+                status:
+                  female.in_call === 1
+                    ? 'in_call'
+                    : female.host_id
+                      ? 'available_call'
+                      : 'online',
+              } as typeof female;
+
+              dispatch({
+                type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+                payload: updatedFemale,
+              });
+
+              return updatedFemale;
+            }
+            return female;
+          });
+
+          dispatch({
+            type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
+            payload: updatedList,
+          });
+
+          return updatedList;
+        });
+      });
+
+      rtmChannelInstance.on('MemberLeft', (memberId: string) => {
+        setOnlineFemalesList((prevList) => {
+          const updatedList = prevList.map((female) => {
+            if (
+              String(female.rtmUid) === memberId &&
+              female.role === 'female'
+            ) {
+              const updatedFemale = {
+                ...female,
+                status: 'offline',
+              } as typeof female;
+
+              dispatch({
+                type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+                payload: updatedFemale,
+              });
+
+              return updatedFemale;
+            }
+            return female;
+          });
+
+          dispatch({
+            type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
+            payload: updatedList,
+          });
+
+          return updatedList;
+        });
+      });
+
+      rtmClientInstance.on(
+        'ConnectionStateChanged',
+        (newState: string, reason: string) => {
+          if (
+            newState === 'ABORTED' ||
+            newState === 'FAILED' ||
+            newState === 'DISCONNECTED' ||
+            newState === 'RECONNECTING'
+          ) {
+            if (newState === 'ABORTED' || newState === 'FAILED') {
+              verifyLobbyPresence(
+                rtmChannelInstance,
+                `connection-${newState.toLowerCase()}`,
+              );
+            } else {
+              setTimeout(
+                () =>
+                  verifyLobbyPresence(
+                    rtmChannelInstance,
+                    `connection-${newState.toLowerCase()}`,
+                  ),
+                500,
+              );
+            }
+          }
+        },
+      );
 
       rtmChannelInstance.on(
         'ChannelMessage',
@@ -101,7 +280,7 @@ export const useAgoraLobby = (
         },
       );
     },
-    [dispatch],
+    [dispatch, setOnlineFemalesList],
   );
 
   const fetchOnlineFemalesList = useCallback(async () => {
@@ -234,12 +413,77 @@ export const useAgoraLobby = (
       setLobbyRtmChannel(channel);
       setIsLobbyJoined(true);
 
-      setupLobbyRtmChannelListeners(channel);
+      setupLobbyRtmChannelListeners(channel, rtmClientInstance);
+
+      try {
+        const members = await channel.getMembers();
+
+        setOnlineFemalesList((prevList) => {
+          const updatedList = prevList.map((female) => {
+            if (
+              members.includes(String(female.rtmUid)) &&
+              female.role === 'female'
+            ) {
+              const updatedStatus =
+                female.in_call === 1
+                  ? 'in_call'
+                  : female.host_id
+                    ? 'available_call'
+                    : 'online';
+              const updatedFemale = {
+                ...female,
+                status: updatedStatus,
+              } as typeof female;
+
+              dispatch({
+                type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+                payload: updatedFemale,
+              });
+
+              return updatedFemale;
+            }
+            return female;
+          });
+
+          dispatch({
+            type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
+            payload: updatedList,
+          });
+
+          return updatedList;
+        });
+      } catch (error) {
+        console.warn(
+          `${LOG_PREFIX_LOBBY} No se pudieron obtener miembros del lobby:`,
+          error,
+        );
+      }
 
       dispatch({
         type: AgoraActionType.JOIN_LOBBY_SUCCESS,
         payload: { lobbyRtmChannel: channel },
       });
+
+      presenceCheckIntervalRef.current = setInterval(async () => {
+        try {
+          const currentMembers = await channel.getMembers();
+          const onlineFemalesCount = onlineFemalesListRef.current.filter(
+            (f) => f.role === 'female' && f.status !== 'offline',
+          ).length;
+          const actualFemalesInLobby = currentMembers.filter((memberId) =>
+            onlineFemalesListRef.current.some(
+              (f) => String(f.rtmUid) === memberId && f.role === 'female',
+            ),
+          ).length;
+
+          verifyLobbyPresence(channel, 'periodic-check');
+        } catch (error) {
+          console.warn(
+            `${LOG_PREFIX_LOBBY} Error en verificación periódica de presencia:`,
+            error,
+          );
+        }
+      }, 10000);
 
       if (localUser.role === 'female' && localUser.is_active === 1) {
         await broadcastLocalFemaleStatusUpdate({});
@@ -280,12 +524,22 @@ export const useAgoraLobby = (
           error,
         );
       } finally {
+        if (presenceCheckIntervalRef.current) {
+          clearInterval(presenceCheckIntervalRef.current);
+          presenceCheckIntervalRef.current = null;
+        }
+
         setLobbyRtmChannel(null);
         setIsLobbyJoined(false);
         dispatch({ type: AgoraActionType.LEAVE_LOBBY });
       }
     } else {
       if (isLobbyJoined || lobbyRtmChannel) {
+        if (presenceCheckIntervalRef.current) {
+          clearInterval(presenceCheckIntervalRef.current);
+          presenceCheckIntervalRef.current = null;
+        }
+
         setLobbyRtmChannel(null);
         setIsLobbyJoined(false);
         dispatch({ type: AgoraActionType.LEAVE_LOBBY });

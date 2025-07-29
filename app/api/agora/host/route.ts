@@ -130,7 +130,8 @@ export async function GET(request: NextRequest) {
       .map((female) => {
         const rtcUid = String(female.id);
         const rtmUid = String(female.id);
-        let derivedStatus: FemaleWithStatus['status'] = 'online';
+
+        let derivedStatus: FemaleWithStatus['status'] = 'offline';
         let currentChannelName: string | null = female.host || null;
         let inCallFlag = female.in_call === 1;
 
@@ -139,17 +140,17 @@ export async function GET(request: NextRequest) {
         if (activeRoomDetails) {
           currentChannelName = activeRoomDetails.channelName;
           if (activeRoomDetails.isBusy) {
-            derivedStatus = 'in_call';
+            derivedStatus = female.is_active === 1 ? 'in_call' : 'offline';
             inCallFlag = true;
           } else if (activeRoomDetails.status === 'waiting') {
-            derivedStatus = 'available_call';
+            derivedStatus = female.is_active === 1 ? 'available_call' : 'offline';
             inCallFlag = false;
           }
         } else {
-          if (inCallFlag && currentChannelName) {
+          if (inCallFlag && currentChannelName && female.is_active === 1) {
             derivedStatus = 'in_call';
           } else {
-            derivedStatus = 'online';
+            derivedStatus = 'offline';
             currentChannelName = null;
           }
         }
