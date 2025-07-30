@@ -24,6 +24,7 @@ const FemaleViewVideo = () => {
   const isMobile = useMobile(920);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
 
   const { handleVideoChatFemale, loadingStatus } = useAgoraContext();
@@ -47,6 +48,17 @@ const FemaleViewVideo = () => {
       });
     }
   }, [histories]);
+
+  const handleVideoChat = async () => {
+    if (isProcessing || loadingStatus.isLoading) return;
+    
+    setIsProcessing(true);
+    try {
+      await handleVideoChatFemale();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (user.user.confirmed !== 1) {
     return (
@@ -137,10 +149,10 @@ const FemaleViewVideo = () => {
               className={cn(
                 'w-full rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] py-7 text-lg font-medium transition-all duration-300',
               )}
-              disabled={loadingStatus.isLoading}
-              onClick={handleVideoChatFemale}
+              disabled={loadingStatus.isLoading || isProcessing}
+              onClick={handleVideoChat}
             >
-              {loadingStatus.isLoading ? (
+              {(loadingStatus.isLoading || isProcessing) ? (
                 <div className="text-md flex items-center justify-center font-latosans">
                   {t('common.loading')}
                   {[1, 2, 3].map((index) => {

@@ -22,6 +22,7 @@ const MaleViewVideo = () => {
   const { currentDate, histories } = useVideoRouletteMale();
 
   const [currentStory, setCurrentStory] = useState<HistoryData | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const formatTime = (seconds: number) => {
@@ -50,9 +51,20 @@ const MaleViewVideo = () => {
   useEffect(() => {
     if (videoRef.current && currentStory?.url) {
       videoRef.current.load();
-      videoRef.current.play().catch((error) => {});
+      videoRef.current.play().catch((error) => { });
     }
   }, [currentStory]);
+
+  const handleVideoChat = async () => {
+    if (isProcessing || loadingStatus.isLoading || isChannelHoppingBlocked) return;
+
+    setIsProcessing(true);
+    try {
+      await handleVideoChatMale();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div
@@ -133,10 +145,10 @@ const MaleViewVideo = () => {
               className={cn(
                 'mb-6 w-full rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] py-7 text-lg font-medium transition-all duration-300',
               )}
-              disabled={loadingStatus.isLoading || isChannelHoppingBlocked}
-              onClick={() => handleVideoChatMale()}
+              disabled={loadingStatus.isLoading || isChannelHoppingBlocked || isProcessing}
+              onClick={handleVideoChat}
             >
-              {loadingStatus.isLoading ? (
+              {(loadingStatus.isLoading || isProcessing) ? (
                 <div className="text-md flex items-center justify-center font-latosans">
                   {t('common.loading')}
                   {[1, 2, 3].map((index) => {
