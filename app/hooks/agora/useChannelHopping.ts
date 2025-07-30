@@ -6,6 +6,7 @@ import {
   AgoraState,
   UserInformation,
 } from '@/app/types/streams';
+import { useChannelHoppingPersistence } from './useChannelHoppingPersistence';
 
 interface ChannelHoppingFunctions {
   handleVideoChatMale: (channelToJoin?: string) => Promise<void>;
@@ -27,6 +28,7 @@ interface ChannelHoppingFunctions {
 const BLOCK_DURATION_MS = 5 * 60 * 1000;
 const MIN_STAY_DURATION_SECONDS = 15;
 const MAX_SHORT_VISITS = 3;
+const RESET_THRESHOLD_SECONDS = 15; 
 
 export const useChannelHopping = (
   dispatch: React.Dispatch<AgoraAction>,
@@ -36,6 +38,11 @@ export const useChannelHopping = (
   router: ReturnType<typeof useRouter>,
 ) => {
   const currentChannelJoinTimeRef = useRef<number | null>(null);
+  
+  const { clearPersistedState } = useChannelHoppingPersistence(
+    state.channelHopping,
+    dispatch
+  );
 
   const checkBlockExpiration = useCallback(() => {
     if (state.channelHopping.isBlocked && state.channelHopping.blockStartTime) {
@@ -44,12 +51,14 @@ export const useChannelHopping = (
 
       if (blockElapsed >= BLOCK_DURATION_MS) {
         dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+        clearPersistedState();
       }
     }
   }, [
     state.channelHopping.isBlocked,
     state.channelHopping.blockStartTime,
     dispatch,
+    clearPersistedState,
   ]);
 
   useEffect(() => {
@@ -107,6 +116,8 @@ export const useChannelHopping = (
       setTimeout(() => {
         const shouldBlock = evaluateChannelHoppingBehavior();
         if (shouldBlock) {
+          console.log('[Channel Hopping] Activando bloqueo por comportamiento abusivo');
+          
           dispatch({
             type: AgoraActionType.SET_CHANNEL_HOPPING_BLOCKED,
             payload: { isBlocked: true, blockStartTime: Date.now() },
@@ -125,6 +136,8 @@ export const useChannelHopping = (
     checkBlockExpiration();
 
     if (state.channelHopping.isBlocked) {
+      console.log('[Channel Hopping] Usuario bloqueado, mostrando modal');
+      
       dispatch({
         type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
         payload: true,
@@ -181,6 +194,7 @@ export const useChannelHopping = (
           await handleLeaveCall();
 
           dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+          clearPersistedState(); 
         } catch (error) {
           console.error(
             '[Channel Hopping] Error al forzar salida por falta de canales:',
@@ -261,10 +275,11 @@ export const useChannelHopping = (
     const { entries } = state.channelHopping;
     const lastEntry = entries[entries.length - 1];
 
-    if (lastEntry && lastEntry.duration && lastEntry.duration >= 60) {
+    if (lastEntry && lastEntry.duration && lastEntry.duration >= RESET_THRESHOLD_SECONDS) {
       dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+      clearPersistedState();
     }
-  }, [state.channelHopping.entries, dispatch]);
+  }, [state.channelHopping.entries, dispatch, clearPersistedState]);
 
   const closeChannelHoppingBlockedModal = useCallback(() => {
     dispatch({

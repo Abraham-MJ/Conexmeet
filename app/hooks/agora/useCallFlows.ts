@@ -27,6 +27,7 @@ import {
   shouldShowChannelBusyModal,
   shouldShowChannelNotAvailableModal,
 } from '@/app/utils/errorLogger';
+import { isUserBlockedFromChannelHopping } from '@/app/utils/channelHoppingValidation';
 
 interface CallOrchestratorFunctions {
   requestMediaPermissions: () => Promise<{
@@ -255,6 +256,15 @@ export const useCallFlows = (
 
   const handleVideoChatMale = useCallback(
     async (channelToJoin?: string) => {
+      if (localUser?.role === 'male' && isUserBlockedFromChannelHopping()) {
+        console.log('[VideoChatMale] Usuario bloqueado por channel hopping persistente');
+        dispatch({
+          type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
+          payload: true,
+        });
+        return;
+      }
+
       dispatch({
         type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
         payload: false,

@@ -32,6 +32,7 @@ import { useAgoraServer } from '../hooks/agora/useAgoraServer';
 import { useAgoraCallChannel } from '../hooks/agora/useAgoraChannel';
 import { useChannelHopping } from '../hooks/agora/useChannelHopping';
 import { useConnectionMonitor } from '../hooks/agora/useConnectionMonitor';
+import { isUserBlockedFromChannelHopping, getBlockTimeRemaining } from '../utils/channelHoppingValidation';
 
 const AgoraContext = createContext<{
   state: AgoraState;
@@ -444,8 +445,8 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
 
   const {
     hopToRandomChannel,
-    isBlocked: isChannelHoppingBlocked,
-    blockTimeRemaining: channelHoppingBlockTimeRemaining,
+    isBlocked: isChannelHoppingBlockedFromState,
+    blockTimeRemaining: channelHoppingBlockTimeRemainingFromState,
     closeChannelHoppingBlockedModal,
     showChannelHoppingBlockedModal,
     openChannelHoppingBlockedModal,
@@ -465,7 +466,15 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     router,
   );
 
-  // Monitor de conexiones simultáneas
+  const isChannelHoppingBlocked = useMemo(() => {
+    return isChannelHoppingBlockedFromState || isUserBlockedFromChannelHopping();
+  }, [isChannelHoppingBlockedFromState]);
+
+  const channelHoppingBlockTimeRemaining = useMemo(() => {
+    const persistentTime = getBlockTimeRemaining();
+    return Math.max(channelHoppingBlockTimeRemainingFromState, persistentTime);
+  }, [channelHoppingBlockTimeRemainingFromState]);
+
   const {
     registerConnectionAttempt,
     markConnectionSuccessful,
