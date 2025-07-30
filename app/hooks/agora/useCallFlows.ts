@@ -22,6 +22,11 @@ import { useAgoraServer } from './useAgoraServer';
 import { useUser } from '@/app/context/useClientContext';
 import { converterMinutes } from '@/app/utils/converter-minutes';
 import { useChannelValidation } from './useChannelValidation';
+import {
+  logConnectionError,
+  shouldShowChannelBusyModal,
+  shouldShowChannelNotAvailableModal,
+} from '@/app/utils/errorLogger';
 
 interface CallOrchestratorFunctions {
   requestMediaPermissions: () => Promise<{
@@ -96,7 +101,8 @@ export const useCallFlows = (
   channelHoppingEntries: any[],
 ) => {
   const { handleGetInformation, state: user } = useUser();
-  const { validateChannelAvailability, clearChannelAttempt } = useChannelValidation();
+  const { validateChannelAvailability, clearChannelAttempt } =
+    useChannelValidation();
 
   const hasTriggeredOutOfMinutesRef = useRef(false);
 
@@ -447,15 +453,16 @@ export const useCallFlows = (
 
             attemptedChannels.add(determinedChannelName);
 
-            // VALIDACIÓN MEJORADA: Verificar disponibilidad antes de intentar conexión
             const validationResult = await validateChannelAvailability(
               determinedChannelName,
               String(appUserId),
-              onlineFemalesList
+              onlineFemalesList,
             );
 
             if (!validationResult.isValid) {
-              console.warn(`[Channel Selection] Canal ${determinedChannelName} no válido: ${validationResult.reason}`);
+              console.warn(
+                `[Channel Selection] Canal ${determinedChannelName} no válido: ${validationResult.reason}`,
+              );
               continue;
             }
 
@@ -468,15 +475,17 @@ export const useCallFlows = (
             }
 
             try {
-              // Usar el endpoint mejorado con validaciones adicionales
-              const backendJoinResponse = await fetch('/api/agora/channels/enter-channel-male-v2', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  user_id: appUserId, 
-                  host_id: determinedChannelName 
-                }),
-              }).then(res => res.json());
+              const backendJoinResponse = await fetch(
+                '/api/agora/channels/enter-channel-male-v2',
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    user_id: appUserId,
+                    host_id: determinedChannelName,
+                  }),
+                },
+              ).then((res) => res.json());
 
               if (backendJoinResponse.success) {
                 connectionSuccessful = true;
@@ -495,14 +504,35 @@ export const useCallFlows = (
 
                 break;
               } else {
-                // Limpiar intento fallido
                 clearChannelAttempt(determinedChannelName);
-                console.warn(`[Channel Selection] Falló conexión a ${determinedChannelName}: ${backendJoinResponse.message}`);
+
+                const message =
+                  backendJoinResponse.message?.toLowerCase() || '';
+                const errorType = backendJoinResponse.errorType;
+
+                if (
+                  errorType === 'CHANNEL_BUSY' ||
+                  message.includes('canal_ocupado') ||
+                  message.includes('ocupado') ||
+                  message.includes('otro usuario') ||
+                  message.includes('simultánea detectada')
+                ) {
+                  console.warn(
+                    `[Channel Selection] Canal ${determinedChannelName} ocupado: ${backendJoinResponse.message}`,
+                  );
+                } else {
+                  console.warn(
+                    `[Channel Selection] Error en ${determinedChannelName}: ${backendJoinResponse.message}`,
+                  );
+                }
                 continue;
               }
             } catch (backendError) {
               clearChannelAttempt(determinedChannelName);
-              console.error(`[Channel Selection] Error en conexión a ${determinedChannelName}:`, backendError);
+              console.error(
+                `[Channel Selection] Error en conexión a ${determinedChannelName}:`,
+                backendError,
+              );
               continue;
             }
           }
@@ -570,11 +600,10 @@ export const useCallFlows = (
           determinedChannelName
         ) {
           try {
-            // VALIDACIÓN PREVIA: Verificar disponibilidad del canal específico
             const validationResult = await validateChannelAvailability(
               determinedChannelName,
               String(appUserId),
-              onlineFemalesList
+              onlineFemalesList,
             );
 
             if (!validationResult.isValid) {
@@ -592,35 +621,53 @@ export const useCallFlows = (
               throw new Error(validationResult.reason || 'Canal no disponible');
             }
 
-            // Usar el endpoint mejorado
-            const backendJoinResponse = await fetch('/api/agora/channels/enter-channel-male-v2', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                user_id: appUserId, 
-                host_id: determinedChannelName 
-              }),
-            }).then(res => res.json());
+            const backendJoinResponse = await fetch(
+              '/api/agora/channels/enter-channel-male-v2',
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: appUserId,
+                  host_id: determinedChannelName,
+                }),
+              },
+            ).then((res) => res.json());
 
             if (!backendJoinResponse.success) {
               clearChannelAttempt(determinedChannelName);
-              
-              if (
-                backendJoinResponse.message
-                  ?.toLowerCase()
-                  .includes('ocupado') ||
-                backendJoinResponse.message
-                  ?.toLowerCase()
-                  .includes('ya está ocupado') ||
-                backendJoinResponse.message
-                  ?.toLowerCase()
-                  .includes('otro usuario')
-              ) {
+
+              logConnectionError(
+                'Channel Connection Failed',
+                backendJoinResponse,
+                determinedChannelName,
+                String(appUserId),
+              );
+
+              if (shouldShowChannelBusyModal(backendJoinResponse)) {
+                console.log(
+                  '[Channel Connection] 🔴 Canal ocupado detectado:',
+                  backendJoinResponse.message,
+                );
                 dispatch({
                   type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
                   payload: true,
                 });
+              } else if (
+                shouldShowChannelNotAvailableModal(backendJoinResponse)
+              ) {
+                console.log(
+                  '[Channel Connection] 🔴 Canal no disponible detectado:',
+                  backendJoinResponse.message,
+                );
+                dispatch({
+                  type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+                  payload: true,
+                });
               } else {
+                console.log(
+                  '[Channel Connection] 🔴 Error inesperado:',
+                  backendJoinResponse.message,
+                );
                 dispatch({
                   type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
                   payload: true,
@@ -648,12 +695,31 @@ export const useCallFlows = (
               type: AgoraActionType.SET_MALE_INITIAL_MINUTES_IN_CALL,
               payload: minutesAvailable,
             });
-          } catch (backendError) {
+          } catch (backendError: any) {
             console.error(
               '[Backend Connection] Error en conexión al backend:',
               backendError,
             );
             clearChannelAttempt(determinedChannelName);
+
+            logConnectionError(
+              'Backend Connection Exception',
+              backendError,
+              determinedChannelName,
+              String(appUserId),
+            );
+
+            if (shouldShowChannelBusyModal(backendError)) {
+              console.log(
+                '[Backend Connection] 🔴 Error de canal ocupado capturado en catch:',
+                backendError.message,
+              );
+              dispatch({
+                type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
+                payload: true,
+              });
+            }
+
             if (preCreatedTracks) {
               try {
                 preCreatedTracks.audioTrack?.close();
