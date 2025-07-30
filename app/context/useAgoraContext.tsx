@@ -31,6 +31,7 @@ import {
 import { useAgoraServer } from '../hooks/agora/useAgoraServer';
 import { useAgoraCallChannel } from '../hooks/agora/useAgoraChannel';
 import { useChannelHopping } from '../hooks/agora/useChannelHopping';
+import { useConnectionMonitor } from '../hooks/agora/useConnectionMonitor';
 
 const AgoraContext = createContext<{
   state: AgoraState;
@@ -463,6 +464,14 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     },
     router,
   );
+
+  // Monitor de conexiones simultáneas
+  const {
+    registerConnectionAttempt,
+    markConnectionSuccessful,
+    markConnectionFailed,
+    hasActiveConnectionConflict,
+  } = useConnectionMonitor(dispatch, state.localUser, onlineFemalesList);
 
   const closeMaleRatingModal = useCallback(() => {
     dispatch({

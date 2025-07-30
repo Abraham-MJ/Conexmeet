@@ -77,7 +77,7 @@ export const AgoraApiClient = {
     appUserId: string | number,
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     const enterChannelResponse = await fetch(
-      `/api/agora/channels/enter-channel-male`,
+      `/api/agora/channels/enter-channel-male-v2`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
