@@ -32,6 +32,8 @@ import { useAgoraServer } from '../hooks/agora/useAgoraServer';
 import { useAgoraCallChannel } from '../hooks/agora/useAgoraChannel';
 import { useChannelHopping } from '../hooks/agora/useChannelHopping';
 import { useConnectionMonitor } from '../hooks/agora/useConnectionMonitor';
+import { useBeforeUnloadCleanup } from '../hooks/agora/useBeforeUnloadCleanup';
+import { useOptimizedHeartbeat } from '../hooks/agora/useOptimizedHeartbeat';
 import { isUserBlockedFromChannelHopping, getBlockTimeRemaining } from '../utils/channelHoppingValidation';
 
 const AgoraContext = createContext<{
@@ -88,46 +90,71 @@ const AgoraContext = createContext<{
     targetUserName: string,
     action: 'added' | 'removed',
   ) => Promise<boolean>;
+  forceEmergencyCleanup: () => Promise<void>;
+  isPerformingEmergencyCleanup: boolean;
+  // Sistema de heartbeat
+  lastHeartbeat: number;
+  isHeartbeatActive: boolean;
+  forceZombieChannelCheck: () => Promise<void>;
+  showFemaleDisconnectedModal: boolean;
+  femaleDisconnectedInfo: {
+    femaleName?: string;
+    disconnectionReason?: 'refresh' | 'connection_lost' | 'unknown';
+  } | null;
+  closeFemaleDisconnectedModal: () => void;
+  showFemaleDisconnectedNotification: (
+    femaleName?: string,
+    reason?: 'refresh' | 'connection_lost' | 'unknown'
+  ) => void;
 }>({
   state: initialState,
   dispatch: () => undefined,
   loadingStatus: { message: '', isLoading: false },
-  handleVideoChatMale: async () => {},
-  handleVideoChatFemale: async () => {},
-  handleLeaveCall: async () => {},
-  sendRtmChannelMessage: async () => {},
-  fetchInitialOnlineFemalesList: async () => {},
-  joinLobbyForRealtimeUpdates: async () => {},
-  leaveLobbyChannel: async () => {},
-  broadcastLocalFemaleStatusUpdate: async () => {},
-  toggleLocalAudio: async () => {},
-  toggleLocalVideo: async () => {},
-  closeMediaPermissionsDeniedModal: () => {},
-  closeNoChannelsAvailableModal: () => {},
-  closeChannelIsBusyModal: () => {},
-  closeUnexpectedErrorModal: () => {},
+  handleVideoChatMale: async () => { },
+  handleVideoChatFemale: async () => { },
+  handleLeaveCall: async () => { },
+  sendRtmChannelMessage: async () => { },
+  fetchInitialOnlineFemalesList: async () => { },
+  joinLobbyForRealtimeUpdates: async () => { },
+  leaveLobbyChannel: async () => { },
+  broadcastLocalFemaleStatusUpdate: async () => { },
+  toggleLocalAudio: async () => { },
+  toggleLocalVideo: async () => { },
+  closeMediaPermissionsDeniedModal: () => { },
+  closeNoChannelsAvailableModal: () => { },
+  closeChannelIsBusyModal: () => { },
+  closeUnexpectedErrorModal: () => { },
   callTimer: '00:00',
-  closeInsufficientMinutesModal: () => {},
-  closeMinutesExhaustedModal: () => {},
+  closeInsufficientMinutesModal: () => { },
+  closeMinutesExhaustedModal: () => { },
   sendGift: async () =>
     Promise.resolve({
       success: false,
       message: 'Not implemented',
       cost_in_minutes: 0,
     }),
-  closeFemaleCallEndedSummaryModal: () => {},
-  hopToRandomChannel: async () => {},
+  closeFemaleCallEndedSummaryModal: () => { },
+  hopToRandomChannel: async () => { },
   isChannelHoppingBlocked: false,
   channelHoppingBlockTimeRemaining: 0,
-  closeChannelHoppingBlockedModal: () => {},
-  openChannelHoppingBlockedModal: () => {},
+  closeChannelHoppingBlockedModal: () => { },
+  openChannelHoppingBlockedModal: () => { },
   showChannelHoppingBlockedModal: false,
   isChannelHoppingLoading: false,
   showMaleRatingModal: false,
   maleRatingInfo: null,
-  closeMaleRatingModal: () => {},
-  submitMaleRating: async () => {},
+  closeMaleRatingModal: () => { },
+  submitMaleRating: async () => { },
   sendContactNotificationThroughLobby: async () => false,
+  forceEmergencyCleanup: async () => { },
+  isPerformingEmergencyCleanup: false,
+  lastHeartbeat: 0,
+  isHeartbeatActive: false,
+  forceZombieChannelCheck: async () => { },
+  showFemaleDisconnectedModal: false,
+  femaleDisconnectedInfo: null,
+  closeFemaleDisconnectedModal: () => { },
+  showFemaleDisconnectedNotification: () => { },
 });
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
@@ -303,7 +330,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       leaveCallChannel,
       broadcastLocalFemaleStatusUpdate,
       sendCallSignal,
-      waitForUserProfile: async () => {},
+      waitForUserProfile: async () => { },
     },
     state.hostEndedCallInfo,
     state.current_room_id,
@@ -482,12 +509,231 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     hasActiveConnectionConflict,
   } = useConnectionMonitor(dispatch, state.localUser, onlineFemalesList);
 
+  // Declarar showFemaleDisconnectedNotification ANTES de usarla
+  const showFemaleDisconnectedNotification = useCallback((
+    femaleName?: string,
+    reason: 'refresh' | 'connection_lost' | 'unknown' = 'unknown'
+  ) => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_FEMALE_DISCONNECTED_MODAL,
+      payload: {
+        show: true,
+        femaleInfo: {
+          femaleName: femaleName || 'La modelo',
+          disconnectionReason: reason
+        }
+      },
+    });
+  }, [dispatch]);
+
+  // Handler optimizado para zombies detectados
+  const handleZombieChannelDetected = useCallback(async (zombieFemale: UserInformation & { disconnectionType?: 'male_disconnected' }) => {
+    console.log('[Optimized] 🚨 HANDLER EJECUTADO - handleZombieChannelDetected:', {
+      femaleName: zombieFemale.user_name,
+      channelId: zombieFemale.host_id,
+      disconnectionType: zombieFemale.disconnectionType,
+      timestamp: new Date().toISOString()
+    });
+
+    if (zombieFemale.disconnectionType === 'male_disconnected') {
+      // Caso especial: Male se desconectó, female debe volver a available_call
+      console.log('[Optimized] 👨‍💻 Male desconectado, actualizando female a available_call:', zombieFemale.host_id);
+
+      // NUEVO: Implementar lógica de backend siguiendo handleLeaveCall para male
+      if (zombieFemale.host_id && state.current_room_id) {
+        // Male se desconectó abruptamente → Replicar flujo de handleLeaveCall para male
+        console.log('[Optimized] 🔄 Ejecutando limpieza de backend para male desconectado');
+
+        // Llamar al backend directamente como en handleLeaveCall (líneas 1237-1244)
+        console.log('[Optimized] 📤 Cerrando canal con status "waiting" y participación de male');
+
+        try {
+          // 1. Cambiar canal a 'waiting' (como en handleLeaveCall línea 1237)
+          await agoraBackend.closeChannel(zombieFemale.host_id, 'waiting');
+          console.log('[Optimized] ✅ Canal cambiado a "waiting" exitosamente');
+
+          // 2. Cerrar participación del male (como en handleLeaveCall líneas 1241-1244)
+          // Nota: No tenemos el user_id específico del male, pero el backend debería manejar esto
+          if (state.current_room_id) {
+            await agoraBackend.closeMaleChannel(
+              'unknown_male', // El backend debería cerrar todos los males en este canal
+              zombieFemale.host_id,
+              state.current_room_id,
+            );
+            console.log('[Optimized] ✅ Participación de male cerrada exitosamente');
+          }
+        } catch (error) {
+          console.error('[Optimized] ❌ Error en limpieza de backend para male:', error);
+        }
+      }
+
+      dispatch({
+        type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+        payload: {
+          ...zombieFemale,
+          status: 'available_call', // Female vuelve a estar disponible para llamadas
+          in_call: 0,               // Ya no está en llamada
+          // Mantiene host_id porque su canal sigue activo
+          is_active: 1,             // Mantiene activa
+        },
+      });
+
+      // Si el usuario local es la female afectada, actualizar su estado local también
+      if (state.localUser?.role === 'female' && state.localUser.host_id === zombieFemale.host_id) {
+        dispatch({
+          type: AgoraActionType.SET_LOCAL_USER_PROFILE,
+          payload: {
+            ...state.localUser,
+            status: 'available_call',
+            in_call: 0,
+          },
+        });
+      }
+
+    } else {
+      // Caso normal: Female se desconectó (canal zombie)
+      console.log('[Optimized] 🧟 Limpiando canal zombie:', zombieFemale.host_id);
+
+      // NUEVO: Implementar lógica de backend siguiendo handleLeaveCall para female
+      if (zombieFemale.host_id) {
+        // Female se desconectó abruptamente → Replicar flujo de handleLeaveCall para female
+        console.log('[Optimized] 🔄 Ejecutando limpieza de backend para female desconectada');
+        console.log('[Optimized] 🔍 Datos de zombie female:', {
+          user_id: zombieFemale.user_id,
+          host_id: zombieFemale.host_id,
+          user_name: zombieFemale.user_name
+        });
+
+        // Llamar al backend directamente como en handleLeaveCall (línea 1176)
+        console.log('[Optimized] 📤 Cerrando canal de female con status "finished"');
+        console.log('[Optimized] 🔍 Datos para closeChannel:', {
+          host_id: zombieFemale.host_id,
+          status: 'finished',
+          agoraBackendExists: !!agoraBackend,
+          closeChannelExists: typeof agoraBackend?.closeChannel === 'function'
+        });
+
+        try {
+          console.log('[Optimized] 🚀 INICIANDO agoraBackend.closeChannel...');
+          const result = await agoraBackend.closeChannel(zombieFemale.host_id, 'finished');
+          console.log('[Optimized] 📥 Resultado de closeChannel:', result);
+          console.log('[Optimized] ✅ Canal de female cerrado exitosamente con status "finished"');
+        } catch (error) {
+          console.error('[Optimized] ❌ Error cerrando canal de female:', error);
+          console.error('[Optimized] ❌ Error stack:', error?.stack);
+          console.error('[Optimized] ❌ Error details:', {
+            name: error?.name,
+            message: error?.message,
+            cause: error?.cause
+          });
+        }
+
+        // Si el usuario local es male en ese canal, debe ejecutar su handleLeaveCall
+        if (state.localUser?.role === 'male' && state.channelName === zombieFemale.host_id) {
+          console.log('[Optimized] 👨 Male detecta female desconectada - ejecutando handleLeaveCall');
+          // Disparar handleLeaveCall del male
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('executeMaleLeaveCall'));
+            }
+          }, 1000);
+        }
+      }
+
+      dispatch({
+        type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+        payload: {
+          ...zombieFemale,
+          status: 'online',    // Como en handleLeaveCall: vuelve a 'online'
+          in_call: 0,          // Como en handleLeaveCall: no en llamada
+          host_id: null,       // Como en handleLeaveCall: limpia host_id
+          is_active: 1,        // Como en handleLeaveCall: mantiene activa
+        },
+      });
+
+      // Si el usuario local es male y está en ese canal, mostrar notificación
+      if (state.localUser?.role === 'male' && state.channelName === zombieFemale.host_id) {
+        showFemaleDisconnectedNotification(zombieFemale.user_name, 'connection_lost');
+      }
+    }
+  }, [dispatch, state.localUser, state.channelName, state.current_room_id, showFemaleDisconnectedNotification, agoraBackend]);
+
+  // Sistema optimizado que combina heartbeat y detección de zombies
+  const { lastHeartbeat, isActive: isHeartbeatActive } = useOptimizedHeartbeat({
+    localUser: state.localUser,
+    isRtcJoined: state.isRtcJoined,
+    currentChannelName: state.channelName,
+    current_room_id: state.current_room_id,
+    onlineFemalesList,
+    onZombieDetected: handleZombieChannelDetected,
+    enabled: true,
+    intervalMs: 30000, // Cada 30 segundos para evitar rate limiting
+  });
+
+  // Función dummy para compatibilidad
+  const forceZombieCheck = useCallback(async () => {
+    console.log('[Optimized] Force check no disponible en modo optimizado');
+  }, []);
+
+  // Hook para limpieza automática en beforeunload/pagehide (como backup)
+  const { forceCleanup, isCleaningUp } = useBeforeUnloadCleanup({
+    localUser: state.localUser,
+    isRtcJoined: state.isRtcJoined,
+    isRtmChannelJoined: state.isRtmChannelJoined,
+    currentChannelName: state.channelName,
+    current_room_id: state.current_room_id,
+    leaveCallChannel,
+    leaveRtcChannel,
+    broadcastLocalFemaleStatusUpdate,
+    // Configuración más conservadora - solo como backup
+    enableVisibilityCleanup: false,
+    visibilityCleanupDelay: 60000,
+  });
+
   const closeMaleRatingModal = useCallback(() => {
     dispatch({
       type: AgoraActionType.SET_SHOW_MALE_RATING_MODAL,
       payload: { show: false, femaleInfo: null },
     });
   }, [dispatch]);
+
+  const closeFemaleDisconnectedModal = useCallback(() => {
+    dispatch({
+      type: AgoraActionType.SET_SHOW_FEMALE_DISCONNECTED_MODAL,
+      payload: { show: false, femaleInfo: null },
+    });
+  }, [dispatch]);
+
+  // Listener para eventos de desconexión de females
+  useEffect(() => {
+    const handleFemaleDisconnected = (event: CustomEvent) => {
+      const { femaleName, reason } = event.detail;
+
+      // Solo mostrar la notificación si el usuario local es male y está en una llamada
+      if (state.localUser?.role === 'male' && state.isRtcJoined) {
+        console.log('[Female Disconnected] Mostrando notificación de desconexión:', { femaleName, reason });
+        showFemaleDisconnectedNotification(femaleName, reason);
+      }
+    };
+
+    const handleExecuteMaleLeaveCall = () => {
+      // Ejecutar handleLeaveCall cuando se detecta que la female se desconectó
+      if (state.localUser?.role === 'male' && state.isRtcJoined) {
+        console.log('[Male Leave Call] Ejecutando handleLeaveCall por female desconectada');
+        handleLeaveCall();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('femaleDisconnectedFromCall', handleFemaleDisconnected as EventListener);
+      window.addEventListener('executeMaleLeaveCall', handleExecuteMaleLeaveCall);
+
+      return () => {
+        window.removeEventListener('femaleDisconnectedFromCall', handleFemaleDisconnected as EventListener);
+        window.removeEventListener('executeMaleLeaveCall', handleExecuteMaleLeaveCall);
+      };
+    }
+  }, [state.localUser, state.isRtcJoined, showFemaleDisconnectedNotification, handleLeaveCall]);
 
   const submitMaleRating = useCallback(
     async (rating: number, comment?: string) => {
@@ -541,6 +787,15 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         closeMaleRatingModal,
         submitMaleRating,
         sendContactNotificationThroughLobby,
+        forceEmergencyCleanup: forceCleanup,
+        isPerformingEmergencyCleanup: isCleaningUp,
+        lastHeartbeat,
+        isHeartbeatActive,
+        forceZombieChannelCheck: forceZombieCheck,
+        showFemaleDisconnectedModal: state.showFemaleDisconnectedModal,
+        femaleDisconnectedInfo: state.femaleDisconnectedInfo,
+        closeFemaleDisconnectedModal,
+        showFemaleDisconnectedNotification,
       }}
     >
       {children}

@@ -63,6 +63,7 @@ export enum AgoraActionType {
   SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL = 'SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL',
   SET_CHANNEL_HOPPING_LOADING = 'SET_CHANNEL_HOPPING_LOADING',
   SET_SHOW_MALE_RATING_MODAL = 'SET_SHOW_MALE_RATING_MODAL',
+  SET_SHOW_FEMALE_DISCONNECTED_MODAL = 'SET_SHOW_FEMALE_DISCONNECTED_MODAL',
 }
 
 export interface LoadingStatus {
@@ -173,6 +174,8 @@ export interface AgoraState {
   isChannelHoppingLoading: boolean;
   showMaleRatingModal: boolean;
   maleRatingInfo: { femaleId: string | number; femaleName?: string; femaleAvatar?: string } | null;
+  showFemaleDisconnectedModal: boolean;
+  femaleDisconnectedInfo: { femaleName?: string; disconnectionReason?: 'refresh' | 'connection_lost' | 'unknown' } | null;
 }
 
 interface RemoteHostEndedCallAction {
@@ -461,6 +464,14 @@ interface SetShowMaleRatingModalAction {
   };
 }
 
+interface SetShowFemaleDisconnectedModalAction {
+  type: AgoraActionType.SET_SHOW_FEMALE_DISCONNECTED_MODAL;
+  payload: { 
+    show: boolean; 
+    femaleInfo?: { femaleName?: string; disconnectionReason?: 'refresh' | 'connection_lost' | 'unknown' } | null;
+  };
+}
+
 export type AgoraAction =
   | SetAppIdAction
   | SetLocalUserProfileAction
@@ -516,4 +527,5 @@ export type AgoraAction =
   | ResetChannelHoppingAction
   | SetShowChannelHoppingBlockedModalAction
   | SetChannelHoppingLoadingAction
-  | SetShowMaleRatingModalAction;
+  | SetShowMaleRatingModalAction
+  | SetShowFemaleDisconnectedModalAction;

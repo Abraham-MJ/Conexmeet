@@ -6,8 +6,15 @@ export async function POST(request: NextRequest) {
     const { status, host_id } = body;
 
     const authToken = request.cookies.get('auth_token')?.value;
+    const isEmergencyCleanup = request.headers.get('x-emergency-cleanup') === 'true';
 
-    if (!authToken) {
+    console.log('[Close Channel] 🔍 Request info:', {
+      hasAuthToken: !!authToken,
+      isEmergencyCleanup,
+      userAgent: request.headers.get('user-agent')?.includes('node') ? 'server' : 'browser'
+    });
+
+    if (!authToken && !isEmergencyCleanup) {
       return NextResponse.json(
         {
           success: false,
@@ -32,14 +39,25 @@ export async function POST(request: NextRequest) {
     formData.append('status', status);
     formData.append('host_id', host_id);
 
+    // Preparar headers para la llamada externa
+    const externalHeaders: Record<string, string> = {
+      Accept: 'application/json',
+    };
+
+    if (authToken) {
+      externalHeaders.Authorization = `Bearer ${authToken}`;
+      console.log('[Close Channel] 🔑 Usando token de usuario para backend');
+    } else if (isEmergencyCleanup) {
+      // Para casos de emergencia, agregar header especial
+      externalHeaders['X-Emergency-Cleanup'] = 'true';
+      console.log('[Close Channel] 🚨 Usando modo de emergencia sin token');
+    }
+
     const externalApiResponse = await fetch(
       'https://app.conexmeet.live/api/v1/status-room',
       {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: externalHeaders,
         body: formData,
       },
     );

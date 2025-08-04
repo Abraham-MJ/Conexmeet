@@ -197,6 +197,9 @@ export const useAgoraCallChannel = (
                   ended: true,
                 },
               });
+            // RTM signals para desconexiones temporalmente deshabilitadas
+            // } else if (receivedMsg.type === 'FEMALE_DISCONNECTED_SIGNAL') {
+            // } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
             } else if (receivedMsg.type === 'GIFT_SENT') {
               const giftData = receivedMsg.payload;
 
@@ -267,7 +270,7 @@ export const useAgoraCallChannel = (
                     host_id: joinData.channelName,
                     is_active: 1,
                   })
-                    .then(() => {})
+                    .then(() => { })
                     .catch((broadcastError) => {
                       console.error(
                         `[Female Client] ❌ Error en broadcast al lobby:`,
