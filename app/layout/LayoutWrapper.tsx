@@ -12,7 +12,6 @@ import AgoraModalsContainer from '../components/shared/modals/AgoraModalsContain
 import SystemStatusMonitor from '../components/shared/debugging/SystemStatusMonitor';
 import MaleDisconnectionDebugger from '../components/shared/debugging/MaleDisconnectionDebugger';
 
-
 const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
   const { state } = useUser();
 
@@ -31,10 +30,6 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
           <ContactsProvider>
             <RenderChildren children={children} />
             <NotificationContainer />
-            <AgoraModalsContainer />
-            {/* Debugging panels temporalmente deshabilitados para reducir rate limiting */}
-            {/* <SystemStatusMonitor /> */}
-            {/* <MaleDisconnectionDebugger /> */}
           </ContactsProvider>
         </ChatProvider>
       </AgoraProvider>

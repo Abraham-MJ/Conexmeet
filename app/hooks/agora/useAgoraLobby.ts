@@ -165,16 +165,12 @@ export const useAgoraLobby = (
       });
 
       rtmChannelInstance.on('MemberLeft', (memberId: string) => {
-        console.log(`${LOG_PREFIX_LOBBY} Miembro salió del lobby: ${memberId}`);
-        
         setOnlineFemalesList((prevList) => {
           const updatedList = prevList.map((female) => {
             if (
               String(female.rtmUid) === memberId &&
               female.role === 'female'
             ) {
-              console.log(`${LOG_PREFIX_LOBBY} Female ${female.user_name} (${memberId}) se desconectó - actualizando a offline`);
-              
               const updatedFemale = {
                 ...female,
                 status: 'offline',
@@ -188,10 +184,7 @@ export const useAgoraLobby = (
                 payload: updatedFemale,
               });
 
-              // Si la female tenía un canal activo, notificar al backend para limpieza
               if (female.host_id && female.status === 'in_call') {
-                console.log(`${LOG_PREFIX_LOBBY} Notificando backend sobre desconexión abrupta de female en canal ${female.host_id}`);
-                
                 fetch('/api/agora/channels/emergency-cleanup', {
                   method: 'POST',
                   headers: {
@@ -200,15 +193,17 @@ export const useAgoraLobby = (
                   body: JSON.stringify({
                     user_id: female.user_id,
                     channel_name: female.host_id,
-                    room_id: null, // No tenemos room_id aquí, pero el backend puede manejarlo
+                    room_id: null,
                     role: 'female',
                     reason: 'member_left_lobby',
                   }),
-                }).catch(error => {
-                  console.warn(`${LOG_PREFIX_LOBBY} Error notificando limpieza de emergencia:`, error);
+                }).catch((error) => {
+                  console.warn(
+                    `${LOG_PREFIX_LOBBY} Error notificando limpieza de emergencia:`,
+                    error,
+                  );
                 });
 
-                // Notificar a través de un evento personalizado para que el contexto principal lo maneje
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(
                     new CustomEvent('femaleDisconnectedFromCall', {
@@ -216,9 +211,9 @@ export const useAgoraLobby = (
                         femaleName: female.user_name || 'La modelo',
                         femaleId: female.user_id,
                         channelId: female.host_id,
-                        reason: 'connection_lost'
-                      }
-                    })
+                        reason: 'connection_lost',
+                      },
+                    }),
                   );
                 }
               }

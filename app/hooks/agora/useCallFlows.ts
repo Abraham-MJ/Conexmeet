@@ -257,7 +257,6 @@ export const useCallFlows = (
   const handleVideoChatMale = useCallback(
     async (channelToJoin?: string) => {
       if (localUser?.role === 'male' && isUserBlockedFromChannelHopping()) {
-        console.log('[VideoChatMale] Usuario bloqueado por channel hopping persistente');
         dispatch({
           type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
           payload: true,
@@ -654,10 +653,6 @@ export const useCallFlows = (
               );
 
               if (shouldShowChannelBusyModal(backendJoinResponse)) {
-                console.log(
-                  '[Channel Connection] 🔴 Canal ocupado detectado:',
-                  backendJoinResponse.message,
-                );
                 dispatch({
                   type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
                   payload: true,
@@ -665,19 +660,11 @@ export const useCallFlows = (
               } else if (
                 shouldShowChannelNotAvailableModal(backendJoinResponse)
               ) {
-                console.log(
-                  '[Channel Connection] 🔴 Canal no disponible detectado:',
-                  backendJoinResponse.message,
-                );
                 dispatch({
                   type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
                   payload: true,
                 });
               } else {
-                console.log(
-                  '[Channel Connection] 🔴 Error inesperado:',
-                  backendJoinResponse.message,
-                );
                 dispatch({
                   type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
                   payload: true,
@@ -720,10 +707,6 @@ export const useCallFlows = (
             );
 
             if (shouldShowChannelBusyModal(backendError)) {
-              console.log(
-                '[Backend Connection] 🔴 Error de canal ocupado capturado en catch:',
-                backendError.message,
-              );
               dispatch({
                 type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
                 payload: true,

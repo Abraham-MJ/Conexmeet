@@ -18,7 +18,7 @@ export const useHeartbeatSystem = ({
   currentChannelName,
   current_room_id,
   enabled = true,
-  intervalMs = 15000, // 15 segundos por defecto
+  intervalMs = 15000,
 }: HeartbeatSystemOptions) => {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastHeartbeatRef = useRef<number>(Date.now());
@@ -26,18 +26,11 @@ export const useHeartbeatSystem = ({
 
   const sendHeartbeat = useCallback(async () => {
     if (!localUser || !currentChannelName || !current_room_id) {
-      console.log('[Heartbeat] ⚠️ Faltan datos para enviar heartbeat:', {
-        hasUser: !!localUser,
-        hasChannel: !!currentChannelName,
-        hasRoomId: !!current_room_id
-      });
       return;
     }
 
-    // Rate limiting: no enviar más de 1 heartbeat por cada 10 segundos
     const now = Date.now();
     if (now - lastRequestRef.current < 10000) {
-      console.log('[Heartbeat] ⏭️ Rate limited - saltando heartbeat');
       return;
     }
     lastRequestRef.current = now;
@@ -51,8 +44,6 @@ export const useHeartbeatSystem = ({
         timestamp: Date.now(),
       };
 
-      console.log(`[Heartbeat] 📤 Enviando heartbeat para ${localUser.role}:`, heartbeatData);
-
       const response = await fetch('/api/agora/channels/heartbeat', {
         method: 'POST',
         headers: {
@@ -63,21 +54,27 @@ export const useHeartbeatSystem = ({
 
       if (response.ok) {
         lastHeartbeatRef.current = Date.now();
-        console.log(`[Heartbeat] ✅ ${localUser.role} heartbeat enviado correctamente`);
       } else {
-        console.warn(`[Heartbeat] ⚠️ Error en respuesta para ${localUser.role}:`, response.status);
+        console.warn(
+          `[Heartbeat] ⚠️ Error en respuesta para ${localUser.role}:`,
+          response.status,
+        );
       }
     } catch (error) {
-      console.error(`[Heartbeat] ❌ Error enviando heartbeat para ${localUser.role}:`, error);
+      console.error(
+        `[Heartbeat] ❌ Error enviando heartbeat para ${localUser.role}:`,
+        error,
+      );
     }
   }, [localUser, currentChannelName, current_room_id]);
 
   useEffect(() => {
-    // Activar para females con canal activo O males en llamada
-    const shouldActivate = enabled && localUser && isRtcJoined && currentChannelName && (
-      (localUser.role === 'female') || // Females con canal
-      (localUser.role === 'male')      // Males en llamada
-    );
+    const shouldActivate =
+      enabled &&
+      localUser &&
+      isRtcJoined &&
+      currentChannelName &&
+      (localUser.role === 'female' || localUser.role === 'male');
 
     if (!shouldActivate) {
       if (heartbeatIntervalRef.current) {
@@ -87,22 +84,24 @@ export const useHeartbeatSystem = ({
       return;
     }
 
-    console.log(`[Heartbeat] 🚀 Iniciando sistema de heartbeat para ${localUser.role} cada`, intervalMs, 'ms');
-
-    // Enviar heartbeat inicial
     sendHeartbeat();
 
-    // Configurar intervalo
     heartbeatIntervalRef.current = setInterval(sendHeartbeat, intervalMs);
 
     return () => {
       if (heartbeatIntervalRef.current) {
-        console.log(`[Heartbeat] 🛑 Deteniendo sistema de heartbeat para ${localUser.role}`);
         clearInterval(heartbeatIntervalRef.current);
         heartbeatIntervalRef.current = null;
       }
     };
-  }, [enabled, localUser, isRtcJoined, currentChannelName, intervalMs, sendHeartbeat]);
+  }, [
+    enabled,
+    localUser,
+    isRtcJoined,
+    currentChannelName,
+    intervalMs,
+    sendHeartbeat,
+  ]);
 
   return {
     lastHeartbeat: lastHeartbeatRef.current,
