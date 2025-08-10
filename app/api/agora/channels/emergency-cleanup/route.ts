@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       );
 
       const responseDataFromExternalApi = await externalApiResponse.json();
+
       return responseDataFromExternalApi;
     } else if (
       backend_action === 'close_channel_waiting_and_male' &&

@@ -371,12 +371,14 @@ export function agoraReducer(
       ) {
         newOnlineFemalesList = state.onlineFemalesList.filter(
           (female: UserInformation) =>
-            String(female.rtmUid) !== String(updatedFemaleData.rtmUid),
+            String(female.rtmUid) !== String(updatedFemaleData.rtmUid) &&
+            String(female.user_id) !== String(updatedFemaleData.user_id),
         );
       } else {
         const existingFemaleIndex: number = state.onlineFemalesList.findIndex(
           (female: UserInformation) =>
-            String(female.rtmUid) === String(updatedFemaleData.rtmUid),
+            String(female.rtmUid) === String(updatedFemaleData.rtmUid) ||
+            String(female.user_id) === String(updatedFemaleData.user_id),
         );
         if (existingFemaleIndex > -1) {
           const modifiedList = [...state.onlineFemalesList];

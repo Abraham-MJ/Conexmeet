@@ -21,15 +21,13 @@ export const useAgoraLobby = (
   isRtmLoggedIn: boolean,
   agoraBackend: ReturnType<typeof useAgoraServer>,
   initializeRtmClient: (loadingMessage?: string) => Promise<RtmClient | null>,
+  globalOnlineFemalesList: UserInformation[],
 ) => {
   const { state: userState } = useUser();
   const [lobbyRtmChannel, setLobbyRtmChannel] = useState<RtmChannel | null>(
     null,
   );
   const [isLobbyJoined, setIsLobbyJoined] = useState(false);
-  const [onlineFemalesList, setOnlineFemalesList] = useState<UserInformation[]>(
-    [],
-  );
   const [isLoadingOnlineFemales, setIsLoadingOnlineFemales] = useState(false);
   const [onlineFemalesError, setOnlineFemalesError] = useState<string | null>(
     null,
@@ -37,64 +35,54 @@ export const useAgoraLobby = (
 
   const presenceCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const onlineFemalesListRef = useRef<UserInformation[]>(
+    globalOnlineFemalesList,
+  );
+
+  useEffect(() => {
+    onlineFemalesListRef.current = globalOnlineFemalesList;
+  }, [globalOnlineFemalesList]);
+
   const verifyLobbyPresence = useCallback(
     async (channelInstance: RtmChannel, reason = 'manual') => {
       try {
         const currentMembers = await channelInstance.getMembers();
-        setOnlineFemalesList((prevList) => {
-          const updatedList = prevList.map((female) => {
-            if (female.role === 'female') {
-              const isPresent = currentMembers.includes(String(female.rtmUid));
-              const currentStatus = female.status;
+        const currentList = onlineFemalesListRef.current;
 
-              if (!isPresent && currentStatus !== 'offline') {
-                const updatedFemale = {
-                  ...female,
-                  status: 'offline',
-                } as typeof female;
+        currentList.forEach((female) => {
+          if (female.role === 'female') {
+            const isPresent = currentMembers.includes(String(female.rtmUid));
+            const currentStatus = female.status;
 
-                dispatch({
-                  type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
-                  payload: updatedFemale,
-                });
+            if (!isPresent && currentStatus !== 'offline') {
+              const updatedFemale = {
+                ...female,
+                status: 'offline',
+              } as typeof female;
 
-                return updatedFemale;
-              } else if (isPresent && currentStatus === 'offline') {
-                const newStatus =
-                  female.in_call === 1
-                    ? 'in_call'
-                    : female.host_id
-                      ? 'available_call'
-                      : 'online';
+              dispatch({
+                type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+                payload: updatedFemale,
+              });
+            } else if (isPresent && currentStatus === 'offline') {
+              const newStatus =
+                female.in_call === 1
+                  ? 'in_call'
+                  : female.host_id
+                    ? 'available_call'
+                    : 'online';
 
-                const updatedFemale = {
-                  ...female,
-                  status: newStatus,
-                } as typeof female;
+              const updatedFemale = {
+                ...female,
+                status: newStatus,
+              } as typeof female;
 
-                dispatch({
-                  type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
-                  payload: updatedFemale,
-                });
-
-                return updatedFemale;
-              }
+              dispatch({
+                type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+                payload: updatedFemale,
+              });
             }
-            return female;
-          });
-
-          const hasChanges = updatedList.some(
-            (female, index) => female.status !== prevList[index]?.status,
-          );
-
-          if (hasChanges) {
-            dispatch({
-              type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
-              payload: updatedList,
-            });
           }
-
-          return updatedList;
         });
       } catch (error) {
         console.warn(
@@ -103,13 +91,8 @@ export const useAgoraLobby = (
         );
       }
     },
-    [dispatch, setOnlineFemalesList],
+    [dispatch],
   );
-
-  const onlineFemalesListRef = useRef<UserInformation[]>([]);
-  useEffect(() => {
-    onlineFemalesListRef.current = onlineFemalesList;
-  }, [onlineFemalesList]);
 
   useEffect(() => {
     return () => {
@@ -129,107 +112,85 @@ export const useAgoraLobby = (
       rtmClientInstance.removeAllListeners('ConnectionStateChanged');
 
       rtmChannelInstance.on('MemberJoined', (memberId: string) => {
-        setOnlineFemalesList((prevList) => {
-          const updatedList = prevList.map((female) => {
-            if (
-              String(female.rtmUid) === memberId &&
-              female.role === 'female'
-            ) {
-              const updatedFemale = {
-                ...female,
-                status:
-                  female.in_call === 1
-                    ? 'in_call'
-                    : female.host_id
-                      ? 'available_call'
-                      : 'online',
-              } as typeof female;
+        const currentList = onlineFemalesListRef.current;
+        const femaleToUpdate = currentList.find(
+          (female) =>
+            String(female.rtmUid) === memberId && female.role === 'female',
+        );
 
-              dispatch({
-                type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
-                payload: updatedFemale,
-              });
-
-              return updatedFemale;
-            }
-            return female;
-          });
+        if (femaleToUpdate) {
+          const updatedFemale = {
+            ...femaleToUpdate,
+            status:
+              femaleToUpdate.in_call === 1
+                ? 'in_call'
+                : femaleToUpdate.host_id
+                  ? 'available_call'
+                  : 'online',
+          } as typeof femaleToUpdate;
 
           dispatch({
-            type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
-            payload: updatedList,
+            type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+            payload: updatedFemale,
           });
-
-          return updatedList;
-        });
+        }
       });
 
       rtmChannelInstance.on('MemberLeft', (memberId: string) => {
-        setOnlineFemalesList((prevList) => {
-          const updatedList = prevList.map((female) => {
-            if (
-              String(female.rtmUid) === memberId &&
-              female.role === 'female'
-            ) {
-              const updatedFemale = {
-                ...female,
-                status: 'offline',
-                in_call: 0,
-                host_id: null,
-                is_active: 0,
-              } as typeof female;
+        const currentList = onlineFemalesListRef.current;
+        const femaleToUpdate = currentList.find(
+          (female) =>
+            String(female.rtmUid) === memberId && female.role === 'female',
+        );
 
-              dispatch({
-                type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
-                payload: updatedFemale,
-              });
-
-              if (female.host_id && female.status === 'in_call') {
-                fetch('/api/agora/channels/emergency-cleanup', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    user_id: female.user_id,
-                    channel_name: female.host_id,
-                    room_id: null,
-                    role: 'female',
-                    reason: 'member_left_lobby',
-                  }),
-                }).catch((error) => {
-                  console.warn(
-                    `${LOG_PREFIX_LOBBY} Error notificando limpieza de emergencia:`,
-                    error,
-                  );
-                });
-
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(
-                    new CustomEvent('femaleDisconnectedFromCall', {
-                      detail: {
-                        femaleName: female.user_name || 'La modelo',
-                        femaleId: female.user_id,
-                        channelId: female.host_id,
-                        reason: 'connection_lost',
-                      },
-                    }),
-                  );
-                }
-              }
-
-              return updatedFemale;
-            }
-            return female;
-          });
+        if (femaleToUpdate) {
+          const updatedFemale = {
+            ...femaleToUpdate,
+            status: 'offline',
+            in_call: 0,
+            host_id: null,
+            is_active: 0,
+          } as typeof femaleToUpdate;
 
           dispatch({
-            type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
-            payload: updatedList,
+            type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+            payload: updatedFemale,
           });
 
-          return updatedList;
-        });
+          if (femaleToUpdate.host_id && femaleToUpdate.status === 'in_call') {
+            fetch('/api/agora/channels/emergency-cleanup', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_id: femaleToUpdate.user_id,
+                channel_name: femaleToUpdate.host_id,
+                room_id: null,
+                role: 'female',
+                reason: 'member_left_lobby',
+              }),
+            }).catch((error) => {
+              console.warn(
+                `${LOG_PREFIX_LOBBY} Error notificando limpieza de emergencia:`,
+                error,
+              );
+            });
+
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('femaleDisconnectedFromCall', {
+                  detail: {
+                    femaleName: femaleToUpdate.user_name || 'La modelo',
+                    femaleId: femaleToUpdate.user_id,
+                    channelId: femaleToUpdate.host_id,
+                    reason: 'connection_lost',
+                  },
+                }),
+              );
+            }
+          }
+        }
       });
 
       rtmClientInstance.on(
@@ -272,19 +233,6 @@ export const useAgoraLobby = (
                 type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
                 payload: updatedFemale,
               });
-
-              setOnlineFemalesList((prevList) => {
-                const existingIndex = prevList.findIndex(
-                  (f) => f.rtmUid === updatedFemale.rtmUid,
-                );
-                if (existingIndex > -1) {
-                  const newList = [...prevList];
-                  newList[existingIndex] = updatedFemale;
-                  return newList;
-                } else {
-                  return [...prevList, updatedFemale];
-                }
-              });
             } else if (
               receivedMsg.type === 'CONTACT_ADDED_NOTIFICATION' ||
               receivedMsg.type === 'CONTACT_REMOVED_NOTIFICATION'
@@ -317,7 +265,7 @@ export const useAgoraLobby = (
         },
       );
     },
-    [dispatch, setOnlineFemalesList],
+    [dispatch, verifyLobbyPresence],
   );
 
   const fetchOnlineFemalesList = useCallback(async () => {
@@ -331,7 +279,6 @@ export const useAgoraLobby = (
 
     try {
       const females = await agoraBackend.fetchOnlineFemales();
-      setOnlineFemalesList(females);
       dispatch({
         type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
         payload: females,
@@ -454,19 +401,21 @@ export const useAgoraLobby = (
 
       try {
         const members = await channel.getMembers();
+        const currentList = onlineFemalesListRef.current;
 
-        setOnlineFemalesList((prevList) => {
-          const updatedList = prevList.map((female) => {
-            if (
-              members.includes(String(female.rtmUid)) &&
-              female.role === 'female'
-            ) {
-              const updatedStatus =
-                female.in_call === 1
-                  ? 'in_call'
-                  : female.host_id
-                    ? 'available_call'
-                    : 'online';
+        currentList.forEach((female) => {
+          if (
+            members.includes(String(female.rtmUid)) &&
+            female.role === 'female'
+          ) {
+            const updatedStatus =
+              female.in_call === 1
+                ? 'in_call'
+                : female.host_id
+                  ? 'available_call'
+                  : 'online';
+
+            if (female.status !== updatedStatus) {
               const updatedFemale = {
                 ...female,
                 status: updatedStatus,
@@ -476,18 +425,8 @@ export const useAgoraLobby = (
                 type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
                 payload: updatedFemale,
               });
-
-              return updatedFemale;
             }
-            return female;
-          });
-
-          dispatch({
-            type: AgoraActionType.FETCH_ONLINE_FEMALES_SUCCESS,
-            payload: updatedList,
-          });
-
-          return updatedList;
+          }
         });
       } catch (error) {
         console.warn(
@@ -643,7 +582,7 @@ export const useAgoraLobby = (
   return {
     lobbyRtmChannel,
     isLobbyJoined,
-    onlineFemalesList,
+    onlineFemalesList: globalOnlineFemalesList,
     isLoadingOnlineFemales,
     onlineFemalesError,
     fetchOnlineFemalesList,

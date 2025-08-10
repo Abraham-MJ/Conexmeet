@@ -232,6 +232,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     isRtmLoggedIn,
     agoraBackend,
     initializeRtmClient,
+    state.onlineFemalesList,
   );
 
   const {
