@@ -532,49 +532,20 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       },
     ) => {
       if (zombieFemale.disconnectionType === 'male_disconnected') {
-        if (zombieFemale.host_id && state.current_room_id) {
-          try {
-            await agoraBackend.closeChannel(zombieFemale.host_id, 'waiting');
-
-            if (state.current_room_id && zombieFemale.host_id) {
-              await agoraBackend.closeMaleChannel(
-                'unknown_male',
-                zombieFemale.host_id,
-                state.current_room_id,
-              );
-            }
-          } catch (error) {
-            console.error(
-              '[Zombie Detection] ❌ Error en limpieza de backend:',
-              error,
-            );
-          }
-        }
+        dispatch({
+          type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+          payload: {
+            ...zombieFemale,
+            status: 'available_call',
+            in_call: 0,
+            is_active: 1,
+          },
+        });
 
         if (
           state.localUser?.role === 'female' &&
           state.localUser.host_id === zombieFemale.host_id
         ) {
-          const callDuration = callTimer || '00:00';
-
-          const earnings = state.femaleTotalPointsEarnedInCall || 0;
-
-          const summaryPayload = {
-            reason: 'Desconexión inesperada' as const,
-            duration: callDuration,
-            earnings: earnings,
-            host_id: zombieFemale.host_id || null,
-          };
-
-          dispatch({
-            type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
-            payload: summaryPayload,
-          });
-          dispatch({
-            type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
-            payload: true,
-          });
-
           dispatch({
             type: AgoraActionType.SET_LOCAL_USER_PROFILE,
             payload: {
@@ -592,82 +563,23 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
           });
         }
 
-        dispatch({
-          type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
-          payload: {
-            ...zombieFemale,
-            status: 'available_call',
-            in_call: 0,
-            is_active: 1,
-          },
-        });
-
-        return;
-      } else {
-        if (zombieFemale.host_id) {
+        if (zombieFemale.host_id && state.current_room_id) {
           try {
-            const authToken = document.cookie
-              .split('; ')
-              .find((row) => row.startsWith('auth_token='))
-              ?.split('=')[1];
-
-            const formData = new FormData();
-            formData.append('status', 'finished');
-            formData.append('host_id', zombieFemale.host_id);
-
-            const externalApiResponse = await fetch(
-              'https://app.conexmeet.live/api/v1/status-room',
-              {
-                method: 'POST',
-                headers: {
-                  Accept: 'application/json',
-                  Authorization: `Bearer ${authToken}`,
-                },
-                body: formData,
-              },
-            );
-
-            const responseData = await externalApiResponse.json();
-          } catch (error) {
-            console.error(
-              '[Optimized] ❌ Error cerrando canal de female:',
-              error,
-            );
-          }
-
-          if (
-            state.localUser?.role === 'male' &&
-            zombieFemale.host_id &&
-            state.channelName === zombieFemale.host_id &&
-            state.current_room_id
-          ) {
-            try {
-              const response = await fetch(
-                '/api/agora/channels/close-channel-male',
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    user_id: state.localUser.user_id,
-                    host_id: zombieFemale.host_id,
-                    id: state.current_room_id,
-                  }),
-                },
-              );
-
-              const responseData = await response.json();
-
-              if (responseData.success) {
-              }
-            } catch (error) {
-              console.error(
-                '[Optimized] ❌ Error cerrando canal de male:',
-                error,
+            await agoraBackend.closeChannel(zombieFemale.host_id, 'waiting');
+            if (state.current_room_id && zombieFemale.host_id) {
+              await agoraBackend.closeMaleChannel(
+                'unknown_male',
+                zombieFemale.host_id,
+                state.current_room_id,
               );
             }
+          } catch (error) {
+            console.error('Error en limpieza de backend:', error);
           }
         }
 
+        return;
+      } else {
         dispatch({
           type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
           payload: {
@@ -694,6 +606,30 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
                 },
               }),
             );
+          }
+        }
+
+        if (zombieFemale.host_id) {
+          try {
+            const authToken = document.cookie
+              .split('; ')
+              .find((row) => row.startsWith('auth_token='))
+              ?.split('=')[1];
+
+            const formData = new FormData();
+            formData.append('status', 'finished');
+            formData.append('host_id', zombieFemale.host_id);
+
+            await fetch('https://app.conexmeet.live/api/v1/status-room', {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: formData,
+            });
+          } catch (error) {
+            console.error('Error cerrando canal de female:', error);
           }
         }
       }

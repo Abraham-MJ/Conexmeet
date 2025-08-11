@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 export async function POST(request: Request) {
   try {
@@ -31,12 +32,14 @@ export async function POST(request: Request) {
     formData.append('otp', otp || '');
     formData.append('birthdate', birthdate);
 
-    const response = await fetch('https://app.conexmeet.live/api/v1/register', {
+    const response = await fetchWithTimeout('https://app.conexmeet.live/api/v1/register', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
       },
       body: formData,
+      timeout: 15000,
+      retries: 2,
     });
 
     const data = await response.json();
@@ -54,9 +57,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
     console.error('Error en la API de registro:', error);
+    
+    const isConnectionError = error instanceof Error && 
+      (error.message.includes('fetch failed') || 
+       error.message.includes('timeout') ||
+       error.message.includes('CONNECT_TIMEOUT'));
+
     return NextResponse.json(
-      { success: false, message: 'Error interno del servidor' },
-      { status: 500 },
+      { 
+        success: false, 
+        message: isConnectionError 
+          ? 'Error de conexión con el servidor. Intenta nuevamente en unos momentos.'
+          : 'Error interno del servidor',
+        isConnectionError,
+      },
+      { status: isConnectionError ? 503 : 500 },
     );
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,12 +12,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch('https://app.conexmeet.live/api/v1/packages', {
+    const response = await fetchWithTimeout('https://app.conexmeet.live/api/v1/packages', {
       method: 'GET',
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${authToken}`,
       },
+      timeout: 15000,
+      retries: 2,
     });
 
     const externalApiResponse = await response.json();
@@ -55,6 +58,8 @@ export async function GET(request: NextRequest) {
       );
     }
   } catch (error: any) {
+    console.error('Error en get-package:', error);
+    
     if (error instanceof SyntaxError) {
       return NextResponse.json(
         {
@@ -66,13 +71,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const isConnectionError = error instanceof Error && 
+      (error.message.includes('fetch failed') || 
+       error.message.includes('timeout') ||
+       error.message.includes('CONNECT_TIMEOUT'));
+
     return NextResponse.json(
       {
         success: false,
-        message:
-          'Error interno del servidor. Por favor, inténtelo de nuevo más tarde.',
+        message: isConnectionError 
+          ? 'Error de conexión con el servidor. Intenta nuevamente en unos momentos.'
+          : 'Error interno del servidor. Por favor, inténtelo de nuevo más tarde.',
+        isConnectionError,
       },
-      { status: 500 },
+      { status: isConnectionError ? 503 : 500 },
     );
   }
 }

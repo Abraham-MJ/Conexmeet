@@ -158,25 +158,6 @@ export const useAgoraLobby = (
           });
 
           if (femaleToUpdate.host_id && femaleToUpdate.status === 'in_call') {
-            fetch('/api/agora/channels/emergency-cleanup', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                user_id: femaleToUpdate.user_id,
-                channel_name: femaleToUpdate.host_id,
-                room_id: null,
-                role: 'female',
-                reason: 'member_left_lobby',
-              }),
-            }).catch((error) => {
-              console.warn(
-                `${LOG_PREFIX_LOBBY} Error notificando limpieza de emergencia:`,
-                error,
-              );
-            });
-
             if (typeof window !== 'undefined') {
               window.dispatchEvent(
                 new CustomEvent('femaleDisconnectedFromCall', {
@@ -189,6 +170,23 @@ export const useAgoraLobby = (
                 }),
               );
             }
+
+            fetch('/api/agora/channels/emergency-cleanup', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_id: femaleToUpdate.user_id,
+                channel_name: femaleToUpdate.host_id,
+                room_id: null,
+                role: 'female',
+                reason: 'member_left_lobby',
+                backend_action: 'close_channel_finished',
+              }),
+            }).catch((error) => {
+              console.warn('Error en limpieza de backend:', error);
+            });
           }
         }
       });
@@ -443,15 +441,6 @@ export const useAgoraLobby = (
       presenceCheckIntervalRef.current = setInterval(async () => {
         try {
           const currentMembers = await channel.getMembers();
-          const onlineFemalesCount = onlineFemalesListRef.current.filter(
-            (f) => f.role === 'female' && f.status !== 'offline',
-          ).length;
-          const actualFemalesInLobby = currentMembers.filter((memberId) =>
-            onlineFemalesListRef.current.some(
-              (f) => String(f.rtmUid) === memberId && f.role === 'female',
-            ),
-          ).length;
-
           verifyLobbyPresence(channel, 'periodic-check');
         } catch (error) {
           console.warn(
@@ -459,7 +448,7 @@ export const useAgoraLobby = (
             error,
           );
         }
-      }, 10000);
+      }, 30000); 
 
       if (localUser.role === 'female' && localUser.is_active === 1) {
         await broadcastLocalFemaleStatusUpdate({});

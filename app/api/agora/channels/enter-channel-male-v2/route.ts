@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 interface RoomData {
   id: number;
@@ -223,13 +224,15 @@ export async function POST(request: NextRequest) {
           finalRoom.another_user_id &&
           finalRoom.another_user_id !== maleUserId
         ) {
-          await fetch('https://app.conexmeet.live/api/v1/leave-room', {
+          await fetchWithTimeout('https://app.conexmeet.live/api/v1/leave-room', {
             method: 'POST',
             headers: {
               Accept: 'application/json',
               Authorization: `Bearer ${authToken}`,
             },
             body: formdata,
+            timeout: 10000,
+            retries: 1,
           }).catch(() => {});
 
           connectionAttempts.delete(targetHostId);

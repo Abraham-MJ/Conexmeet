@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 export async function POST(req: Request) {
   try {
@@ -11,13 +12,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const response = await fetch('https://app.conexmeet.live/api/v1/login', {
+    const response = await fetchWithTimeout('https://app.conexmeet.live/api/v1/login', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ email, password }),
+      timeout: 15000,
+      retries: 2,
     });
 
     const data = await response.json();
@@ -42,9 +45,22 @@ export async function POST(req: Request) {
       },
     );
   } catch (error) {
+    console.error('Error en sign-in:', error);
+    
+    const isConnectionError = error instanceof Error && 
+      (error.message.includes('fetch failed') || 
+       error.message.includes('timeout') ||
+       error.message.includes('CONNECT_TIMEOUT'));
+
     return NextResponse.json(
-      { success: false, message: 'Error en el servidor' },
-      { status: 500 },
+      { 
+        success: false, 
+        message: isConnectionError 
+          ? 'Error de conexión con el servidor. Intenta nuevamente en unos momentos.'
+          : 'Error en el servidor',
+        isConnectionError,
+      },
+      { status: isConnectionError ? 503 : 500 },
     );
   }
 }

@@ -1018,8 +1018,6 @@ export const useCallFlows = (
       );
       await joinCallChannel(channel_name);
 
-      await agoraBackend.registerChannel(channel_name);
-
       dispatch({
         type: AgoraActionType.SET_LOCAL_USER_PROFILE,
         payload: {
@@ -1037,6 +1035,8 @@ export const useCallFlows = (
         in_call: 0,
         is_active: 1,
       });
+
+      await agoraBackend.registerChannel(channel_name);
 
       router.push(`/main/stream/${channel_name}`);
     } catch (error: any) {

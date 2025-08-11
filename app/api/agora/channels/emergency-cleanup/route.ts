@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,12 +29,14 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${authToken}`,
       };
 
-      const externalApiResponse = await fetch(
+      const externalApiResponse = await fetchWithTimeout(
         'https://app.conexmeet.live/api/v1/status-room',
         {
           method: 'POST',
           headers: externalHeaders,
           body: formData,
+          timeout: 15000,
+          retries: 2,
         },
       );
 
@@ -55,12 +58,14 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${authToken}`,
         };
 
-        const closeMaleResponse = await fetch(
+        const closeMaleResponse = await fetchWithTimeout(
           'https://app.conexmeet.live/api/v1/closed-room',
           {
             method: 'POST',
             headers: externalHeaderS,
             body: formdata,
+            timeout: 15000,
+            retries: 2,
           },
         );
 
@@ -75,12 +80,14 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${authToken}`,
         };
 
-        const changeStatusResponse = await fetch(
+        const changeStatusResponse = await fetchWithTimeout(
           'https://app.conexmeet.live/api/v1/status-room',
           {
             method: 'POST',
             headers: externalHeaders,
             body: formData,
+            timeout: 15000,
+            retries: 2,
           },
         );
 
@@ -136,13 +143,22 @@ export async function POST(request: NextRequest) {
       error,
     );
 
+    const isConnectionError =
+      error instanceof Error &&
+      (error.message.includes('fetch failed') ||
+        error.message.includes('timeout') ||
+        error.message.includes('CONNECT_TIMEOUT'));
+
     return NextResponse.json(
       {
         success: false,
-        message: 'Error interno durante la limpieza de emergencia',
+        message: isConnectionError
+          ? 'Error de conexión con el servidor externo. Intenta nuevamente en unos momentos.'
+          : 'Error interno durante la limpieza de emergencia',
         error: error instanceof Error ? error.message : 'Unknown error',
+        isConnectionError,
       },
-      { status: 500 },
+      { status: isConnectionError ? 503 : 500 },
     );
   }
 }

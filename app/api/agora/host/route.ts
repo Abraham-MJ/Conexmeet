@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 interface FemaleUserFromApi {
   id: number;
@@ -51,13 +52,17 @@ export async function GET(request: NextRequest) {
     headers.append('Authorization', `Bearer ${authToken}`);
 
     const [femalesResponse, roomsResponse] = await Promise.all([
-      fetch('https://app.conexmeet.live/api/v1/list-users?gender=female', {
+      fetchWithTimeout('https://app.conexmeet.live/api/v1/list-users?gender=female', {
         headers,
         cache: 'no-store',
+        timeout: 15000,
+        retries: 2,
       }),
-      fetch('https://app.conexmeet.live/api/v1/rooms', {
+      fetchWithTimeout('https://app.conexmeet.live/api/v1/rooms', {
         headers,
         cache: 'no-store',
+        timeout: 15000,
+        retries: 2,
       }),
     ]);
 
@@ -194,14 +199,28 @@ export async function GET(request: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    let errorMessage =
-      'Error interno del servidor al obtener el directorio de females.';
-    if (error instanceof Error) {
+    console.error('Error en host API:', error);
+    
+    const isConnectionError = error instanceof Error && 
+      (error.message.includes('fetch failed') || 
+       error.message.includes('timeout') ||
+       error.message.includes('CONNECT_TIMEOUT'));
+
+    let errorMessage = isConnectionError 
+      ? 'Error de conexión con el servidor. Intenta nuevamente en unos momentos.'
+      : 'Error interno del servidor al obtener el directorio de females.';
+    
+    if (error instanceof Error && !isConnectionError) {
       errorMessage = error.message;
     }
+    
     return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 },
+      { 
+        success: false, 
+        message: errorMessage,
+        isConnectionError,
+      },
+      { status: isConnectionError ? 503 : 500 },
     );
   }
 }
