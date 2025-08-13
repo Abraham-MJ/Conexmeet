@@ -100,12 +100,56 @@ export const useCallFlows = (
   maleGiftMinutesSpent: number,
   femaleTotalPointsEarnedInCall: number,
   channelHoppingEntries: any[],
+  localAudioTrack: any,
+  localVideoTrack: any,
 ) => {
   const { handleGetInformation, state: user } = useUser();
   const { validateChannelAvailability, clearChannelAttempt } =
     useChannelValidation();
 
   const hasTriggeredOutOfMinutesRef = useRef(false);
+
+  const validateSystemState = useCallback(
+    (channelName: string, targetFemale: UserInformation, localUser: UserInformation) => {
+      const issues: string[] = [];
+
+      if (!isRtcJoined) {
+        issues.push('RTC no está conectado');
+      }
+
+      if (!isRtmChannelJoined) {
+        issues.push('RTM channel no está conectado');
+      }
+
+      if (!currentChannelName || currentChannelName !== channelName) {
+        issues.push(`Canal name inconsistente (esperado: ${channelName}, actual: ${currentChannelName})`);
+      }
+
+      const currentFemale = onlineFemalesList.find(f => f.host_id === channelName);
+      if (!currentFemale) {
+        issues.push('Female target ya no está en la lista');
+      }
+
+      if (localUser.role === 'male') {
+        if (!localAudioTrack) {
+          issues.push('Track de audio local no disponible');
+        }
+        if (!localVideoTrack) {
+          issues.push('Track de video local no disponible');
+        }
+      }
+
+      if (localUser.role === 'male' && !current_room_id) {
+        issues.push('Room ID no establecido');
+      }
+
+      return {
+        isValid: issues.length === 0,
+        issues: issues
+      };
+    },
+    [isRtcJoined, isRtmChannelJoined, currentChannelName, onlineFemalesList, localAudioTrack, localVideoTrack, current_room_id]
+  );
 
   const determineJoinChannelName = useCallback(
     async (
@@ -224,34 +268,58 @@ export const useCallFlows = (
       agoraBackend: ReturnType<typeof useAgoraServer>,
       leaveCallChannel: () => Promise<void>,
     ) => {
+      console.log(`[Cleanup] Iniciando limpieza para usuario ${localUser.user_id}, canal: ${determinedChannelName}`);
+
       if (preCreatedTracks) {
         try {
+          console.log(`[Cleanup] Cerrando tracks de audio y video`);
           preCreatedTracks.audioTrack?.close();
           preCreatedTracks.videoTrack?.close();
+          console.log(`[Cleanup] ✅ Tracks cerrados exitosamente`);
         } catch (cleanupError) {
-          console.warn('[Cleanup] Error limpiando tracks:', cleanupError);
+          console.warn('[Cleanup] ❌ Error limpiando tracks:', cleanupError);
         }
       }
 
       try {
+        console.log(`[Cleanup] Saliendo del canal RTM`);
         await leaveCallChannel();
+        console.log(`[Cleanup] ✅ Canal RTM cerrado exitosamente`);
       } catch (cleanupError) {
-        console.warn('[Cleanup] Error cerrando canal RTM:', cleanupError);
+        console.warn('[Cleanup] ❌ Error cerrando canal RTM:', cleanupError);
       }
 
-      if (localUserRole === 'male' && channelToJoin && current_room_id) {
+      try {
+        if (isRtcJoined) {
+          console.log(`[Cleanup] Saliendo del canal RTC`);
+          await leaveRtcChannel();
+          console.log(`[Cleanup] ✅ Canal RTC cerrado exitosamente`);
+        }
+      } catch (cleanupError) {
+        console.warn('[Cleanup] ❌ Error cerrando canal RTC:', cleanupError);
+      }
+
+      if (localUserRole === 'male' && determinedChannelName && current_room_id) {
         try {
+          console.log(`[Cleanup] Cerrando canal en backend: ${determinedChannelName}, room: ${current_room_id}`);
           await agoraBackend.closeMaleChannel(
             String(localUser.user_id),
             determinedChannelName,
             current_room_id,
           );
+          console.log(`[Cleanup] ✅ Canal backend cerrado exitosamente`);
         } catch (cleanupError) {
-          console.warn('[Cleanup] Error cerrando canal backend:', cleanupError);
+          console.warn('[Cleanup] ❌ Error cerrando canal backend:', cleanupError);
         }
       }
+
+      dispatch({ type: AgoraActionType.LEAVE_RTC_CHANNEL });
+      dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
+      dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+
+      console.log(`[Cleanup] ✅ Limpieza completada para usuario ${localUser.user_id}`);
     },
-    [],
+    [isRtcJoined, leaveRtcChannel, dispatch],
   );
 
   const handleVideoChatMale = useCallback(
@@ -434,10 +502,13 @@ export const useCallFlows = (
               female.is_active === 1,
           );
 
+          console.log(`[Male ${appUserId}] Iniciando selección aleatoria. Canales disponibles:`, availableFemales.length);
+
           let attemptedChannels = new Set<string>();
           let connectionSuccessful = false;
           const maxAttempts = Math.min(availableFemales.length, 5);
           let attemptCount = 0;
+          let lastError: string | null = null;
 
           while (
             attemptedChannels.size < maxAttempts &&
@@ -445,11 +516,14 @@ export const useCallFlows = (
             attemptCount < maxAttempts
           ) {
             attemptCount++;
+            console.log(`[Male ${appUserId}] Intento ${attemptCount}/${maxAttempts}`);
+
             const remainingFemales = availableFemales.filter(
               (female) => !attemptedChannels.has(female.host_id!),
             );
 
             if (remainingFemales.length === 0) {
+              console.warn(`[Male ${appUserId}] No quedan canales disponibles para intentar`);
               break;
             }
 
@@ -460,30 +534,38 @@ export const useCallFlows = (
             determinedChannelName = selectedFemale.host_id!;
             targetFemale = selectedFemale;
 
+            console.log(`[Male ${appUserId}] Intento ${attemptCount}: Seleccionado canal ${determinedChannelName} (${selectedFemale.user_name})`);
             attemptedChannels.add(determinedChannelName);
 
-            const validationResult = await validateChannelAvailability(
-              determinedChannelName,
-              String(appUserId),
-              onlineFemalesList,
-            );
-
-            if (!validationResult.isValid) {
-              console.warn(
-                `[Channel Selection] Canal ${determinedChannelName} no válido: ${validationResult.reason}`,
-              );
-              continue;
-            }
-
-            const currentFemale = onlineFemalesList.find(
-              (female) => female.host_id === determinedChannelName,
-            );
-
-            if (!currentFemale || currentFemale.status !== 'available_call') {
-              continue;
-            }
-
             try {
+              const validationResult = await validateChannelAvailability(
+                determinedChannelName,
+                String(appUserId),
+                onlineFemalesList,
+              );
+
+              console.log(`[Male ${appUserId}] Validación canal ${determinedChannelName}:`, validationResult);
+
+              if (!validationResult.isValid) {
+                console.warn(
+                  `[Male ${appUserId}] Canal ${determinedChannelName} no válido: ${validationResult.reason}`,
+                );
+                lastError = validationResult.reason || 'Canal no válido';
+                continue;
+              }
+
+              const currentFemale = onlineFemalesList.find(
+                (female) => female.host_id === determinedChannelName,
+              );
+
+              if (!currentFemale || currentFemale.status !== 'available_call') {
+                console.warn(`[Male ${appUserId}] Canal ${determinedChannelName} cambió de estado durante validación`);
+                lastError = 'Canal cambió de estado';
+                continue;
+              }
+
+              console.log(`[Male ${appUserId}] Intentando conectar al backend para canal ${determinedChannelName}`);
+              
               const backendJoinResponse = await fetch(
                 '/api/agora/channels/enter-channel-male-v2',
                 {
@@ -496,8 +578,11 @@ export const useCallFlows = (
                 },
               ).then((res) => res.json());
 
+              console.log(`[Male ${appUserId}] Respuesta backend para canal ${determinedChannelName}:`, backendJoinResponse);
+
               if (backendJoinResponse.success) {
                 connectionSuccessful = true;
+                console.log(`[Male ${appUserId}] ✅ Conexión exitosa al canal ${determinedChannelName}`);
 
                 if (backendJoinResponse.data && backendJoinResponse.data.id) {
                   dispatch({
@@ -527,34 +612,69 @@ export const useCallFlows = (
                   message.includes('simultánea detectada')
                 ) {
                   console.warn(
-                    `[Channel Selection] Canal ${determinedChannelName} ocupado: ${backendJoinResponse.message}`,
+                    `[Male ${appUserId}] Canal ${determinedChannelName} ocupado: ${backendJoinResponse.message}`,
                   );
+                  lastError = `Canal ocupado: ${backendJoinResponse.message}`;
                 } else {
                   console.warn(
-                    `[Channel Selection] Error en ${determinedChannelName}: ${backendJoinResponse.message}`,
+                    `[Male ${appUserId}] Error en ${determinedChannelName}: ${backendJoinResponse.message}`,
                   );
+                  lastError = backendJoinResponse.message || 'Error desconocido del backend';
                 }
                 continue;
               }
-            } catch (backendError) {
+            } catch (backendError: any) {
               clearChannelAttempt(determinedChannelName);
               console.error(
-                `[Channel Selection] Error en conexión a ${determinedChannelName}:`,
+                `[Male ${appUserId}] ❌ Error en conexión a ${determinedChannelName}:`,
                 backendError,
               );
+              
+              lastError = backendError.message || 'Error de conexión al backend';
+
+              try {
+                await cleanupConnectionsOnError(
+                  preCreatedTracks,
+                  localUserRole,
+                  channelToJoin,
+                  current_room_id,
+                  determinedChannelName,
+                  localUser,
+                  agoraBackend,
+                  leaveCallChannel,
+                );
+                console.log(`[Male ${appUserId}] Cleanup completado para canal fallido ${determinedChannelName}`);
+              } catch (cleanupError) {
+                console.error(`[Male ${appUserId}] Error en cleanup:`, cleanupError);
+              }
+
               continue;
             }
           }
 
-          if (!connectionSuccessful) {
+          if (!connectionSuccessful || !determinedChannelName || !targetFemale) {
+            console.error(`[Male ${appUserId}] ❌ Falló la selección aleatoria después de ${attemptCount} intentos. Último error: ${lastError}`);
+            
+            if (preCreatedTracks) {
+              try {
+                preCreatedTracks.audioTrack?.close();
+                preCreatedTracks.videoTrack?.close();
+                console.log(`[Male ${appUserId}] Tracks limpiados después de fallo total`);
+              } catch (cleanupError) {
+                console.warn(`[Male ${appUserId}] Error limpiando tracks:`, cleanupError);
+              }
+            }
+
             dispatch({
               type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
               payload: true,
             });
             throw new Error(
-              'No hay modelos disponibles para llamar en este momento. ¡Intenta más tarde!',
+              lastError || 'No hay modelos disponibles para llamar en este momento. ¡Intenta más tarde!',
             );
           }
+
+          console.log(`[Male ${appUserId}] ✅ Selección aleatoria completada exitosamente. Canal final: ${determinedChannelName}`);
         }
 
         if (channelToJoin && localUserRole === 'male') {
@@ -868,6 +988,31 @@ export const useCallFlows = (
           );
         }
 
+        // Validación final comprehensiva antes de navegación
+        console.log(`[Male ${appUserId}] Realizando validación final antes de navegación`);
+        
+        const systemValidation = validateSystemState(channelName, targetFemale, localUser);
+        
+        if (!systemValidation.isValid) {
+          console.error(`[Male ${appUserId}] ❌ Sistema no está en estado válido para navegación:`, systemValidation.issues);
+          
+          // Intentar cleanup antes de fallar
+          await cleanupConnectionsOnError(
+            preCreatedTracks,
+            localUserRole,
+            channelToJoin,
+            current_room_id,
+            channelName,
+            localUser,
+            agoraBackend,
+            leaveCallChannel,
+          );
+          
+          throw new Error(`Sistema no está listo para la llamada: ${systemValidation.issues.join(', ')}`);
+        }
+
+        console.log(`[Male ${appUserId}] ✅ Validación final completada exitosamente`);
+
         if (localUserRole === 'male' && targetFemale) {
           const femaleToUpdate = onlineFemalesList.find(
             (f) => f.host_id === channelName,
@@ -885,22 +1030,54 @@ export const useCallFlows = (
           }
 
           try {
+            console.log(`[Male ${appUserId}] Enviando MALE_JOINED_SIGNAL`);
             await sendCallSignal('MALE_JOINED_SIGNAL', {
               maleUserId: String(appUserId),
               channelName: channelName,
               timestamp: Date.now(),
             });
+            console.log(`[Male ${appUserId}] ✅ MALE_JOINED_SIGNAL enviado exitosamente`);
           } catch (signalError) {
             console.error(
-              '[Male Join] Error enviando MALE_JOINED_SIGNAL:',
+              `[Male ${appUserId}] ❌ Error enviando MALE_JOINED_SIGNAL:`,
               signalError,
             );
+            // No lanzar error aquí, la señal es importante pero no crítica para la navegación
           }
         }
 
+        console.log(`[Male ${appUserId}] 🚀 Navegando a /main/stream/${channelName}`);
         router.push(`/main/stream/${channelName}`);
       } catch (error: any) {
-        console.error('[handleVideoChatMale] Error general:', error);
+        console.error(`[Male ${appUserId}] ❌ Error general en handleVideoChatMale:`, error);
+
+        // Detectar si es un error de estado zombie
+        const isZombieStateError = 
+          error.message?.includes('Sistema no está listo') ||
+          error.message?.includes('Timeout esperando perfil') ||
+          error.message?.includes('Estado de canal inconsistente') ||
+          error.message?.includes('RTC no está conectado') ||
+          error.message?.includes('RTM channel no está conectado');
+
+        if (isZombieStateError) {
+          console.error(`[Male ${appUserId}] 🧟 Detectado posible estado zombie, realizando limpieza completa`);
+          
+          // Limpieza agresiva para estados zombie
+          try {
+            await cleanupConnectionsOnError(
+              preCreatedTracks,
+              localUserRole,
+              channelToJoin,
+              current_room_id,
+              determinedChannelName || 'unknown',
+              localUser,
+              agoraBackend,
+              leaveCallChannel,
+            );
+          } catch (cleanupError) {
+            console.error(`[Male ${appUserId}] Error en limpieza de estado zombie:`, cleanupError);
+          }
+        }
 
         const isAlreadyHandledModal =
           error.message?.toLowerCase().includes('no hay modelos disponibles') ||
@@ -911,7 +1088,9 @@ export const useCallFlows = (
           error.message
             ?.toLowerCase()
             .includes('error de conexión de video/audio') ||
-          error.message?.toLowerCase().includes('error esperando perfil');
+          error.message?.toLowerCase().includes('error esperando perfil') ||
+          error.message?.toLowerCase().includes('sistema no está listo') ||
+          error.message?.toLowerCase().includes('timeout esperando perfil');
 
         if (!isAlreadyHandledModal) {
           dispatch({
@@ -925,11 +1104,12 @@ export const useCallFlows = (
           payload: `${error.message || 'Error desconocido al intentar unirse al canal.'}`,
         });
 
+        // Limpieza final de canales
         try {
           await leaveCallChannel();
         } catch (e) {
           console.error(
-            `${LOG_PREFIX_MALE_ADMIN} Error leaving RTM channel on cleanup:`,
+            `[Male ${appUserId}] Error leaving RTM channel on cleanup:`,
             e,
           );
         }
@@ -937,7 +1117,7 @@ export const useCallFlows = (
           await leaveRtcChannel();
         } catch (e) {
           console.error(
-            `${LOG_PREFIX_MALE_ADMIN} Error leaving RTC client on cleanup:`,
+            `[Male ${appUserId}] Error leaving RTC client on cleanup:`,
             e,
           );
         }

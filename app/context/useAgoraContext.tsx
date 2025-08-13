@@ -334,6 +334,8 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.maleGiftMinutesSpent,
     state.femaleTotalPointsEarnedInCall,
     state.channelHopping.entries,
+    state.localAudioTrack,
+    state.localVideoTrack,
   );
 
   useEffect(() => {

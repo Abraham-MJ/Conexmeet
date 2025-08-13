@@ -29,11 +29,9 @@ export const useAgoraCallChannel = (
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
 
-  // useRef para evitar closure stale en listeners
   const stateRef = useRef(state);
   const localUserRef = useRef(localUser);
 
-  // Actualizar refs cuando cambie el estado
   useEffect(() => {
     stateRef.current = state;
     localUserRef.current = localUser;
@@ -42,14 +40,34 @@ export const useAgoraCallChannel = (
   const pendingProfilePromisesRef = useRef(new Map<string, () => void>());
 
   const waitForUserProfile = useCallback(
-    (uidToWaitFor: string | number) => {
+    (uidToWaitFor: string | number, timeoutMs: number = 15000) => {
       const stringUid = String(uidToWaitFor);
+      
       if (state.remoteUsers?.find((u) => String(u.rtcUid) === stringUid)) {
+        console.log(`[waitForUserProfile] Usuario ${stringUid} ya está en remoteUsers`);
         return Promise.resolve();
       }
 
-      return new Promise<void>((resolve) => {
+      console.log(`[waitForUserProfile] Esperando perfil de usuario ${stringUid} (timeout: ${timeoutMs}ms)`);
+
+      return new Promise<void>((resolve, reject) => {
         pendingProfilePromisesRef.current.set(stringUid, resolve);
+
+        const timeoutId = setTimeout(() => {
+          pendingProfilePromisesRef.current.delete(stringUid);
+          console.error(`[waitForUserProfile] ❌ Timeout esperando perfil de usuario ${stringUid} después de ${timeoutMs}ms`);
+          reject(new Error(`Timeout esperando perfil de usuario ${stringUid}`));
+        }, timeoutMs);
+
+        const originalResolve = resolve;
+        const wrappedResolve = () => {
+          clearTimeout(timeoutId);
+          pendingProfilePromisesRef.current.delete(stringUid);
+          console.log(`[waitForUserProfile] ✅ Perfil de usuario ${stringUid} recibido exitosamente`);
+          originalResolve();
+        };
+
+        pendingProfilePromisesRef.current.set(stringUid, wrappedResolve);
       });
     },
     [state.remoteUsers],
