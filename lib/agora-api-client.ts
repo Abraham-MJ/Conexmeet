@@ -149,6 +149,39 @@ export const AgoraApiClient = {
     }
   },
 
+  async cleanupAfterMaleDisconnect(
+    maleUserId: string | number,
+    hostId: string,
+    roomId: string | number,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await fetch('/api/agora/channels/cleanup-after-male-disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: maleUserId,
+          host_id: hostId,
+          room_id: roomId,
+        }),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok || !responseData.success) {
+        throw new Error(
+          responseData.message ||
+            `Error en limpieza después de desconexión del male: ${response.status}`,
+        );
+      }
+      return responseData;
+    } catch (error: any) {
+      console.error(
+        `Excepción en limpieza después de desconexión del male para ${maleUserId} (host: ${hostId}, room: ${roomId}):`,
+        error,
+      );
+      throw error;
+    }
+  },
+
   async closeChannel(
     hostId: string,
     status:

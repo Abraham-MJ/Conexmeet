@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (authToken) {
+      externalHeaders['Authorization'] = `Bearer ${authToken}`;
     } else if (isEmergencyCleanup) {
       externalHeaders['X-Emergency-Cleanup'] = 'true';
     } else {

@@ -100,6 +100,9 @@ export const useCallFlows = (
   maleGiftMinutesSpent: number,
   femaleTotalPointsEarnedInCall: number,
   channelHoppingEntries: any[],
+  channelHoppingFunctions?: {
+    registerChannelLeave: (hostId: string, isChannelHopping?: boolean) => void;
+  },
 ) => {
   const { handleGetInformation, state: user } = useUser();
   const { validateChannelAvailability, clearChannelAttempt } =
@@ -1220,26 +1223,48 @@ export const useCallFlows = (
 
         if (localUser.user_id && currentChannel && current_room_id) {
           try {
-            if (!hostEndedCallInfo?.ended) {
-              await agoraBackend.closeChannel(currentChannel, 'waiting');
-            }
-
-            await agoraBackend.closeMaleChannel(
+            await agoraBackend.cleanupAfterMaleDisconnect(
               String(localUser.user_id),
               currentChannel,
               current_room_id,
             );
           } catch (error) {
             console.error(
-              '[Male] Error al cerrar el canal en el backend:',
+              '[Male] ❌ Error en limpieza completa, intentando limpieza básica:',
               error,
             );
+
+            try {
+              await agoraBackend.closeMaleChannel(
+                String(localUser.user_id),
+                currentChannel,
+                current_room_id,
+              );
+
+              if (!hostEndedCallInfo?.ended) {
+                await agoraBackend.closeChannel(currentChannel, 'waiting');
+              }
+            } catch (fallbackError) {
+              console.error(
+                '[Male] ❌ Error en limpieza básica también:',
+                fallbackError,
+              );
+            }
           }
         }
       }
 
       await leaveRtcChannel();
       await leaveCallChannel();
+
+      if (
+        currentUser.role === 'male' &&
+        currentChannel &&
+        channelHoppingFunctions?.registerChannelLeave
+      ) {
+        channelHoppingFunctions.registerChannelLeave(currentChannel, false);
+      }
+
       await handleGetInformation();
     } catch (error: any) {
       console.error(
@@ -1266,6 +1291,13 @@ export const useCallFlows = (
     femaleTotalPointsEarnedInCall,
     isRtmChannelJoined,
     handleGetInformation,
+    channelHoppingFunctions,
+    leaveRtcChannel,
+    leaveCallChannel,
+    sendCallSignal,
+    broadcastLocalFemaleStatusUpdate,
+    hostEndedCallInfo,
+    onlineFemalesList,
   ]);
 
   const closeNoChannelsAvailableModal = useCallback(() => {

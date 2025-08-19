@@ -109,6 +109,31 @@ export const useAgoraServer = (dispatch: React.Dispatch<AgoraAction>) => {
     [],
   );
 
+  const cleanupAfterMaleDisconnect = useCallback(
+    async (
+      maleUserId: string | number,
+      hostId: string,
+      roomId: string | number,
+    ): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const result = await AgoraApiClient.cleanupAfterMaleDisconnect(
+          maleUserId,
+          hostId,
+          roomId,
+        );
+
+        return result;
+      } catch (error: any) {
+        console.error(
+          `${LOG_PREFIX_MALE_ADMIN} Error en limpieza después de desconexión del male para ${maleUserId} (host: ${hostId}, room: ${roomId}):`,
+          error.message,
+        );
+        throw error;
+      }
+    },
+    [],
+  );
+
   const closeChannel = useCallback(
     async (
       hostId: string,
@@ -199,5 +224,6 @@ export const useAgoraServer = (dispatch: React.Dispatch<AgoraAction>) => {
     fetchOnlineFemales,
     closeMaleChannel,
     handleSendGift,
+    cleanupAfterMaleDisconnect,
   };
 };

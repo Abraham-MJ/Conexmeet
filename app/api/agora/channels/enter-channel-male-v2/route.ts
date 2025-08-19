@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting&filter[host_id]=${targetHostId}`;
-      const roomsListResponse = await fetch(listRoomsApiUrl, {
+      let listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting&filter[host_id]=${targetHostId}`;
+      let roomsListResponse = await fetch(listRoomsApiUrl, {
         method: 'GET',
         headers: {
           Accept: 'application/json',
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const roomsListData = await roomsListResponse.json();
+      let roomsListData = await roomsListResponse.json();
 
       if (
         roomsListData.status !== 'Success' ||
@@ -107,9 +107,39 @@ export async function POST(request: NextRequest) {
         throw new Error('Respuesta inválida del servicio de verificación');
       }
 
-      const targetRoom = roomsListData.data.find(
+      let targetRoom = roomsListData.data.find(
         (room: RoomData) => room.host_id === targetHostId,
       );
+
+      if (!targetRoom) {
+        
+        listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[host_id]=${targetHostId}`;
+        roomsListResponse = await fetch(listRoomsApiUrl, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (roomsListResponse.ok) {
+          roomsListData = await roomsListResponse.json();
+          if (roomsListData.status === 'Success' && Array.isArray(roomsListData.data)) {
+            targetRoom = roomsListData.data.find(
+              (room: RoomData) => room.host_id === targetHostId,
+            );
+            
+            if (targetRoom && targetRoom.status !== 'waiting') {
+              
+              if (targetRoom.status === 'finished' || targetRoom.status === 'closed') {
+                targetRoom = null; 
+              } else if (targetRoom.another_user_id && targetRoom.another_user_id !== maleUserId) {
+                targetRoom = null;
+              }
+            }
+          }
+        }
+      }
 
       if (!targetRoom) {
         connectionAttempts.delete(targetHostId);

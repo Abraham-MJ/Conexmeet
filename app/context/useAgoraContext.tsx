@@ -336,6 +336,30 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.channelHopping.entries,
   );
 
+  const {
+    hopToRandomChannel,
+    isBlocked: isChannelHoppingBlockedFromState,
+    blockTimeRemaining: channelHoppingBlockTimeRemainingFromState,
+    closeChannelHoppingBlockedModal,
+    showChannelHoppingBlockedModal,
+    openChannelHoppingBlockedModal,
+    registerChannelLeave,
+  } = useChannelHopping(
+    dispatch,
+    state,
+    onlineFemalesList,
+    {
+      handleVideoChatMale,
+      handleLeaveCall,
+      leaveRtcChannel,
+      leaveCallChannel,
+      joinCallChannel,
+      initRtcClient,
+      requestMediaPermissions,
+    },
+    router,
+  );
+
   useEffect(() => {
     if (state.hostEndedCallInfo && state.hostEndedCallInfo.ended) {
       handleLeaveCall();
@@ -464,29 +488,6 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       payload: null,
     });
   }, [dispatch]);
-
-  const {
-    hopToRandomChannel,
-    isBlocked: isChannelHoppingBlockedFromState,
-    blockTimeRemaining: channelHoppingBlockTimeRemainingFromState,
-    closeChannelHoppingBlockedModal,
-    showChannelHoppingBlockedModal,
-    openChannelHoppingBlockedModal,
-  } = useChannelHopping(
-    dispatch,
-    state,
-    onlineFemalesList,
-    {
-      handleVideoChatMale,
-      handleLeaveCall,
-      leaveRtcChannel,
-      leaveCallChannel,
-      joinCallChannel,
-      initRtcClient,
-      requestMediaPermissions,
-    },
-    router,
-  );
 
   const isChannelHoppingBlocked = useMemo(() => {
     return (

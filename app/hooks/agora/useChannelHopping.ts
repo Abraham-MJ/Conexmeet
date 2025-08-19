@@ -27,8 +27,6 @@ interface ChannelHoppingFunctions {
 
 const BLOCK_DURATION_MS = 5 * 60 * 1000;
 const MIN_STAY_DURATION_SECONDS = 15;
-const MAX_SHORT_VISITS = 3;
-const RESET_THRESHOLD_SECONDS = 15;
 
 export const useChannelHopping = (
   dispatch: React.Dispatch<AgoraAction>,
@@ -73,21 +71,23 @@ export const useChannelHopping = (
       (entry) => entry.leaveTime && entry.duration !== undefined,
     );
 
-    if (completedEntries.length < MAX_SHORT_VISITS) {
+    if (completedEntries.length === 0) {
       return false;
     }
 
-    const recentEntries = completedEntries.slice(-MAX_SHORT_VISITS);
+    let consecutiveShortVisits = 0;
 
-    const allShortVisits = recentEntries.every(
-      (entry) => entry.duration! < MIN_STAY_DURATION_SECONDS,
-    );
+    for (let i = completedEntries.length - 1; i >= 0; i--) {
+      const entry = completedEntries[i];
 
-    if (allShortVisits) {
-      return true;
+      if (entry.duration! < MIN_STAY_DURATION_SECONDS) {
+        consecutiveShortVisits++;
+      } else {
+        break;
+      }
     }
 
-    return false;
+    return consecutiveShortVisits >= 4;
   }, [state.channelHopping.entries]);
 
   const registerChannelJoin = useCallback(
@@ -104,7 +104,7 @@ export const useChannelHopping = (
   );
 
   const registerChannelLeave = useCallback(
-    (hostId: string) => {
+    (hostId: string, isChannelHopping: boolean = false) => {
       const leaveTime = Date.now();
       currentChannelJoinTimeRef.current = null;
 
@@ -114,6 +114,24 @@ export const useChannelHopping = (
       });
 
       setTimeout(() => {
+        const { entries } = state.channelHopping;
+        const completedEntries = entries.filter(
+          (entry) => entry.leaveTime && entry.duration !== undefined,
+        );
+        const lastEntry = completedEntries[completedEntries.length - 1];
+
+        if (lastEntry && lastEntry.duration! >= MIN_STAY_DURATION_SECONDS) {
+          dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+          clearPersistedState();
+          return;
+        }
+
+        if (!isChannelHopping) {
+          dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
+          clearPersistedState();
+          return;
+        }
+
         const shouldBlock = evaluateChannelHoppingBehavior();
         if (shouldBlock) {
           dispatch({
@@ -127,7 +145,12 @@ export const useChannelHopping = (
         }
       }, 100);
     },
-    [dispatch, evaluateChannelHoppingBehavior],
+    [
+      dispatch,
+      evaluateChannelHoppingBehavior,
+      state.channelHopping,
+      clearPersistedState,
+    ],
   );
 
   const hopToRandomChannel = useCallback(async () => {
@@ -205,7 +228,7 @@ export const useChannelHopping = (
     const currentChannelName = state.channelName;
 
     try {
-      registerChannelLeave(currentChannelName);
+      registerChannelLeave(currentChannelName, true);
 
       const randomIndex = Math.floor(Math.random() * availableChannels.length);
       const selectedChannel = availableChannels[randomIndex];
@@ -267,20 +290,6 @@ export const useChannelHopping = (
     router,
   ]);
 
-  const resetChannelHoppingIfStayedLong = useCallback(() => {
-    const { entries } = state.channelHopping;
-    const lastEntry = entries[entries.length - 1];
-
-    if (
-      lastEntry &&
-      lastEntry.duration &&
-      lastEntry.duration >= RESET_THRESHOLD_SECONDS
-    ) {
-      dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
-      clearPersistedState();
-    }
-  }, [state.channelHopping.entries, dispatch, clearPersistedState]);
-
   const closeChannelHoppingBlockedModal = useCallback(() => {
     dispatch({
       type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
@@ -341,7 +350,6 @@ export const useChannelHopping = (
     recentHops: state.channelHopping.entries.slice(-5),
     closeChannelHoppingBlockedModal,
     showChannelHoppingBlockedModal: state.showChannelHoppingBlockedModal,
-    resetChannelHoppingIfStayedLong,
     registerChannelJoin,
     registerChannelLeave,
     openChannelHoppingBlockedModal,
