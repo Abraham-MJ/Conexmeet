@@ -89,10 +89,13 @@ export default function UserDropdown() {
               </div>
               <div className="flex flex-col text-center">
                 <span className="text-sm font-medium text-gray-700">
-                  {state?.user?.name}
+                  {state?.user?.name} 
                 </span>
                 <span className="text-sm font-medium text-gray-700">
                   {state?.user?.email}
+                </span>
+                <span className="text-sm font-medium text-gray-700">
+                  V-1.1.0 
                 </span>
               </div>
             </div>

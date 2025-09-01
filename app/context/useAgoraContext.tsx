@@ -236,6 +236,9 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
   );
 
   const {
+    rtcClient,
+    localAudioTrack,
+    localVideoTrack,
     isRtcJoined,
     rtcError,
     requestingMediaPermissions,
@@ -349,15 +352,17 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state,
     onlineFemalesList,
     {
-      handleVideoChatMale,
       handleLeaveCall,
-      leaveRtcChannel,
       leaveCallChannel,
       joinCallChannel,
-      initRtcClient,
-      requestMediaPermissions,
+      sendCallSignal,
     },
-    router,
+    {
+      rtcClient,
+      localAudioTrack,
+      localVideoTrack,
+      agoraBackend,
+    },agoraBackend
   );
 
   useEffect(() => {
