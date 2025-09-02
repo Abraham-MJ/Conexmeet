@@ -531,12 +531,17 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     [dispatch],
   );
 
+  // TEMPORALMENTE COMENTADO PARA DEBUGGING - Sistema de detección de zombies desactivado
   const handleZombieChannelDetected = useCallback(
     async (
       zombieFemale: UserInformation & {
         disconnectionType?: 'male_disconnected';
       },
     ) => {
+      console.log('[DEBUG] Sistema de zombies desactivado - ignorando detección:', zombieFemale);
+      return; // Salir inmediatamente sin hacer nada
+      
+      /* CÓDIGO ORIGINAL COMENTADO:
       if (zombieFemale.disconnectionType === 'male_disconnected') {
         dispatch({
           type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
@@ -639,6 +644,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
           }
         }
       }
+      */ // FIN DEL CÓDIGO ORIGINAL COMENTADO
     },
     [
       dispatch,
@@ -650,16 +656,21 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  const { lastHeartbeat, isActive: isHeartbeatActive } = useOptimizedHeartbeat({
-    localUser: state.localUser,
-    isRtcJoined: state.isRtcJoined,
-    currentChannelName: state.channelName,
-    current_room_id: state.current_room_id,
-    onlineFemalesList,
-    onZombieDetected: handleZombieChannelDetected,
-    enabled: true,
-    intervalMs: 60000,
-  });
+  // TEMPORALMENTE COMENTADO PARA DEBUGGING
+  // const { lastHeartbeat, isActive: isHeartbeatActive } = useOptimizedHeartbeat({
+  //   localUser: state.localUser,
+  //   isRtcJoined: state.isRtcJoined,
+  //   currentChannelName: state.channelName,
+  //   current_room_id: state.current_room_id,
+  //   onlineFemalesList,
+  //   onZombieDetected: handleZombieChannelDetected,
+  //   enabled: true,
+  //   intervalMs: 60000,
+  // });
+  
+  // Variables temporales para mantener compatibilidad
+  const lastHeartbeat = Date.now();
+  const isHeartbeatActive = false;
 
   const { forceCleanup, isCleaningUp } = useBeforeUnloadCleanup({
     localUser: state.localUser,
