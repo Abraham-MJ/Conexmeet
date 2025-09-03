@@ -31,13 +31,10 @@ import {
 import { useAgoraServer } from '../hooks/agora/useAgoraServer';
 import { useAgoraCallChannel } from '../hooks/agora/useAgoraChannel';
 import { useChannelHopping } from '../hooks/agora/useChannelHopping';
+import { useChannelHoppingCooldown } from '../hooks/agora/useChannelHoppingCooldown';
 import { useConnectionMonitor } from '../hooks/agora/useConnectionMonitor';
 import { useBeforeUnloadCleanup } from '../hooks/agora/useBeforeUnloadCleanup';
 import { useOptimizedHeartbeat } from '../hooks/agora/useOptimizedHeartbeat';
-import {
-  isUserBlockedFromChannelHopping,
-  getBlockTimeRemaining,
-} from '../utils/channelHoppingValidation';
 
 const AgoraContext = createContext<{
   state: AgoraState;
@@ -74,11 +71,8 @@ const AgoraContext = createContext<{
   >;
   closeFemaleCallEndedSummaryModal: () => void;
   hopToRandomChannel: () => Promise<void>;
-  isChannelHoppingBlocked: boolean;
-  channelHoppingBlockTimeRemaining: number;
-  closeChannelHoppingBlockedModal: () => void;
-  showChannelHoppingBlockedModal: boolean;
-  openChannelHoppingBlockedModal: () => void;
+  isHoppingDisabled: boolean;
+  remainingTime: number;
   isChannelHoppingLoading: boolean;
   showMaleRatingModal: boolean;
   maleRatingInfo: {
@@ -136,11 +130,8 @@ const AgoraContext = createContext<{
     }),
   closeFemaleCallEndedSummaryModal: () => {},
   hopToRandomChannel: async () => {},
-  isChannelHoppingBlocked: false,
-  channelHoppingBlockTimeRemaining: 0,
-  closeChannelHoppingBlockedModal: () => {},
-  openChannelHoppingBlockedModal: () => {},
-  showChannelHoppingBlockedModal: false,
+  isHoppingDisabled: false,
+  remainingTime: 0,
   isChannelHoppingLoading: false,
   showMaleRatingModal: false,
   maleRatingInfo: null,
@@ -339,15 +330,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.channelHopping.entries,
   );
 
-  const {
-    hopToRandomChannel,
-    isBlocked: isChannelHoppingBlockedFromState,
-    blockTimeRemaining: channelHoppingBlockTimeRemainingFromState,
-    closeChannelHoppingBlockedModal,
-    showChannelHoppingBlockedModal,
-    openChannelHoppingBlockedModal,
-    registerChannelLeave,
-  } = useChannelHopping(
+  const { hopToRandomChannel } = useChannelHopping(
     dispatch,
     state,
     onlineFemalesList,
@@ -362,8 +345,12 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       localAudioTrack,
       localVideoTrack,
       agoraBackend,
-    },agoraBackend
+    }
   );
+
+  const { isHoppingDisabled, remainingTime } = useChannelHoppingCooldown({
+    currentChannel: state.channelName,
+  });
 
   useEffect(() => {
     if (state.hostEndedCallInfo && state.hostEndedCallInfo.ended) {
@@ -494,16 +481,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     });
   }, [dispatch]);
 
-  const isChannelHoppingBlocked = useMemo(() => {
-    return (
-      isChannelHoppingBlockedFromState || isUserBlockedFromChannelHopping()
-    );
-  }, [isChannelHoppingBlockedFromState]);
 
-  const channelHoppingBlockTimeRemaining = useMemo(() => {
-    const persistentTime = getBlockTimeRemaining();
-    return Math.max(channelHoppingBlockTimeRemainingFromState, persistentTime);
-  }, [channelHoppingBlockTimeRemainingFromState]);
 
   const {
     registerConnectionAttempt,
@@ -820,11 +798,8 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         sendGift,
         closeFemaleCallEndedSummaryModal,
         hopToRandomChannel,
-        isChannelHoppingBlocked,
-        channelHoppingBlockTimeRemaining,
-        closeChannelHoppingBlockedModal,
-        openChannelHoppingBlockedModal,
-        showChannelHoppingBlockedModal,
+        isHoppingDisabled,
+        remainingTime,
         isChannelHoppingLoading: state.isChannelHoppingLoading,
         showMaleRatingModal: state.showMaleRatingModal,
         maleRatingInfo: state.maleRatingInfo,

@@ -105,7 +105,6 @@ const RenderChildren = ({ children }: { children: React.ReactNode }) => {
       <ModalChannelBusy />
       <ModalInsufficientMinutes />
       <ModalMinutesExhausted />
-      <ChannelHoppingBlockedModal />
       <ModalRatingCall />
     </>
   );

@@ -5,8 +5,6 @@ import {
   AgoraState,
   UserInformation,
 } from '@/app/types/streams';
-import { useAgoraServer } from './useAgoraServer';
-// import { useChannelHoppingPersistence } from './useChannelHoppingPersistence';
 
 interface ChannelHoppingFunctions {
   handleLeaveCall: () => Promise<void>;
@@ -22,9 +20,6 @@ interface ChannelHoppingResources {
   agoraBackend: any;
 }
 
-// const BLOCK_DURATION_MS = 5 * 60 * 1000;
-// const MIN_STAY_DURATION_SECONDS = 15;
-
 export const useChannelHopping = (
   dispatch: React.Dispatch<AgoraAction>,
   state: AgoraState,
@@ -36,126 +31,7 @@ export const useChannelHopping = (
     sendCallSignal,
   }: ChannelHoppingFunctions,
   resources: ChannelHoppingResources,
-  agoraBackend: ReturnType<typeof useAgoraServer>,
 ) => {
-  // const currentChannelJoinTimeRef = useRef<number | null>(null);
-
-  // const { clearPersistedState } = useChannelHoppingPersistence(
-  //   state.channelHopping,
-  //   dispatch,
-  // );
-
-  // const checkBlockExpiration = useCallback(() => {
-  //   if (state.channelHopping.isBlocked && state.channelHopping.blockStartTime) {
-  //     const now = Date.now();
-  //     const blockElapsed = now - state.channelHopping.blockStartTime;
-
-  //     if (blockElapsed >= BLOCK_DURATION_MS) {
-  //       dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
-  //       clearPersistedState();
-  //     }
-  //   }
-  // }, [
-  //   state.channelHopping.isBlocked,
-  //   state.channelHopping.blockStartTime,
-  //   dispatch,
-  //   clearPersistedState,
-  // ]);
-
-  // useEffect(() => {
-  //   const interval = setInterval(checkBlockExpiration, 60000);
-  //   return () => clearInterval(interval);
-  // }, [checkBlockExpiration]);
-
-  // const evaluateChannelHoppingBehavior = useCallback(() => {
-  //   const { entries } = state.channelHopping;
-
-  //   const completedEntries = entries.filter(
-  //     (entry) => entry.leaveTime && entry.duration !== undefined,
-  //   );
-
-  //   if (completedEntries.length === 0) {
-  //     return false;
-  //   }
-
-  //   let consecutiveShortVisits = 0;
-
-  //   for (let i = completedEntries.length - 1; i >= 0; i--) {
-  //     const entry = completedEntries[i];
-
-  //     if (entry.duration! < MIN_STAY_DURATION_SECONDS) {
-  //       consecutiveShortVisits++;
-  //     } else {
-  //       break;
-  //     }
-  //   }
-
-  //   return consecutiveShortVisits >= 4;
-  // }, [state.channelHopping.entries]);
-
-  // const registerChannelJoin = useCallback(
-  //   (hostId: string) => {
-  //     const joinTime = Date.now();
-  //     currentChannelJoinTimeRef.current = joinTime;
-
-  //     dispatch({
-  //       type: AgoraActionType.CHANNEL_HOP_JOIN,
-  //       payload: { hostId, joinTime },
-  //     });
-  //   },
-  //   [dispatch],
-  // );
-
-  // const registerChannelLeave = useCallback(
-  //   (hostId: string, isChannelHopping: boolean = false) => {
-  //     const leaveTime = Date.now();
-  //     currentChannelJoinTimeRef.current = null;
-
-  //     dispatch({
-  //       type: AgoraActionType.CHANNEL_HOP_LEAVE,
-  //       payload: { hostId, leaveTime },
-  //     });
-
-  //     setTimeout(() => {
-  //       const { entries } = state.channelHopping;
-  //       const completedEntries = entries.filter(
-  //         (entry) => entry.leaveTime && entry.duration !== undefined,
-  //       );
-  //       const lastEntry = completedEntries[completedEntries.length - 1];
-
-  //       if (lastEntry && lastEntry.duration! >= MIN_STAY_DURATION_SECONDS) {
-  //         dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
-  //         clearPersistedState();
-  //         return;
-  //       }
-
-  //       if (!isChannelHopping) {
-  //         dispatch({ type: AgoraActionType.RESET_CHANNEL_HOPPING });
-  //         clearPersistedState();
-  //         return;
-  //       }
-
-  //       const shouldBlock = evaluateChannelHoppingBehavior();
-  //       if (shouldBlock) {
-  //         dispatch({
-  //           type: AgoraActionType.SET_CHANNEL_HOPPING_BLOCKED,
-  //           payload: { isBlocked: true, blockStartTime: Date.now() },
-  //         });
-  //         dispatch({
-  //           type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
-  //           payload: true,
-  //         });
-  //       }
-  //     }, 100);
-  //   },
-  //   [
-  //     dispatch,
-  //     evaluateChannelHoppingBehavior,
-  //     state.channelHopping,
-  //     clearPersistedState,
-  //   ],
-  // );
-
   const hopToRandomChannel = useCallback(async () => {
     if (state.localUser?.role !== 'male') {
       console.warn(
@@ -664,7 +540,6 @@ export const useChannelHopping = (
 
       console.log('[Channel Hopping] ✅ Estado RTC actualizado correctamente');
 
-      // Forzar una segunda actualización del estado para asegurar sincronización
       setTimeout(() => {
         dispatch({
           type: AgoraActionType.RTC_SETUP_SUCCESS,
@@ -791,68 +666,7 @@ export const useChannelHopping = (
     resources,
   ]);
 
-  const closeChannelHoppingBlockedModal = useCallback(() => {
-    dispatch({
-      type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
-      payload: false,
-    });
-  }, [dispatch]);
-
-  const openChannelHoppingBlockedModal = useCallback(() => {
-    dispatch({
-      type: AgoraActionType.SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL,
-      payload: true,
-    });
-  }, [dispatch]);
-
-  // const getBlockTimeRemaining = useCallback(() => {
-  //   if (
-  //     !state.channelHopping.isBlocked ||
-  //     !state.channelHopping.blockStartTime
-  //   ) {
-  //     return 0;
-  //   }
-
-  //   const elapsed = Date.now() - state.channelHopping.blockStartTime;
-  //   const remaining = Math.max(0, BLOCK_DURATION_MS - elapsed);
-  //   return Math.ceil(remaining / 1000);
-  // }, [state.channelHopping.isBlocked, state.channelHopping.blockStartTime]);
-
-  // useEffect(() => {
-  //   if (
-  //     state.isRtcJoined &&
-  //     state.channelName &&
-  //     state.localUser?.role === 'male'
-  //   ) {
-  //     if (!currentChannelJoinTimeRef.current) {
-  //       registerChannelJoin(state.channelName);
-  //     }
-  //   }
-  // }, [
-  //   state.isRtcJoined,
-  //   state.channelName,
-  //   state.localUser?.role,
-  //   registerChannelJoin,
-  // ]);
-
-  // useEffect(() => {
-  //   return () => {
-  //     if (currentChannelJoinTimeRef.current && state.channelName) {
-  //       registerChannelLeave(state.channelName);
-  //     }
-  //   };
-  // }, [state.channelName, registerChannelLeave]);
-
   return {
     hopToRandomChannel,
-    isBlocked: false,
-    blockTimeRemaining: 0,
-    visitedChannelsCount: 0,
-    recentHops: [],
-    closeChannelHoppingBlockedModal,
-    showChannelHoppingBlockedModal: state.showChannelHoppingBlockedModal,
-    registerChannelJoin: () => {},
-    registerChannelLeave: () => {},
-    openChannelHoppingBlockedModal,
   };
 };

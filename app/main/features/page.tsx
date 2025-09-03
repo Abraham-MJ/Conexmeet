@@ -50,15 +50,12 @@ const FeaturesScreen = () => {
     handleVideoChatMale,
     loadingStatus,
     state: agora,
-    channelHoppingBlockTimeRemaining,
-    openChannelHoppingBlockedModal,
-    isChannelHoppingBlocked,
   } = useAgoraContext();
 
   const { validateCallAttempt, setCallInProgress } = useCallValidation({
     agoraState: agora,
     isLoading: loadingStatus.isLoading,
-    isChannelHoppingBlocked,
+    isChannelHoppingBlocked: false,
   });
 
   const {
@@ -76,12 +73,6 @@ const FeaturesScreen = () => {
     'contacts',
   ];
 
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
   return (
     <ContainerGlobal classNames="max-w-[1536px] px-4 mx-auto">
       <StyledFloatAlert
@@ -90,7 +81,6 @@ const FeaturesScreen = () => {
         animationDirection="top"
         variant="loading"
       />
-
 
       <TabNavigation
         activeTab={activeTab}
@@ -103,7 +93,6 @@ const FeaturesScreen = () => {
           <div>
             <h2 className="mb-8 text-xl font-medium text-gray-800">
               {t('features.onlineNow')}
-              {`${agora.channelHopping.isBlocked ? ` 🚫 ${t('features.blocked')} ${formatTime(channelHoppingBlockTimeRemaining)}` : ''}`}
             </h2>
             {online.loading ? (
               <FeaturesSkeleton />
@@ -133,21 +122,34 @@ const FeaturesScreen = () => {
                           const validation = validateCallAttempt(host_id);
 
                           if (!validation.isValid) {
-                            console.warn('Call attempt blocked:', validation.reason);
+                            console.warn(
+                              'Call attempt blocked:',
+                              validation.reason,
+                            );
 
-                            if (validation.reason === 'Channel hopping is blocked') {
-                              openChannelHoppingBlockedModal();
-                            } else {
+                            {
                               const errorMessages: Record<string, string> = {
-                                'Call already in progress': t('errors.callAlreadyInProgress'),
-                                'Already connected to RTC channel': t('errors.alreadyConnectedRTC'),
-                                'Already connected to RTM channel': t('errors.alreadyConnectedRTM'),
-                                'Remote users already connected': t('errors.remoteUsersConnected'),
+                                'Call already in progress': t(
+                                  'errors.callAlreadyInProgress',
+                                ),
+                                'Already connected to RTC channel': t(
+                                  'errors.alreadyConnectedRTC',
+                                ),
+                                'Already connected to RTM channel': t(
+                                  'errors.alreadyConnectedRTM',
+                                ),
+                                'Remote users already connected': t(
+                                  'errors.remoteUsersConnected',
+                                ),
                                 'Invalid host ID': t('errors.invalidHostId'),
-                                'Local user not initialized': t('errors.localUserNotInitialized'),
+                                'Local user not initialized': t(
+                                  'errors.localUserNotInitialized',
+                                ),
                               };
 
-                              const errorMessage = errorMessages[validation.reason || ''] || t('errors.cannotStartCall');
+                              const errorMessage =
+                                errorMessages[validation.reason || ''] ||
+                                t('errors.cannotStartCall');
                               setValidationError(errorMessage);
                             }
                             return;
@@ -158,8 +160,13 @@ const FeaturesScreen = () => {
                           try {
                             await handleVideoChatMale(host_id);
                           } catch (error) {
-                            console.error('Error during call initiation:', error);
-                            setValidationError(t('errors.callInitiationFailed'));
+                            console.error(
+                              'Error during call initiation:',
+                              error,
+                            );
+                            setValidationError(
+                              t('errors.callInitiationFailed'),
+                            );
                           } finally {
                             setTimeout(() => {
                               setCallInProgress(false);
@@ -168,7 +175,9 @@ const FeaturesScreen = () => {
                         }}
                         isLoadingCall={loadingStatus.isLoading}
                         rolUser={agora.localUser?.role ?? 'male'}
-                        isUserInCall={agora.isRtcJoined || agora.isRtmChannelJoined}
+                        isUserInCall={
+                          agora.isRtcJoined || agora.isRtmChannelJoined
+                        }
                       />
                     </motion.div>
                   );

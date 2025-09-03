@@ -34,6 +34,8 @@ interface StreamMobileProps {
   >;
   hopToRandomChannel: () => Promise<void>;
   isChannelHoppingLoading: boolean;
+  isHoppingDisabled: boolean;
+  remainingTime: number;
   toggleContact: (userId: number | string) => Promise<ToggleContactApiResponse | null>;
   isLoading: boolean;
   remoteUser: any;
@@ -52,6 +54,8 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
   sendGift,
   hopToRandomChannel,
   isChannelHoppingLoading,
+  isHoppingDisabled,
+  remainingTime,
   isLoading,
   remoteUser,
   toggleContact
@@ -502,11 +506,20 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                           {agora?.localUser?.role === 'male' ? (
                             <button
                               onClick={hopToRandomChannel}
-                              className="transition-border pointer-events-auto m-0 box-border flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-none bg-[#0000007a] text-white no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out"
-                              aria-label={t('video.nextChannel')}
+                              disabled={isHoppingDisabled}
+                              className={`transition-border pointer-events-auto m-0 box-border flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-none no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out ${
+                                isHoppingDisabled
+                                  ? 'bg-[#00000040] text-gray-400 cursor-not-allowed'
+                                  : 'bg-[#0000007a] text-white'
+                              }`}
+                              aria-label={isHoppingDisabled ? `Espera ${remainingTime}s` : t('video.nextChannel')}
                             >
                               <span className="translate-z-0 relative flex max-w-full flex-1 transform items-center justify-center">
-                                <TbPlayerTrackNextFilled className="h-8 w-8" />
+                                {isHoppingDisabled ? (
+                                  <span className="text-sm font-bold">{remainingTime}</span>
+                                ) : (
+                                  <TbPlayerTrackNextFilled className="h-8 w-8" />
+                                )}
                               </span>
                             </button>
                           ) : null}

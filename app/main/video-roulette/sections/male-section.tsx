@@ -13,23 +13,12 @@ import { useTranslation } from '@/app/hooks/useTranslation';
 const MaleViewVideo = () => {
   const { t } = useTranslation();
   const isMobile = useMobile(920);
-  const {
-    handleVideoChatMale,
-    loadingStatus,
-    isChannelHoppingBlocked,
-    channelHoppingBlockTimeRemaining,
-  } = useAgoraContext();
+  const { handleVideoChatMale, loadingStatus } = useAgoraContext();
   const { currentDate, histories } = useVideoRouletteMale();
 
   const [currentStory, setCurrentStory] = useState<HistoryData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
 
   const selectRandomStory = useCallback(() => {
     if (histories && histories.length > 0) {
@@ -51,12 +40,12 @@ const MaleViewVideo = () => {
   useEffect(() => {
     if (videoRef.current && currentStory?.url) {
       videoRef.current.load();
-      videoRef.current.play().catch((error) => { });
+      videoRef.current.play().catch((error) => {});
     }
   }, [currentStory]);
 
   const handleVideoChat = async () => {
-    if (isProcessing || loadingStatus.isLoading || isChannelHoppingBlocked) return;
+    if (isProcessing || loadingStatus.isLoading) return;
 
     setIsProcessing(true);
     try {
@@ -126,7 +115,9 @@ const MaleViewVideo = () => {
         className="absolute"
       >
         <div className="relative z-20 w-full max-w-md text-center">
-          <h1 className="mb-2 text-4xl font-bold text-white">{t('videoRoulette.male.title1')}</h1>
+          <h1 className="mb-2 text-4xl font-bold text-white">
+            {t('videoRoulette.male.title1')}
+          </h1>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -145,10 +136,10 @@ const MaleViewVideo = () => {
               className={cn(
                 'mb-6 w-full rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] py-7 text-lg font-medium transition-all duration-300',
               )}
-              disabled={loadingStatus.isLoading || isChannelHoppingBlocked || isProcessing}
+              disabled={loadingStatus.isLoading || isProcessing}
               onClick={handleVideoChat}
             >
-              {(loadingStatus.isLoading || isProcessing) ? (
+              {loadingStatus.isLoading || isProcessing ? (
                 <div className="text-md flex items-center justify-center font-latosans">
                   {t('common.loading')}
                   {[1, 2, 3].map((index) => {
@@ -165,14 +156,7 @@ const MaleViewVideo = () => {
                 </div>
               ) : (
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isChannelHoppingBlocked ? (
-                    <>
-                      🚫 {t('videoRoulette.blocked')} (
-                      {formatTime(channelHoppingBlockTimeRemaining)})
-                    </>
-                  ) : (
-                    <>{t('videoRoulette.male.enterVideoChat')}</>
-                  )}
+                  {t('videoRoulette.male.enterVideoChat')}
                 </span>
               )}
             </Button>

@@ -39,6 +39,8 @@ const PageStreamVideo = () => {
     sendGift,
     hopToRandomChannel,
     isChannelHoppingLoading,
+    isHoppingDisabled,
+    remainingTime,
   } = useAgoraContext();
 
   if (isMobile) {
@@ -52,6 +54,8 @@ const PageStreamVideo = () => {
         sendGift={sendGift}
         hopToRandomChannel={hopToRandomChannel}
         isChannelHoppingLoading={isChannelHoppingLoading}
+        isHoppingDisabled={isHoppingDisabled}
+        remainingTime={remainingTime}
         toggleContact={toggleContact}
         isLoading={isLoading}
         remoteUser={
@@ -174,9 +178,19 @@ const PageStreamVideo = () => {
                   <div className="mt-4 flex flex-shrink-0 justify-end pe-6">
                     <button
                       onClick={hopToRandomChannel}
-                      className="pointer-events-auto relative m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none bg-[#ffffff29] text-base text-white no-underline opacity-100 outline-none backdrop-blur-[12px] transition duration-300 ease-in-out hover:scale-105 hover:cursor-pointer hover:bg-[#ffffff3d]"
+                      disabled={isHoppingDisabled}
+                      className={`pointer-events-auto relative m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none text-base no-underline opacity-100 outline-none backdrop-blur-[12px] transition duration-300 ease-in-out ${
+                        isHoppingDisabled
+                          ? 'bg-[#ffffff15] text-gray-400 cursor-not-allowed'
+                          : 'bg-[#ffffff29] text-white hover:scale-105 hover:cursor-pointer hover:bg-[#ffffff3d]'
+                      }`}
+                      title={isHoppingDisabled ? `Espera ${remainingTime}s` : 'Siguiente canal'}
                     >
-                      <TbPlayerTrackNextFilled className="h-8 w-8" />
+                      {isHoppingDisabled ? (
+                        <span className="text-xs font-bold">{remainingTime}</span>
+                      ) : (
+                        <TbPlayerTrackNextFilled className="h-8 w-8" />
+                      )}
                     </button>
                   </div>
                 )}
