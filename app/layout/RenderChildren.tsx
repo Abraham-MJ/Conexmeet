@@ -11,7 +11,6 @@ import ModalChannelBusy from '../components/shared/modals/ModalChannelBusy';
 import ModalInsufficientMinutes from '../components/shared/modals/ModalInsufficientMinutes';
 import ModalCallEndedFemaleSummary from '../components/shared/modals/ModalCallEndedFemaleSummary';
 import ModalMinutesExhausted from '../components/shared/modals/ModalMinutesExhausted';
-import { ChannelHoppingBlockedModal } from '../components/shared/modals/ChannelHoppingBlockedModal';
 import ModalRatingCall from '../components/shared/modals/ModalRatingCall';
 
 const baseRoutes = {
