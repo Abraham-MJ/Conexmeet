@@ -6,6 +6,44 @@ import {
   UserInformation,
 } from '@/app/types/streams';
 
+const waitForRTMChannelReady = async (
+  channel: any,
+  maxWait = 2000,
+): Promise<boolean> => {
+  const startTime = Date.now();
+  let attemptCount = 0;
+  const maxAttempts = 5;
+
+  while (Date.now() - startTime < maxWait && attemptCount < maxAttempts) {
+    try {
+      attemptCount++;
+      await channel.sendMessage({ text: JSON.stringify({ type: 'PING' }) });
+      return true;
+    } catch (error: any) {
+      if (error.code === 5) {
+        const waitTime = Math.min(200 + attemptCount * 100, 500);
+
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        continue;
+      }
+      console.warn(`[RTM Ready Check] ❌ Error inesperado:`, error);
+      throw error;
+    }
+  }
+
+  return false;
+};
+
+const isRTMChannelConnected = (channel: any): boolean => {
+  try {
+    return (
+      channel && channel.channelId && typeof channel.sendMessage === 'function'
+    );
+  } catch {
+    return false;
+  }
+};
+
 interface ChannelHoppingFunctions {
   handleLeaveCall: () => Promise<void>;
   leaveCallChannel: () => Promise<void>;
@@ -74,7 +112,9 @@ export const useChannelHopping = (
     });
 
     const timeoutId = setTimeout(() => {
-      console.error('[Channel Hopping] ❌ Timeout - operación cancelada');
+      console.error(
+        '[Channel Hopping] ❌ Timeout - operación cancelada después de 45 segundos',
+      );
       dispatch({
         type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
         payload: false,
@@ -83,7 +123,7 @@ export const useChannelHopping = (
         type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
         payload: true,
       });
-    }, 30000);
+    }, 45000);
 
     const currentChannelName = state.channelName;
     let newChannelName: string | null = null;
@@ -178,17 +218,17 @@ export const useChannelHopping = (
       }
 
       try {
-        const summaryPayload = {
-          reason: 'Usuario finalizó la llamada',
-          duration: '00:00',
-          earnings: 0,
-          host_id: currentChannelName,
-        };
-
         if (state.isRtmChannelJoined) {
+          const summaryPayload = {
+            reason: 'Usuario finalizó la llamada',
+            duration: '00:00',
+            earnings: 0,
+            host_id: currentChannelName,
+          };
+
           await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
 
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 300));
         }
       } catch (notifyError) {
         console.warn(
@@ -200,7 +240,6 @@ export const useChannelHopping = (
       if (state.isRtmChannelJoined) {
         try {
           await leaveCallChannel();
-          console.log('[Channel Hopping] ✅ Canal RTM desconectado');
         } catch (rtmError: any) {
           console.warn(
             '[Channel Hopping] ⚠️ Error al salir del canal RTM:',
@@ -213,9 +252,26 @@ export const useChannelHopping = (
 
       if (state.isRtcJoined && resources.rtcClient) {
         try {
+          if (resources.localAudioTrack || resources.localVideoTrack) {
+            const tracksToUnpublish = [];
+            if (resources.localAudioTrack)
+              tracksToUnpublish.push(resources.localAudioTrack);
+            if (resources.localVideoTrack)
+              tracksToUnpublish.push(resources.localVideoTrack);
+
+            try {
+              await resources.rtcClient.unpublish(tracksToUnpublish);
+            } catch (unpublishError) {
+              console.warn(
+                '[Channel Hopping] ⚠️ Error despublicando tracks:',
+                unpublishError,
+              );
+            }
+          }
+
           await resources.rtcClient.leave();
 
-          dispatch({ type: AgoraActionType.LEAVE_RTC_CHANNEL });
+          dispatch({ type: AgoraActionType.CHANNEL_HOPPING_RTC_LEAVE });
         } catch (rtcError: any) {
           console.warn(
             '[Channel Hopping] ⚠️ Error al salir del canal RTC:',
@@ -224,7 +280,7 @@ export const useChannelHopping = (
         }
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const newRtcToken = await resources.agoraBackend.fetchRtcToken(
         newChannelName,
@@ -244,7 +300,15 @@ export const useChannelHopping = (
             String(state.localUser.rtcUid),
           );
 
-          break;
+          const connectionState = resources.rtcClient.connectionState;
+
+          if (connectionState === 'CONNECTED') {
+            break;
+          } else {
+            throw new Error(
+              `Estado de conexión inesperado: ${connectionState}`,
+            );
+          }
         } catch (rtcJoinError: any) {
           rtcJoinAttempts++;
           console.warn(
@@ -263,16 +327,48 @@ export const useChannelHopping = (
       }
 
       try {
-        await resources.rtcClient.publish([
-          resources.localAudioTrack,
-          resources.localVideoTrack,
-        ]);
+        if (resources.localAudioTrack && !resources.localAudioTrack.enabled) {
+          await resources.localAudioTrack.setEnabled(true);
+        }
+
+        if (resources.localVideoTrack && !resources.localVideoTrack.enabled) {
+          await resources.localVideoTrack.setEnabled(true);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        const tracksToPublish = [];
+        if (resources.localAudioTrack)
+          tracksToPublish.push(resources.localAudioTrack);
+        if (resources.localVideoTrack)
+          tracksToPublish.push(resources.localVideoTrack);
+
+        if (tracksToPublish.length > 0) {
+          await resources.rtcClient.publish(tracksToPublish);
+        }
       } catch (publishError: any) {
         console.error(
           '[Channel Hopping] ❌ Error republicando tracks:',
           publishError,
         );
-        throw publishError;
+
+        if (
+          publishError.code === 'TRACK_IS_DISABLED' ||
+          publishError.code === 'INVALID_OPERATION'
+        ) {
+          try {
+            console.warn(
+              '[Channel Hopping] ⚠️ Continuando sin republicar tracks, se intentará más tarde',
+            );
+          } catch (recoveryError) {
+            console.error(
+              '[Channel Hopping] ❌ Error en recuperación:',
+              recoveryError,
+            );
+          }
+        } else {
+          throw publishError;
+        }
       }
 
       try {
@@ -325,6 +421,31 @@ export const useChannelHopping = (
         handleConnectionStateChanged,
       );
 
+      resources.rtcClient.on(
+        'user-published',
+        async (user: any, mediaType: string) => {
+          if (mediaType === 'video') {
+            try {
+              await resources.rtcClient.subscribe(user, 'video');
+
+              dispatch({
+                type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+                payload: false,
+              });
+            } catch (subscribeError) {
+              console.warn(
+                `[Channel Hopping] ⚠️ Error suscribiendo al video de ${user.uid}:`,
+                subscribeError,
+              );
+              dispatch({
+                type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+                payload: false,
+              });
+            }
+          }
+        },
+      );
+
       let rtmJoinAttempts = 0;
       const maxRtmJoinAttempts = 3;
       let rtmJoinSuccessful = false;
@@ -332,18 +453,12 @@ export const useChannelHopping = (
       while (rtmJoinAttempts < maxRtmJoinAttempts && !rtmJoinSuccessful) {
         try {
           rtmJoinAttempts++;
-          console.log(
-            `[Channel Hopping] 🔍 Intento RTM ${rtmJoinAttempts}/${maxRtmJoinAttempts}`,
-          );
 
           await joinCallChannel(newChannelName);
 
           await new Promise((resolve) => setTimeout(resolve, 1500));
 
           if (state.isRtmChannelJoined) {
-            console.log(
-              '[Channel Hopping] ✅ Unido al nuevo canal RTM exitosamente',
-            );
             rtmJoinSuccessful = true;
           } else {
             console.warn(
@@ -373,7 +488,9 @@ export const useChannelHopping = (
 
       try {
         if (!state.isRtmChannelJoined) {
-          console.warn('[Channel Hopping] ⚠️ RTM no está unido, esperando...');
+          console.warn(
+            '[Channel Hopping] ⚠️ RTM no está unido según el estado, esperando...',
+          );
           await new Promise((resolve) => setTimeout(resolve, 1000));
 
           if (!state.isRtmChannelJoined) {
@@ -381,7 +498,51 @@ export const useChannelHopping = (
           }
         }
 
-        await sendCallSignal('MALE_JOINED_SIGNAL', {
+        const rtmChannel = state.rtmChannel;
+        if (rtmChannel && isRTMChannelConnected(rtmChannel)) {
+          const isReady = await waitForRTMChannelReady(rtmChannel, 2000);
+          if (!isReady) {
+            console.log(
+              '[Channel Hopping] ⚠️ Canal RTM no confirmado como listo, pero continuando (esto es normal)...',
+            );
+          } else {
+            console.log('[Channel Hopping] ✅ Canal RTM confirmado como listo');
+          }
+        } else {
+          console.log(
+            '[Channel Hopping] ⏳ Esperando tiempo fijo para estabilización RTM...',
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+
+        const sendSignalWithRetry = async (
+          signalType: string,
+          payload: any,
+          maxRetries = 2,
+        ) => {
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              await sendCallSignal(signalType, payload);
+
+              return true;
+            } catch (signalError: any) {
+              if (signalError.code === 5 && attempt < maxRetries) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                continue;
+              } else if (signalError.code === 5) {
+                console.log(
+                  `[Channel Hopping] ⚠️ ${signalType} no se pudo enviar después de ${maxRetries} intentos, continuando...`,
+                );
+                return false;
+              } else {
+                throw signalError;
+              }
+            }
+          }
+          return false;
+        };
+
+        await sendSignalWithRetry('MALE_JOINED_SIGNAL', {
           maleUserId: String(state.localUser.user_id),
           maleRtcUid: String(state.localUser.rtcUid),
           maleRtmUid: String(state.localUser.rtmUid),
@@ -392,7 +553,7 @@ export const useChannelHopping = (
           timestamp: Date.now(),
         });
 
-        await sendCallSignal('CALL_STARTED_SIGNAL', {
+        await sendSignalWithRetry('CALL_STARTED_SIGNAL', {
           maleUserId: String(state.localUser.user_id),
           femaleChannelId: newChannelName,
           timestamp: Date.now(),
@@ -402,11 +563,22 @@ export const useChannelHopping = (
 
         if (resources.localAudioTrack && resources.localVideoTrack) {
           try {
+            const audioEnabled = resources.localAudioTrack.enabled;
+            const videoEnabled = resources.localVideoTrack.enabled;
+
             await resources.rtcClient.unpublish([
               resources.localAudioTrack,
               resources.localVideoTrack,
             ]);
-            await new Promise((resolve) => setTimeout(resolve, 200));
+
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            if (!audioEnabled) {
+              await resources.localAudioTrack.setEnabled(true);
+            }
+            if (!videoEnabled) {
+              await resources.localVideoTrack.setEnabled(true);
+            }
 
             await resources.rtcClient.publish([
               resources.localAudioTrack,
@@ -471,9 +643,20 @@ export const useChannelHopping = (
         });
 
         if (femaleInfo) {
-          console.log(
-            `[Channel Hopping] ✅ Información de female encontrada: ${femaleInfo.user_name}`,
-          );
+          if (remoteUser.hasVideo && remoteUser.videoTrack) {
+            dispatch({
+              type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+              payload: false,
+            });
+          } else if (remoteUser.hasVideo) {
+            console.log(
+              '[Channel Hopping] 📹 Female tiene video pero track no disponible aún, manteniendo loading...',
+            );
+          } else {
+            console.log(
+              '[Channel Hopping] 📷 Female sin video, manteniendo loading...',
+            );
+          }
         } else {
           console.log(
             `[Channel Hopping] ⚠️ No se encontró información de female para UID ${remoteUser.uid}`,
@@ -497,27 +680,33 @@ export const useChannelHopping = (
               '[Channel Hopping] ⚠️ Canal parece estar vacío después de 2.5 segundos',
             );
           } else {
-            console.log(
-              `[Channel Hopping] ✅ Usuarios remotos detectados después de espera: ${remoteUsersAfterWait.length}`,
-            );
             for (const lateUser of remoteUsersAfterWait) {
               if (!remoteUsers.find((u: any) => u.uid === lateUser.uid)) {
-                console.log(
-                  `[Channel Hopping] Procesando usuario tardío: ${lateUser.uid}`,
-                );
                 await processRemoteUser(lateUser);
               }
             }
           }
         }
+
+        setTimeout(() => {
+          dispatch({
+            type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+            payload: false,
+          });
+        }, 3000);
       } catch (remoteUsersError) {
         console.warn(
           '[Channel Hopping] ⚠️ Error al procesar usuarios remotos:',
           remoteUsersError,
         );
-      }
 
-      console.log('[Channel Hopping] Limpiando estado del canal anterior...');
+        setTimeout(() => {
+          dispatch({
+            type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+            payload: false,
+          });
+        }, 1000);
+      }
 
       state.remoteUsers.forEach((remoteUser) => {
         dispatch({
@@ -538,30 +727,7 @@ export const useChannelHopping = (
         },
       });
 
-      console.log('[Channel Hopping] ✅ Estado RTC actualizado correctamente');
-
-      setTimeout(() => {
-        dispatch({
-          type: AgoraActionType.RTC_SETUP_SUCCESS,
-          payload: {
-            rtcClient: resources.rtcClient,
-            localAudioTrack: resources.localAudioTrack,
-            localVideoTrack: resources.localVideoTrack,
-            channelName: newChannelName!,
-          },
-        });
-        console.log(
-          '[Channel Hopping] ✅ Estado RTC re-actualizado para sincronización',
-        );
-      }, 500);
-
-      console.log('[Channel Hopping] Esperando perfiles RTM...');
-
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      console.log(
-        '[Channel Hopping] ✅ Tiempo de espera para perfiles RTM completado',
-      );
 
       const previousFemale = onlineFemalesList.find(
         (f) => f.host_id === currentChannelName,
@@ -575,9 +741,6 @@ export const useChannelHopping = (
             status: 'available_call',
           },
         });
-        console.log(
-          `[Channel Hopping] ✅ Female anterior ${currentChannelName} marcada como disponible`,
-        );
       }
 
       const femaleToUpdate = onlineFemalesList.find(
@@ -593,21 +756,10 @@ export const useChannelHopping = (
             status: 'in_call',
           },
         });
-
-        console.log(
-          `[Channel Hopping] ✅ Female nueva ${newChannelName} marcada como ocupada`,
-        );
       }
-
-      console.log(
-        '[Channel Hopping] Canal anterior procesado por cleanupAfterMaleDisconnect',
-      );
 
       try {
         await resources.agoraBackend.fetchOnlineFemales();
-        console.log(
-          '[Channel Hopping] ✅ Lista de females actualizada desde backend',
-        );
       } catch (fetchError) {
         console.warn(
           '[Channel Hopping] ⚠️ Error actualizando lista de females:',
@@ -615,18 +767,7 @@ export const useChannelHopping = (
         );
       }
 
-      console.log(
-        `[Channel Hopping] ✅ Channel hopping exitoso a ${newChannelName}`,
-      );
-
       clearTimeout(timeoutId);
-
-      setTimeout(() => {
-        dispatch({
-          type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
-          payload: false,
-        });
-      }, 3000);
     } catch (error: any) {
       console.error(
         '[Channel Hopping] ❌ Error crítico durante channel hopping:',
@@ -638,7 +779,6 @@ export const useChannelHopping = (
         payload: true,
       });
 
-      console.log('[Channel Hopping] Iniciando limpieza de emergencia...');
       try {
         await handleLeaveCall();
       } catch (cleanupError) {

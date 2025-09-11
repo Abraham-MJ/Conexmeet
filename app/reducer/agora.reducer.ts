@@ -167,6 +167,17 @@ export function agoraReducer(
         isChannelHoppingLoading: false,
       };
 
+    case AgoraActionType.CHANNEL_HOPPING_RTC_LEAVE:
+      return {
+        ...state,
+        isRtcJoined: false,
+        rtcClient: null,
+        remoteUsers: [],
+        chatMessages: [],
+        channelName: null,
+        currentCallHostRtcUid: null,
+      };
+
     case AgoraActionType.RTM_SETUP_START:
       return {
         ...state,

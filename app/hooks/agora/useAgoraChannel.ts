@@ -29,15 +29,14 @@ export const useAgoraCallChannel = (
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
 
-  // useRef para evitar closure stale en listeners
   const stateRef = useRef(state);
   const localUserRef = useRef(localUser);
 
-  // Actualizar refs cuando cambie el estado
   useEffect(() => {
     stateRef.current = state;
     localUserRef.current = localUser;
   }, [state, localUser]);
+
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const pendingProfilePromisesRef = useRef(new Map<string, () => void>());
 
@@ -59,21 +58,39 @@ export const useAgoraCallChannel = (
     async (type: string, payload: any) => {
       if (!rtmChannel || !isRtmChannelJoined || !localUser) {
         console.warn(
-          `${LOG_PREFIX_RTM_LISTEN} No se puede enviar señal. Canal RTM no unido o usuario local no disponible.`,
+          `${LOG_PREFIX_RTM_LISTEN} No se puede enviar señal '${type}'. Canal RTM no unido o usuario local no disponible.`,
         );
         return;
       }
+
       const signalMessage = {
         type: type,
         payload: payload,
       };
+
       try {
         await rtmChannel.sendMessage({ text: JSON.stringify(signalMessage) });
-      } catch (error) {
-        console.error(
-          `${LOG_PREFIX_RTM_LISTEN} Error enviando señal '${type}':`,
-          error,
+        console.log(
+          `${LOG_PREFIX_RTM_LISTEN} ✅ Señal '${type}' enviada exitosamente`,
         );
+      } catch (error: any) {
+        if (error.code === 5) {
+          console.warn(
+            `${LOG_PREFIX_RTM_LISTEN} ⚠️ Canal RTM no está listo para enviar '${type}' (Code 5). Esto es normal durante transiciones.`,
+          );
+          throw error;
+        } else if (error.code === 3) {
+          console.warn(
+            `${LOG_PREFIX_RTM_LISTEN} ⚠️ Canal RTM no está unido para enviar '${type}' (Code 3). Canal desconectado.`,
+          );
+          throw error;
+        } else {
+          console.error(
+            `${LOG_PREFIX_RTM_LISTEN} ❌ Error inesperado enviando señal '${type}':`,
+            error,
+          );
+          throw error;
+        }
       }
     },
     [rtmChannel, isRtmChannelJoined, localUser],
@@ -197,9 +214,8 @@ export const useAgoraCallChannel = (
                   ended: true,
                 },
               });
-            // RTM signals para desconexiones temporalmente deshabilitadas
-            // } else if (receivedMsg.type === 'FEMALE_DISCONNECTED_SIGNAL') {
-            // } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
+              // } else if (receivedMsg.type === 'FEMALE_DISCONNECTED_SIGNAL') {
+              // } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
             } else if (receivedMsg.type === 'GIFT_SENT') {
               const giftData = receivedMsg.payload;
 
@@ -270,7 +286,7 @@ export const useAgoraCallChannel = (
                     host_id: joinData.channelName,
                     is_active: 1,
                   })
-                    .then(() => { })
+                    .then(() => {})
                     .catch((broadcastError) => {
                       console.error(
                         `[Female Client] ❌ Error en broadcast al lobby:`,
@@ -416,12 +432,25 @@ export const useAgoraCallChannel = (
 
       if (rtmChannel && rtmChannel.channelId !== channelName) {
         try {
-          await rtmChannel.leave();
-        } catch (e) {
-          console.warn(
-            `${LOG_PREFIX_RTM_LISTEN} Error al dejar el canal RTM anterior:`,
-            e,
-          );
+          const isConnected = rtmChannel.channelId && isRtmChannelJoined;
+          if (isConnected) {
+            await rtmChannel.leave();
+          } else {
+            console.log(
+              `${LOG_PREFIX_RTM_LISTEN} Canal RTM anterior ya desconectado, continuando...`,
+            );
+          }
+        } catch (e: any) {
+          if (e.code === 3) {
+            console.log(
+              `${LOG_PREFIX_RTM_LISTEN} Canal RTM anterior ya estaba desconectado (Code 3), continuando...`,
+            );
+          } else {
+            console.warn(
+              `${LOG_PREFIX_RTM_LISTEN} Error inesperado al dejar el canal RTM anterior:`,
+              e,
+            );
+          }
         }
       }
 

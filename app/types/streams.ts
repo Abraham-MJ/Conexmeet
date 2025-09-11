@@ -62,6 +62,7 @@ export enum AgoraActionType {
   RESET_CHANNEL_HOPPING = 'RESET_CHANNEL_HOPPING',
   SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL = 'SET_SHOW_CHANNEL_HOPPING_BLOCKED_MODAL',
   SET_CHANNEL_HOPPING_LOADING = 'SET_CHANNEL_HOPPING_LOADING',
+  CHANNEL_HOPPING_RTC_LEAVE = 'CHANNEL_HOPPING_RTC_LEAVE',
   SET_SHOW_MALE_RATING_MODAL = 'SET_SHOW_MALE_RATING_MODAL',
   SET_SHOW_FEMALE_DISCONNECTED_MODAL = 'SET_SHOW_FEMALE_DISCONNECTED_MODAL',
 }
@@ -456,6 +457,10 @@ interface SetChannelHoppingLoadingAction {
   payload: boolean;
 }
 
+interface ChannelHoppingRtcLeaveAction {
+  type: AgoraActionType.CHANNEL_HOPPING_RTC_LEAVE;
+}
+
 interface SetShowMaleRatingModalAction {
   type: AgoraActionType.SET_SHOW_MALE_RATING_MODAL;
   payload: { 
@@ -480,6 +485,7 @@ export type AgoraAction =
   | RtcSetupSuccessAction
   | RtcSetupFailureAction
   | LeaveRtcChannelAction
+  | ChannelHoppingRtcLeaveAction
   | RtmSetupStartAction
   | RtmLoginSuccessAction
   | RtmLoginFailureAction
