@@ -1017,18 +1017,23 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
     const [language, setLanguageState] = useState<Language>('es');
+    const [isClient, setIsClient] = useState(false);
 
-    // Load language from localStorage on mount
     useEffect(() => {
-        const savedLanguage = localStorage.getItem('language') as Language;
-        if (savedLanguage && (savedLanguage === 'es' || savedLanguage === 'en')) {
-            setLanguageState(savedLanguage);
+        setIsClient(true);
+        if (typeof window !== 'undefined') {
+            const savedLanguage = localStorage.getItem('language') as Language;
+            if (savedLanguage && (savedLanguage === 'es' || savedLanguage === 'en')) {
+                setLanguageState(savedLanguage);
+            }
         }
     }, []);
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);
-        localStorage.setItem('language', lang);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('language', lang);
+        }
     };
 
     const t = (key: string, params?: Record<string, any>): string => {
