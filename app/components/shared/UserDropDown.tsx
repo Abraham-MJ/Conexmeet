@@ -95,7 +95,7 @@ export default function UserDropdown() {
                   {state?.user?.email}
                 </span>
                 <span className="text-sm font-medium text-gray-700">
-                  V-1.1.4 
+                  V-1.1.5
                 </span>
               </div>
             </div>

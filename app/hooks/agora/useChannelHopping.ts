@@ -134,7 +134,8 @@ export const useChannelHopping = (
           female.status === 'available_call' &&
           female.host_id &&
           female.host_id !== currentChannelName &&
-          female.is_active === 1,
+          female.is_active === 1 &&
+          !state.channelHopping.visitedChannelsInSession.has(female.host_id),
       );
 
       if (availableChannels.length === 0) {
@@ -147,9 +148,49 @@ export const useChannelHopping = (
         return;
       }
 
-      const randomIndex = Math.floor(Math.random() * availableChannels.length);
-      const selectedChannel = availableChannels[randomIndex];
+      let selectedChannel = null;
+      let verificationAttempts = 0;
+      const maxVerificationAttempts = Math.min(availableChannels.length, 3);
+
+      while (!selectedChannel && verificationAttempts < maxVerificationAttempts) {
+        const randomIndex = Math.floor(Math.random() * availableChannels.length);
+        const candidateChannel = availableChannels[randomIndex];
+        
+        console.log(`[Channel Hopping] 🔍 Verificando disponibilidad de ${candidateChannel.host_id}...`);
+        
+        try {
+          const availability = await resources.agoraBackend.verifyChannelAvailability(candidateChannel.host_id!);
+          
+          if (availability.available) {
+            selectedChannel = candidateChannel;
+            console.log(`[Channel Hopping] ✅ Canal ${candidateChannel.host_id} verificado como disponible`);
+            break;
+          } else {
+            console.log(`[Channel Hopping] ❌ Canal ${candidateChannel.host_id} no disponible: ${availability.reason}`);
+            const channelIndex = availableChannels.findIndex(c => c.host_id === candidateChannel.host_id);
+            if (channelIndex > -1) {
+              availableChannels.splice(channelIndex, 1);
+            }
+          }
+        } catch (verificationError) {
+          console.warn(`[Channel Hopping] ⚠️ Error verificando ${candidateChannel.host_id}:`, verificationError);
+        }
+        
+        verificationAttempts++;
+      }
+
+      if (!selectedChannel) {
+        console.warn('[Channel Hopping] ❌ No se encontró ningún canal disponible después de verificaciones');
+        dispatch({
+          type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+          payload: true,
+        });
+        await handleLeaveCall();
+        return;
+      }
+
       newChannelName = selectedChannel.host_id!;
+      console.log(`[Channel Hopping] 🎯 Canal seleccionado para hopping: ${newChannelName}`);
 
       if (
         state.localUser.user_id &&
@@ -384,16 +425,112 @@ export const useChannelHopping = (
             payload: String(backendJoinResponse.data.id),
           });
         } else {
-          console.warn(
-            `[Channel Hopping] ⚠️ Respuesta inesperada del backend:`,
-            backendJoinResponse,
-          );
+          const errorMessage = backendJoinResponse.message || '';
+          const isChannelBusy = 
+            backendJoinResponse.errorType === 'CHANNEL_BUSY' ||
+            errorMessage.toLowerCase().includes('canal_ocupado') ||
+            errorMessage.toLowerCase().includes('ocupado') ||
+            errorMessage.toLowerCase().includes('otro usuario') ||
+            errorMessage.toLowerCase().includes('simultánea detectada');
+
+          if (isChannelBusy) {
+            console.warn(
+              `[Channel Hopping] ❌ Canal ${newChannelName} ocupado durante hopping, intentando otro canal...`,
+            );
+            
+            dispatch({
+              type: AgoraActionType.CHANNEL_HOP_JOIN,
+              payload: { hostId: newChannelName, joinTime: Date.now() },
+            });
+            
+            const remainingChannels = availableChannels.filter(
+              (channel) => 
+                channel.host_id !== newChannelName && 
+                !state.channelHopping.visitedChannelsInSession.has(channel.host_id!)
+            );
+            
+            if (remainingChannels.length > 0) {
+              console.log(`[Channel Hopping] 🔄 Intentando con otro canal, ${remainingChannels.length} disponibles...`);
+              
+              dispatch({
+                type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+                payload: false,
+              });
+              
+              setTimeout(() => {
+                hopToRandomChannel();
+              }, 1000);
+              
+              return;
+            } else {
+              console.warn('[Channel Hopping] ❌ No hay más canales disponibles después de conflicto');
+              dispatch({
+                type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+                payload: true,
+              });
+              await handleLeaveCall();
+              return;
+            }
+          } else {
+            console.warn(
+              `[Channel Hopping] ⚠️ Respuesta inesperada del backend:`,
+              backendJoinResponse,
+            );
+          }
         }
-      } catch (backendError) {
+      } catch (backendError: any) {
         console.warn(
           `[Channel Hopping] ⚠️ Error abriendo nuevo canal en backend:`,
           backendError,
         );
+        
+        const errorMessage = backendError.message || '';
+        const isChannelBusy = 
+          errorMessage.toLowerCase().includes('canal_ocupado') ||
+          errorMessage.toLowerCase().includes('ocupado') ||
+          errorMessage.toLowerCase().includes('otro usuario') ||
+          errorMessage.toLowerCase().includes('simultánea detectada') ||
+          errorMessage.includes('409');
+
+        if (isChannelBusy) {
+          console.warn(
+            `[Channel Hopping] ❌ Error de canal ocupado durante hopping, intentando otro canal...`,
+          );
+          
+          dispatch({
+            type: AgoraActionType.CHANNEL_HOP_JOIN,
+            payload: { hostId: newChannelName, joinTime: Date.now() },
+          });
+          
+          const remainingChannels = availableChannels.filter(
+            (channel) => 
+              channel.host_id !== newChannelName && 
+              !state.channelHopping.visitedChannelsInSession.has(channel.host_id!)
+          );
+          
+          if (remainingChannels.length > 0) {
+            console.log(`[Channel Hopping] 🔄 Reintentando con otro canal después de error, ${remainingChannels.length} disponibles...`);
+            
+            dispatch({
+              type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
+              payload: false,
+            });
+            
+            setTimeout(() => {
+              hopToRandomChannel();
+            }, 1000);
+            
+            return;
+          } else {
+            console.warn('[Channel Hopping] ❌ No hay más canales disponibles después de error de ocupado');
+            dispatch({
+              type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+              payload: true,
+            });
+            await handleLeaveCall();
+            return;
+          }
+        }
       }
 
       const handleUserJoined = async (user: any) => {

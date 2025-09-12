@@ -72,10 +72,33 @@ export const AgoraApiClient = {
     return backendResult;
   },
 
+  async verifyChannelAvailability(
+    channelName: string,
+  ): Promise<{ available: boolean; reason?: string }> {
+    try {
+      const response = await fetch(
+        `/api/agora/channels/verify-availability?host_id=${channelName}`,
+      );
+
+      if (!response.ok) {
+        return { available: false, reason: 'Error verificando disponibilidad' };
+      }
+
+      const result = await response.json();
+      return {
+        available: result.available || false,
+        reason: result.reason || 'Canal no disponible',
+      };
+    } catch (error) {
+      console.warn('Error verificando disponibilidad del canal:', error);
+      return { available: false, reason: 'Error de conexión' };
+    }
+  },
+
   async notifyMaleJoining(
     channelName: string,
     appUserId: string | number,
-  ): Promise<{ success: boolean; message?: string; data?: any }> {
+  ): Promise<{ success: boolean; message?: string; data?: any; errorType?: string }> {
     const enterChannelResponse = await fetch(
       `/api/agora/channels/enter-channel-male-v2`,
       {

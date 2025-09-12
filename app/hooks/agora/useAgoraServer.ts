@@ -68,11 +68,26 @@ export const useAgoraServer = (dispatch: React.Dispatch<AgoraAction>) => {
     [],
   );
 
+  const verifyChannelAvailability = useCallback(
+    async (channelName: string): Promise<{ available: boolean; reason?: string }> => {
+      try {
+        return await AgoraApiClient.verifyChannelAvailability(channelName);
+      } catch (error: any) {
+        console.error(
+          `${LOG_PREFIX_MALE_ADMIN} Error verificando disponibilidad del canal:`,
+          error.message,
+        );
+        return { available: false, reason: 'Error de verificación' };
+      }
+    },
+    [],
+  );
+
   const notifyMaleJoining = useCallback(
     async (
       channelName: string,
       appUserId: string | number,
-    ): Promise<{ success: boolean; message?: string; data?: any }> => {
+    ): Promise<{ success: boolean; message?: string; data?: any; errorType?: string }> => {
       try {
         return await AgoraApiClient.notifyMaleJoining(channelName, appUserId);
       } catch (error: any) {
@@ -219,6 +234,7 @@ export const useAgoraServer = (dispatch: React.Dispatch<AgoraAction>) => {
     fetchRtcToken,
     fetchRtmToken,
     registerChannel,
+    verifyChannelAvailability,
     notifyMaleJoining,
     closeChannel,
     fetchOnlineFemales,
