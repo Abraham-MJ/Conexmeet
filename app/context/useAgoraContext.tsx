@@ -295,6 +295,13 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
   );
 
   const {
+    registerConnectionAttempt,
+    markConnectionSuccessful,
+    markConnectionFailed,
+    hasActiveConnectionConflict,
+  } = useConnectionMonitor(dispatch, state.localUser, onlineFemalesList);
+
+  const {
     handleVideoChatMale,
     handleVideoChatFemale,
     handleLeaveCall,
@@ -328,6 +335,13 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.maleGiftMinutesSpent,
     state.femaleTotalPointsEarnedInCall,
     state.channelHopping.entries,
+    undefined, // channelHoppingFunctions
+    {
+      registerConnectionAttempt,
+      markConnectionSuccessful,
+      markConnectionFailed,
+      hasActiveConnectionConflict,
+    },
   );
 
   const { hopToRandomChannel } = useChannelHopping(
@@ -337,6 +351,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     {
       handleLeaveCall,
       leaveCallChannel,
+      leaveRtcChannel,
       joinCallChannel,
       sendCallSignal,
     },
@@ -345,7 +360,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       localAudioTrack,
       localVideoTrack,
       agoraBackend,
-    }
+    },
   );
 
   const { isHoppingDisabled, remainingTime } = useChannelHoppingCooldown({
@@ -481,15 +496,6 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     });
   }, [dispatch]);
 
-
-
-  const {
-    registerConnectionAttempt,
-    markConnectionSuccessful,
-    markConnectionFailed,
-    hasActiveConnectionConflict,
-  } = useConnectionMonitor(dispatch, state.localUser, onlineFemalesList);
-
   const showFemaleDisconnectedNotification = useCallback(
     (
       femaleName?: string,
@@ -509,16 +515,18 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     [dispatch],
   );
 
-  // TEMPORALMENTE COMENTADO PARA DEBUGGING - Sistema de detección de zombies desactivado
   const handleZombieChannelDetected = useCallback(
     async (
       zombieFemale: UserInformation & {
         disconnectionType?: 'male_disconnected';
       },
     ) => {
-      console.log('[DEBUG] Sistema de zombies desactivado - ignorando detección:', zombieFemale);
+      console.log(
+        '[DEBUG] Sistema de zombies desactivado - ignorando detección:',
+        zombieFemale,
+      );
       return; // Salir inmediatamente sin hacer nada
-      
+
       /* CÓDIGO ORIGINAL COMENTADO:
       if (zombieFemale.disconnectionType === 'male_disconnected') {
         dispatch({
@@ -645,7 +653,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
   //   enabled: true,
   //   intervalMs: 60000,
   // });
-  
+
   // Variables temporales para mantener compatibilidad
   const lastHeartbeat = Date.now();
   const isHeartbeatActive = false;

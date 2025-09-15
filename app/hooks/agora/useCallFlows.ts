@@ -103,6 +103,12 @@ export const useCallFlows = (
   channelHoppingFunctions?: {
     registerChannelLeave: (hostId: string, isChannelHopping?: boolean) => void;
   },
+  connectionMonitor?: {
+    registerConnectionAttempt: (channelId: string, userId: string) => void;
+    markConnectionSuccessful: (channelId: string) => void;
+    markConnectionFailed: (channelId: string) => void;
+    hasActiveConnectionConflict: (channelId: string, userId: string) => boolean;
+  },
 ) => {
   const { handleGetInformation, state: user } = useUser();
   const { validateChannelAvailability, clearChannelAttempt } =
@@ -465,6 +471,13 @@ export const useCallFlows = (
 
             attemptedChannels.add(determinedChannelName);
 
+            if (connectionMonitor?.hasActiveConnectionConflict(determinedChannelName, String(appUserId))) {
+              console.warn(
+                `[Channel Selection] Canal ${determinedChannelName} tiene conflicto de conexión activo`,
+              );
+              continue;
+            }
+
             const validationResult = await validateChannelAvailability(
               determinedChannelName,
               String(appUserId),
@@ -487,6 +500,8 @@ export const useCallFlows = (
             }
 
             try {
+              connectionMonitor?.registerConnectionAttempt(determinedChannelName, String(appUserId));
+
               const backendJoinResponse = await fetch(
                 '/api/agora/channels/enter-channel-male-v2',
                 {
@@ -501,6 +516,8 @@ export const useCallFlows = (
 
               if (backendJoinResponse.success) {
                 connectionSuccessful = true;
+                
+                connectionMonitor?.markConnectionSuccessful(determinedChannelName);
 
                 if (backendJoinResponse.data && backendJoinResponse.data.id) {
                   dispatch({
@@ -516,6 +533,7 @@ export const useCallFlows = (
 
                 break;
               } else {
+                connectionMonitor?.markConnectionFailed(determinedChannelName);
                 clearChannelAttempt(determinedChannelName);
 
                 const message =
@@ -540,6 +558,7 @@ export const useCallFlows = (
                 continue;
               }
             } catch (backendError) {
+              connectionMonitor?.markConnectionFailed(determinedChannelName);
               clearChannelAttempt(determinedChannelName);
               console.error(
                 `[Channel Selection] Error en conexión a ${determinedChannelName}:`,
@@ -612,6 +631,14 @@ export const useCallFlows = (
           determinedChannelName
         ) {
           try {
+            if (connectionMonitor?.hasActiveConnectionConflict(determinedChannelName, String(appUserId))) {
+              dispatch({
+                type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
+                payload: true,
+              });
+              throw new Error('Canal ocupado por conexión simultánea');
+            }
+
             const validationResult = await validateChannelAvailability(
               determinedChannelName,
               String(appUserId),
@@ -633,6 +660,8 @@ export const useCallFlows = (
               throw new Error(validationResult.reason || 'Canal no disponible');
             }
 
+            connectionMonitor?.registerConnectionAttempt(determinedChannelName, String(appUserId));
+
             const backendJoinResponse = await fetch(
               '/api/agora/channels/enter-channel-male-v2',
               {
@@ -646,6 +675,7 @@ export const useCallFlows = (
             ).then((res) => res.json());
 
             if (!backendJoinResponse.success) {
+              connectionMonitor?.markConnectionFailed(determinedChannelName);
               clearChannelAttempt(determinedChannelName);
 
               logConnectionError(
@@ -680,6 +710,8 @@ export const useCallFlows = (
               );
             }
 
+            connectionMonitor?.markConnectionSuccessful(determinedChannelName);
+
             if (backendJoinResponse.data && backendJoinResponse.data.id) {
               dispatch({
                 type: AgoraActionType.SET_CURRENT_ROOM_ID,
@@ -700,6 +732,7 @@ export const useCallFlows = (
               '[Backend Connection] Error en conexión al backend:',
               backendError,
             );
+            connectionMonitor?.markConnectionFailed(determinedChannelName);
             clearChannelAttempt(determinedChannelName);
 
             logConnectionError(

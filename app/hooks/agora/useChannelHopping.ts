@@ -47,6 +47,7 @@ const isRTMChannelConnected = (channel: any): boolean => {
 interface ChannelHoppingFunctions {
   handleLeaveCall: () => Promise<void>;
   leaveCallChannel: () => Promise<void>;
+  leaveRtcChannel: () => Promise<void>;
   joinCallChannel: (channelName: string) => Promise<any>;
   sendCallSignal: (type: string, payload: Record<string, any>) => Promise<void>;
 }
@@ -65,6 +66,7 @@ export const useChannelHopping = (
   {
     handleLeaveCall,
     leaveCallChannel,
+    leaveRtcChannel,
     joinCallChannel,
     sendCallSignal,
   }: ChannelHoppingFunctions,
@@ -138,13 +140,121 @@ export const useChannelHopping = (
           !state.channelHopping.visitedChannelsInSession.has(female.host_id),
       );
 
+      if (
+        state.localUser.user_id &&
+        currentChannelName &&
+        state.current_room_id
+      ) {
+        try {
+          console.log(`[Channel Hopping] 🧹 Limpiando canal anterior: ${currentChannelName}`);
+          
+          const cleanupResult =
+            await resources.agoraBackend.cleanupAfterMaleDisconnect(
+              String(state.localUser.user_id),
+              currentChannelName,
+              state.current_room_id,
+            );
+
+          if (cleanupResult.success) {
+            try {
+              await resources.agoraBackend.closeChannel(
+                currentChannelName,
+                'waiting',
+              );
+              console.log(`[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'waiting'`);
+            } catch (forceCloseError) {
+              console.warn(
+                '[Channel Hopping] ⚠️ Error forzando cierre a waiting:',
+                forceCloseError,
+              );
+            }
+          } else {
+            console.warn(
+              `[Channel Hopping] ⚠️ Cleanup parcial del canal anterior: ${cleanupResult.message}`,
+            );
+            throw new Error('Cleanup no exitoso, usando fallback');
+          }
+        } catch (cleanupError) {
+          console.error(
+            '[Channel Hopping] ❌ Error en limpieza completa, intentando limpieza básica:',
+            cleanupError,
+          );
+
+          try {
+            await resources.agoraBackend.closeMaleChannel(
+              String(state.localUser.user_id),
+              currentChannelName,
+              state.current_room_id,
+            );
+
+            await resources.agoraBackend.closeChannel(
+              currentChannelName,
+              'waiting',
+            );
+            console.log(`[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'waiting' (fallback)`);
+          } catch (fallbackError) {
+            console.error(
+              '[Channel Hopping] ❌ Error en limpieza básica también:',
+              fallbackError,
+            );
+          }
+        }
+      } else {
+        console.warn(
+          '[Channel Hopping] ⚠️ Faltan datos para limpiar canal anterior:',
+          {
+            user_id: state.localUser.user_id,
+            channel: currentChannelName,
+            room_id: state.current_room_id,
+          },
+        );
+      }
+
       if (availableChannels.length === 0) {
         console.warn('[Channel Hopping] No hay canales disponibles');
         dispatch({
           type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
           payload: true,
         });
-        await handleLeaveCall();
+        
+        try {
+          if (state.isRtmChannelJoined) {
+            const summaryPayload = {
+              reason: 'Usuario finalizó la llamada',
+              duration: '00:00',
+              earnings: 0,
+              host_id: currentChannelName,
+            };
+            await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
+          }
+        } catch (signalError) {
+          console.warn('[Channel Hopping] ⚠️ Error enviando señal de salida:', signalError);
+        }
+        
+        const previousFemale = onlineFemalesList.find(
+          (f) => f.host_id === currentChannelName,
+        );
+        if (previousFemale) {
+          dispatch({
+            type: AgoraActionType.UPDATE_ONE_FEMALE_IN_LIST,
+            payload: {
+              ...previousFemale,
+              in_call: 0,
+              status: 'available_call',
+            },
+          });
+          console.log(`[Channel Hopping] ✅ Estado de female ${currentChannelName} actualizado a 'available_call' en lobby`);
+        }
+        
+        await leaveCallChannel();
+        await leaveRtcChannel();
+        
+        dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+        dispatch({ type: AgoraActionType.LEAVE_RTC_CHANNEL });
+        dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
+        
+        console.log(`[Channel Hopping] ✅ Limpieza completa realizada - canal ${currentChannelName} debe estar en 'waiting' en backend`);
+        
         return;
       }
 
@@ -191,72 +301,6 @@ export const useChannelHopping = (
 
       newChannelName = selectedChannel.host_id!;
       console.log(`[Channel Hopping] 🎯 Canal seleccionado para hopping: ${newChannelName}`);
-
-      if (
-        state.localUser.user_id &&
-        currentChannelName &&
-        state.current_room_id
-      ) {
-        try {
-          const cleanupResult =
-            await resources.agoraBackend.cleanupAfterMaleDisconnect(
-              String(state.localUser.user_id),
-              currentChannelName,
-              state.current_room_id,
-            );
-
-          if (cleanupResult.success) {
-            try {
-              await resources.agoraBackend.closeChannel(
-                currentChannelName,
-                'waiting',
-              );
-            } catch (forceCloseError) {
-              console.warn(
-                '[Channel Hopping] ⚠️ Error forzando cierre a waiting:',
-                forceCloseError,
-              );
-            }
-          } else {
-            console.warn(
-              `[Channel Hopping] ⚠️ Cleanup parcial del canal anterior: ${cleanupResult.message}`,
-            );
-            throw new Error('Cleanup no exitoso, usando fallback');
-          }
-        } catch (cleanupError) {
-          console.error(
-            '[Channel Hopping] ❌ Error en limpieza completa, intentando limpieza básica:',
-            cleanupError,
-          );
-
-          try {
-            await resources.agoraBackend.closeMaleChannel(
-              String(state.localUser.user_id),
-              currentChannelName,
-              state.current_room_id,
-            );
-
-            await resources.agoraBackend.closeChannel(
-              currentChannelName,
-              'waiting',
-            );
-          } catch (fallbackError) {
-            console.error(
-              '[Channel Hopping] ❌ Error en limpieza básica también:',
-              fallbackError,
-            );
-          }
-        }
-      } else {
-        console.warn(
-          '[Channel Hopping] ⚠️ Faltan datos para limpiar canal anterior:',
-          {
-            user_id: state.localUser.user_id,
-            channel: currentChannelName,
-            room_id: state.current_room_id,
-          },
-        );
-      }
 
       try {
         if (state.isRtmChannelJoined) {
