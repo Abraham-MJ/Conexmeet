@@ -16,7 +16,7 @@ export const useAgoraCallChannel = (
   appID: string | null,
   localUser: UserInformation | null,
   rtmClient: RtmClient | null,
-  isRtmLoggedIn: boolean,
+  _isRtmLoggedIn: boolean,
   agoraBackend: ReturnType<typeof useAgoraServer>,
   initializeRtmClient: (loadingMessage?: string) => Promise<RtmClient | null>,
   state: AgoraState,
@@ -24,18 +24,16 @@ export const useAgoraCallChannel = (
     statusInfo: Partial<UserInformation>,
   ) => Promise<void>,
   callTimer: string,
-  femaleTotalPointsEarnedInCall: number,
+  _femaleTotalPointsEarnedInCall: number,
 ) => {
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
 
   const stateRef = useRef(state);
-  const localUserRef = useRef(localUser);
 
   useEffect(() => {
     stateRef.current = state;
-    localUserRef.current = localUser;
-  }, [state, localUser]);
+  }, [state]);
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const pendingProfilePromisesRef = useRef(new Map<string, () => void>());
@@ -133,7 +131,7 @@ export const useAgoraCallChannel = (
       rtmChannelInstance.removeAllListeners('ChannelMessage');
       rtmChannelInstance.on(
         'ChannelMessage',
-        ({ text }: any, senderId: string) => {
+        ({ text }: any, _senderId: string) => {
           try {
             const receivedMsg = JSON.parse(text ?? '');
 
@@ -215,7 +213,58 @@ export const useAgoraCallChannel = (
                 },
               });
               // } else if (receivedMsg.type === 'FEMALE_DISCONNECTED_SIGNAL') {
-              // } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
+            } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
+              if (localUser?.role === 'female') {
+                const disconnectionData = receivedMsg.payload;
+                console.log('[Female] 📨 Recibido MALE_DISCONNECTED_SIGNAL:', disconnectionData);
+
+                // Limpiar todos los remote users males con cleanup de video tracks
+                const currentState = stateRef.current;
+                currentState.remoteUsers.forEach((remoteUser) => {
+                  if (remoteUser.role === 'male') {
+                    console.log(`[Female] 🧹 Removiendo remote male por desconexión: ${remoteUser.rtcUid}`);
+                    
+                    // Limpiar video tracks antes de remover el usuario
+                    if (remoteUser.videoTrack) {
+                      try {
+                        remoteUser.videoTrack.stop();
+                        console.log(`[Female] 🎥 Video track detenido para male ${remoteUser.rtcUid}`);
+                      } catch (videoError) {
+                        console.warn(`[Female] ⚠️ Error deteniendo video track:`, videoError);
+                      }
+                    }
+                    
+                    if (remoteUser.audioTrack) {
+                      try {
+                        remoteUser.audioTrack.stop();
+                        console.log(`[Female] 🎵 Audio track detenido para male ${remoteUser.rtcUid}`);
+                      } catch (audioError) {
+                        console.warn(`[Female] ⚠️ Error deteniendo audio track:`, audioError);
+                      }
+                    }
+                    
+                    dispatch({
+                      type: AgoraActionType.REMOVE_REMOTE_USER,
+                      payload: { rtcUid: String(remoteUser.rtcUid) },
+                    });
+                  }
+                });
+
+                // Limpiar mensajes de chat
+                dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+
+                // Actualizar estado a available_call solo si no es channel hopping
+                if (disconnectionData.reason !== 'channel_hopping') {
+                  broadcastLocalFemaleStatusUpdate({
+                    in_call: 0,
+                    status: 'available_call',
+                    host_id: disconnectionData.channelName,
+                    is_active: 1,
+                  });
+                } else {
+                  console.log('[Female] 🔄 Male desconectado por channel hopping, manteniendo estado in_call temporalmente');
+                }
+              }
             } else if (receivedMsg.type === 'GIFT_SENT') {
               const giftData = receivedMsg.payload;
 
@@ -312,9 +361,10 @@ export const useAgoraCallChannel = (
                     }, 500);
                   }
 
-                  const logMessage = joinData.isReconnection
+                  // Log message for debugging
+                  console.log(joinData.isReconnection
                     ? `[Female Client] ✅ Estado actualizado a 'in_call' por RECONEXIÓN de male`
-                    : `[Female Client] ✅ Estado actualizado a 'in_call' por señal MALE_JOINED`;
+                    : `[Female Client] ✅ Estado actualizado a 'in_call' por señal MALE_JOINED`);
                 } else {
                   console.warn(
                     `[Female Client] ⚠️ No se pudo actualizar estado - Datos faltantes:`,
@@ -360,23 +410,66 @@ export const useAgoraCallChannel = (
                 const summaryPayload =
                   receivedMsg.payload as FemaleCallSummaryInfo;
 
-                if (summaryPayload.reason !== 'Finalizada por ti') {
+                console.log('[Female] 📨 Recibido MALE_CALL_SUMMARY_SIGNAL, limpiando remote users');
+
+                // Limpiar todos los remote users (especialmente males) con cleanup de video tracks
+                const currentState = stateRef.current;
+                currentState.remoteUsers.forEach((remoteUser) => {
+                  if (remoteUser.role === 'male') {
+                    console.log(`[Female] 🧹 Removiendo remote male: ${remoteUser.rtcUid}`);
+                    
+                    // Limpiar video tracks antes de remover el usuario
+                    if (remoteUser.videoTrack) {
+                      try {
+                        remoteUser.videoTrack.stop();
+                        console.log(`[Female] 🎥 Video track detenido para male ${remoteUser.rtcUid}`);
+                      } catch (videoError) {
+                        console.warn(`[Female] ⚠️ Error deteniendo video track:`, videoError);
+                      }
+                    }
+                    
+                    if (remoteUser.audioTrack) {
+                      try {
+                        remoteUser.audioTrack.stop();
+                        console.log(`[Female] 🎵 Audio track detenido para male ${remoteUser.rtcUid}`);
+                      } catch (audioError) {
+                        console.warn(`[Female] ⚠️ Error deteniendo audio track:`, audioError);
+                      }
+                    }
+                    
+                    dispatch({
+                      type: AgoraActionType.REMOVE_REMOTE_USER,
+                      payload: { rtcUid: String(remoteUser.rtcUid) },
+                    });
+                  }
+                });
+
+                // Limpiar mensajes de chat
+                dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+
+                // Solo actualizar estado si no es channel hopping
+                if (!summaryPayload.isChannelHopping && summaryPayload.reason !== 'Finalizada por ti') {
                   broadcastLocalFemaleStatusUpdate({
                     in_call: 0,
                     status: 'available_call',
                     host_id: summaryPayload.host_id,
                     is_active: 1,
                   });
+                } else if (summaryPayload.isChannelHopping) {
+                  console.log('[Female] 🔄 Male salió por channel hopping, esperando nueva conexión...');
                 }
 
-                dispatch({
-                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
-                  payload: summaryPayload,
-                });
-                dispatch({
-                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
-                  payload: true,
-                });
+                // Solo mostrar modal si no es channel hopping
+                if (!summaryPayload.isChannelHopping) {
+                  dispatch({
+                    type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+                    payload: summaryPayload,
+                  });
+                  dispatch({
+                    type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+                    payload: true,
+                  });
+                }
               }
             }
           } catch (e) {
@@ -400,7 +493,6 @@ export const useAgoraCallChannel = (
       state.localUser,
       state.channelName,
       broadcastLocalFemaleStatusUpdate,
-      femaleTotalPointsEarnedInCall,
     ],
   );
 
@@ -753,6 +845,9 @@ export const useAgoraCallChannel = (
       state.channelName,
       state.localUser?.user_id,
       state.remoteUsers,
+      state.maleInitialMinutesInCall,
+      state.maleGiftMinutesSpent,
+      callTimer,
       agoraBackend,
       dispatch,
       rtmChannel,

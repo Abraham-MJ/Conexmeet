@@ -46,6 +46,22 @@ export const useAgoraLobby = (
   const verifyLobbyPresence = useCallback(
     async (channelInstance: RtmChannel, reason = 'manual') => {
       try {
+        // Verificar que el canal y el cliente RTM estén en buen estado
+        if (!channelInstance || !isLobbyJoined) {
+          console.warn(
+            `${LOG_PREFIX_LOBBY} Saltando verificación de presencia - canal no disponible (${reason})`,
+          );
+          return;
+        }
+
+        // Verificar que el cliente RTM esté logueado
+        if (!rtmClient || !isRtmLoggedIn) {
+          console.warn(
+            `${LOG_PREFIX_LOBBY} Saltando verificación de presencia - cliente RTM no logueado (${reason})`,
+          );
+          return;
+        }
+
         const currentMembers = await channelInstance.getMembers();
         const currentList = onlineFemalesListRef.current;
 
@@ -84,14 +100,42 @@ export const useAgoraLobby = (
             }
           }
         });
-      } catch (error) {
-        console.warn(
-          `${LOG_PREFIX_LOBBY} Error en verificación de presencia (${reason}):`,
-          error,
-        );
+      } catch (error: any) {
+        const errorCode = error?.code;
+        const errorMessage = error?.message || error;
+
+        // Error 102: Cliente no logueado - intentar reconectar
+        if (errorCode === 102) {
+          console.warn(
+            `${LOG_PREFIX_LOBBY} Cliente RTM no logueado durante verificación de presencia (${reason}). Intentando reconectar...`,
+          );
+          
+          // Intentar reinicializar RTM client
+          try {
+            await initializeRtmClient('Reconectando servicios de lobby...');
+          } catch (reconnectError) {
+            console.error(
+              `${LOG_PREFIX_LOBBY} Error en reconexión RTM:`,
+              reconnectError,
+            );
+          }
+        }
+        // Error 4: Timeout - no es crítico, solo log
+        else if (errorCode === 4) {
+          console.warn(
+            `${LOG_PREFIX_LOBBY} Timeout en verificación de presencia (${reason}) - continuando...`,
+          );
+        }
+        // Otros errores
+        else {
+          console.warn(
+            `${LOG_PREFIX_LOBBY} Error en verificación de presencia (${reason}):`,
+            errorMessage,
+          );
+        }
       }
     },
-    [dispatch],
+    [dispatch, isLobbyJoined, rtmClient, isRtmLoggedIn, initializeRtmClient],
   );
 
   useEffect(() => {
@@ -439,13 +483,33 @@ export const useAgoraLobby = (
       });
 
       presenceCheckIntervalRef.current = setInterval(async () => {
-        try {
-          const currentMembers = await channel.getMembers();
-          verifyLobbyPresence(channel, 'periodic-check');
-        } catch (error) {
+        // Solo verificar si estamos en buen estado
+        if (isLobbyJoined && isRtmLoggedIn && channel) {
+          try {
+            await verifyLobbyPresence(channel, 'periodic-check');
+          } catch (error: any) {
+            const errorCode = error?.code;
+            
+            // Si es error 102 (no logueado), parar las verificaciones periódicas
+            if (errorCode === 102) {
+              console.warn(
+                `${LOG_PREFIX_LOBBY} Deteniendo verificaciones periódicas - cliente RTM no logueado`,
+              );
+              if (presenceCheckIntervalRef.current) {
+                clearInterval(presenceCheckIntervalRef.current);
+                presenceCheckIntervalRef.current = null;
+              }
+            } else {
+              console.warn(
+                `${LOG_PREFIX_LOBBY} Error en verificación periódica de presencia:`,
+                error,
+              );
+            }
+          }
+        } else {
           console.warn(
-            `${LOG_PREFIX_LOBBY} Error en verificación periódica de presencia:`,
-            error,
+            `${LOG_PREFIX_LOBBY} Saltando verificación periódica - estado no válido`,
+            { isLobbyJoined, isRtmLoggedIn, hasChannel: !!channel }
           );
         }
       }, 30000); 

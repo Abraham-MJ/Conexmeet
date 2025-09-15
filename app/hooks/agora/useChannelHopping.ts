@@ -304,16 +304,27 @@ export const useChannelHopping = (
 
       try {
         if (state.isRtmChannelJoined) {
+          console.log(`[Channel Hopping] 📨 Enviando señal de salida a female en ${currentChannelName}`);
+          
           const summaryPayload = {
             reason: 'Usuario finalizó la llamada',
             duration: '00:00',
             earnings: 0,
             host_id: currentChannelName,
+            isChannelHopping: true, // Indicar que es channel hopping
           };
 
           await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
 
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          // Enviar señal adicional para asegurar limpieza
+          await sendCallSignal('MALE_DISCONNECTED_SIGNAL', {
+            maleUserId: String(state.localUser.user_id),
+            channelName: currentChannelName,
+            reason: 'channel_hopping',
+            timestamp: Date.now(),
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       } catch (notifyError) {
         console.warn(

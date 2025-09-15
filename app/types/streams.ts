@@ -81,6 +81,7 @@ export interface FemaleCallSummaryInfo {
   duration: string;
   earnings: number | string | null;
   host_id: string | null;
+  isChannelHopping?: boolean;
 }
 
 export interface UserInformation {

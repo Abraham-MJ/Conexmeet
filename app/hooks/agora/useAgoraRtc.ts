@@ -48,6 +48,9 @@ export const useAgoraRtc = (
 
       currentRtcClient.on('user-published', async (remoteUser, mediaType) => {
         if (mediaType !== 'audio' && mediaType !== 'video') return;
+        
+        console.log(`[RTC] 📹 Usuario publicó ${mediaType}: ${remoteUser.uid}`);
+        
         try {
           await currentRtcClient!.subscribe(remoteUser, mediaType);
 
@@ -66,6 +69,24 @@ export const useAgoraRtc = (
 
           if (mediaType === 'audio' && remoteUser.audioTrack) {
             remoteUser.audioTrack.play();
+          }
+
+          // Si soy female y un male publicó video, asegurar que mi estado esté correcto
+          if (localUser?.role === 'female' && mediaType === 'video') {
+            console.log('[Female] 📹 Male publicó video, actualizando estado a in_call');
+            
+            setTimeout(async () => {
+              try {
+                await broadcastLocalFemaleStatusUpdate({
+                  in_call: 1,
+                  status: 'in_call',
+                  host_id: localUser.host_id,
+                  is_active: 1,
+                });
+              } catch (error) {
+                console.warn('[Female] ⚠️ Error actualizando estado después de video publicado:', error);
+              }
+            }, 200);
           }
         } catch (subError) {
           console.error(
@@ -91,10 +112,71 @@ export const useAgoraRtc = (
       );
 
       currentRtcClient.on('user-left', (remoteUserLeaving) => {
+        console.log(`[RTC] 👋 Usuario salió del canal: ${remoteUserLeaving.uid}`);
+        
+        // Limpiar tracks del usuario que se va
+        const leavingUser = remoteUsersRef.current.find(
+          (user) => String(user.rtcUid) === String(remoteUserLeaving.uid)
+        );
+        
+        if (leavingUser) {
+          if (leavingUser.videoTrack) {
+            try {
+              leavingUser.videoTrack.stop();
+              console.log(`[RTC] 🎥 Video track limpiado para usuario saliente: ${remoteUserLeaving.uid}`);
+            } catch (videoError) {
+              console.warn(`[RTC] ⚠️ Error limpiando video track:`, videoError);
+            }
+          }
+          
+          if (leavingUser.audioTrack) {
+            try {
+              leavingUser.audioTrack.stop();
+              console.log(`[RTC] 🎵 Audio track limpiado para usuario saliente: ${remoteUserLeaving.uid}`);
+            } catch (audioError) {
+              console.warn(`[RTC] ⚠️ Error limpiando audio track:`, audioError);
+            }
+          }
+        }
+        
         dispatch({
           type: AgoraActionType.REMOVE_REMOTE_USER,
           payload: { rtcUid: String(remoteUserLeaving.uid) },
         });
+
+        // Si soy female y un male se desconectó, actualizar mi estado
+        // Pero solo si no hay otros males conectados
+        if (localUser?.role === 'female') {
+          const remainingMales = remoteUsersRef.current.filter(
+            (user) => user.role === 'male' && String(user.rtcUid) !== String(remoteUserLeaving.uid)
+          );
+          
+          if (remainingMales.length === 0) {
+            console.log('[Female] 🔄 Último male se desconectó, actualizando estado a available_call');
+            
+            // Delay para permitir que channel hopping complete si está en progreso
+            setTimeout(async () => {
+              const currentRemoteMales = remoteUsersRef.current.filter(user => user.role === 'male');
+              
+              if (currentRemoteMales.length === 0) {
+                try {
+                  await broadcastLocalFemaleStatusUpdate({
+                    in_call: 0,
+                    status: 'available_call',
+                    host_id: localUser.host_id,
+                    is_active: 1,
+                  });
+                } catch (error) {
+                  console.warn('[Female] ⚠️ Error actualizando estado después de user-left:', error);
+                }
+              } else {
+                console.log('[Female] 🔄 Nuevos males detectados, manteniendo estado in_call');
+              }
+            }, 1000);
+          } else {
+            console.log(`[Female] 👥 Aún hay ${remainingMales.length} males conectados, manteniendo estado in_call`);
+          }
+        }
       });
     },
     [dispatch, localUser, broadcastLocalFemaleStatusUpdate],

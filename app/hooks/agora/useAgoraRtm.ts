@@ -76,6 +76,10 @@ export const useAgoraRtm = (
         currentRtmClient.removeAllListeners('ConnectionStateChanged');
 
         currentRtmClient.on('ConnectionStateChanged', (newState, reason) => {
+          console.log(
+            `${LOG_PREFIX_RTM_LISTEN} RTM Estado cambió: ${newState} (${reason})`,
+          );
+
           if (
             newState === 'ABORTED' ||
             (newState === 'DISCONNECTED' &&
@@ -94,11 +98,68 @@ export const useAgoraRtm = (
             newState === 'DISCONNECTED' &&
             String(reason) === 'LOGOUT'
           ) {
+            console.log(`${LOG_PREFIX_RTM_LISTEN} RTM Logout normal`);
             setIsRtmLoggedIn(false);
             dispatch({ type: AgoraActionType.RTM_LOGOUT_LEAVE_CHANNEL });
+          } else if (
+            newState === 'DISCONNECTED' &&
+            String(reason) !== 'LOGOUT'
+          ) {
+            console.warn(
+              `${LOG_PREFIX_RTM_LISTEN} RTM Desconectado inesperadamente: ${reason}`,
+            );
+            setIsRtmLoggedIn(false);
+            setRtmError(`Desconectado: ${reason}`);
+
+            // Categorizar el tipo de error para decidir si reconectar
+            const shouldAttemptReconnect = ![
+              'INVALID_TOKEN',
+              'TOKEN_EXPIRED',
+              'INVALID_ARGUMENT',
+            ].includes(String(reason));
+
+            if (shouldAttemptReconnect) {
+              // Intentar reconectar después de un delay progresivo
+              const reconnectDelay = Math.min(
+                2000 + Math.random() * 1000,
+                5000,
+              );
+              setTimeout(async () => {
+                if (localUser && localUser.rtmUid && !isRtmLoggedIn) {
+                  console.log(
+                    `${LOG_PREFIX_RTM_LISTEN} Intentando reconectar RTM automáticamente...`,
+                  );
+                  try {
+                    await initializeRtmClient(
+                      'Reconectando servicios de mensajería...',
+                    );
+                  } catch (reconnectError) {
+                    console.error(
+                      `${LOG_PREFIX_RTM_LISTEN} Error en reconexión automática:`,
+                      reconnectError,
+                    );
+                  }
+                }
+              }, reconnectDelay);
+            } else {
+              console.error(
+                `${LOG_PREFIX_RTM_LISTEN} Error crítico RTM, no se intentará reconectar: ${reason}`,
+              );
+              dispatch({
+                type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
+                payload: true,
+              });
+            }
           } else if (newState === 'CONNECTED') {
+            console.log(`${LOG_PREFIX_RTM_LISTEN} RTM Conectado exitosamente`);
             setIsRtmLoggedIn(true);
             setRtmError(null);
+          } else if (newState === 'RECONNECTING') {
+            console.log(`${LOG_PREFIX_RTM_LISTEN} RTM Reconectando...`);
+            setRtmError('Reconectando...');
+          } else if (newState === 'CONNECTING') {
+            console.log(`${LOG_PREFIX_RTM_LISTEN} RTM Conectando...`);
+            setRtmError('Conectando...');
           }
         });
 

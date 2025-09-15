@@ -13,6 +13,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const hostId = searchParams.get('host_id');
 
+    if (!hostId) {
+      return NextResponse.json(
+        { available: false, reason: 'host_id es requerido' },
+        { status: 400 },
+      );
+    }
+
     const authToken = request.cookies.get('auth_token')?.value;
 
     if (!authToken) {
@@ -22,14 +29,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!hostId) {
-      return NextResponse.json(
-        { available: false, reason: 'host_id requerido' },
-        { status: 400 },
-      );
-    }
-
+    // Verificar si existe una sala en estado 'waiting' para este host
     const listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting&filter[host_id]=${hostId}`;
+    
     const roomsListResponse = await fetch(listRoomsApiUrl, {
       method: 'GET',
       headers: {
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
       !Array.isArray(roomsListData.data)
     ) {
       return NextResponse.json(
-        { available: false, reason: 'Respuesta inválida del servicio' },
+        { available: false, reason: 'Respuesta inválida del servidor' },
         { status: 500 },
       );
     }
@@ -68,17 +70,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (targetRoom.another_user_id !== null) {
-      return NextResponse.json({
-        available: false,
-        reason: 'Canal ocupado por otro usuario',
-      });
-    }
-
     if (targetRoom.status !== 'waiting') {
       return NextResponse.json({
         available: false,
         reason: `Canal en estado: ${targetRoom.status}`,
+      });
+    }
+
+    if (targetRoom.another_user_id !== null) {
+      return NextResponse.json({
+        available: false,
+        reason: 'Canal ocupado por otro usuario',
       });
     }
 
