@@ -333,7 +333,7 @@ export const useCallFlows = (
           });
           dispatch({
             type: AgoraActionType.RTC_SETUP_FAILURE,
-            payload: 'No tienes minutos suficientes para iniciar la llamada.',
+            payload: 'No tienes monedas suficientes para iniciar la llamada.',
           });
           return;
         }
@@ -471,7 +471,12 @@ export const useCallFlows = (
 
             attemptedChannels.add(determinedChannelName);
 
-            if (connectionMonitor?.hasActiveConnectionConflict(determinedChannelName, String(appUserId))) {
+            if (
+              connectionMonitor?.hasActiveConnectionConflict(
+                determinedChannelName,
+                String(appUserId),
+              )
+            ) {
               console.warn(
                 `[Channel Selection] Canal ${determinedChannelName} tiene conflicto de conexión activo`,
               );
@@ -500,7 +505,10 @@ export const useCallFlows = (
             }
 
             try {
-              connectionMonitor?.registerConnectionAttempt(determinedChannelName, String(appUserId));
+              connectionMonitor?.registerConnectionAttempt(
+                determinedChannelName,
+                String(appUserId),
+              );
 
               const backendJoinResponse = await fetch(
                 '/api/agora/channels/enter-channel-male-v2',
@@ -516,8 +524,10 @@ export const useCallFlows = (
 
               if (backendJoinResponse.success) {
                 connectionSuccessful = true;
-                
-                connectionMonitor?.markConnectionSuccessful(determinedChannelName);
+
+                connectionMonitor?.markConnectionSuccessful(
+                  determinedChannelName,
+                );
 
                 if (backendJoinResponse.data && backendJoinResponse.data.id) {
                   dispatch({
@@ -631,7 +641,12 @@ export const useCallFlows = (
           determinedChannelName
         ) {
           try {
-            if (connectionMonitor?.hasActiveConnectionConflict(determinedChannelName, String(appUserId))) {
+            if (
+              connectionMonitor?.hasActiveConnectionConflict(
+                determinedChannelName,
+                String(appUserId),
+              )
+            ) {
               dispatch({
                 type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
                 payload: true,
@@ -660,7 +675,10 @@ export const useCallFlows = (
               throw new Error(validationResult.reason || 'Canal no disponible');
             }
 
-            connectionMonitor?.registerConnectionAttempt(determinedChannelName, String(appUserId));
+            connectionMonitor?.registerConnectionAttempt(
+              determinedChannelName,
+              String(appUserId),
+            );
 
             const backendJoinResponse = await fetch(
               '/api/agora/channels/enter-channel-male-v2',
@@ -995,6 +1013,11 @@ export const useCallFlows = (
       waitForUserProfile,
       user.user?.minutes,
       cleanupConnectionsOnError,
+      validateChannelAvailability,
+      clearChannelAttempt,
+      connectionMonitor,
+      current_room_id,
+      sendCallSignal,
     ],
   );
 
@@ -1139,199 +1162,203 @@ export const useCallFlows = (
   ]);
 
   const handleLeaveCall = useCallback(async () => {
-    const currentUser = localUser;
-    const currentChannel = currentChannelName;
+      const currentUser = localUser;
+      const currentChannel = currentChannelName;
+      console.log(`${LOG_PREFIX_PROVIDER} handleLeaveCall iniciado para usuario:`, currentUser?.role, currentUser?.user_id);
 
-    if (!currentUser) {
-      console.warn(
-        `${LOG_PREFIX_PROVIDER} handleLeaveCall: No hay usuario local. Redirigiendo...`,
-      );
-      router.push('/main/video-roulette');
-      return;
-    }
-
-    hasTriggeredOutOfMinutesRef.current = true;
-
-    let disconnectReason: FemaleCallSummaryInfo['reason'] =
-      'Desconexión inesperada';
-    let callDuration: string = callTimer;
-    let callEarnings: number | string | null = null;
-
-    try {
-      if (currentUser.role === 'female' && currentChannel) {
-        disconnectReason = 'Finalizada por ti';
-        const [minutesStr, secondsStr] = callTimer.split(':');
-        const parsedMinutes = parseInt(minutesStr, 10);
-        const parsedSeconds = parseInt(secondsStr, 10);
-        callEarnings = getBalance(
-          { minutes: parsedMinutes, seconds: parsedSeconds },
-          femaleTotalPointsEarnedInCall,
+      if (!currentUser) {
+        console.warn(
+          `${LOG_PREFIX_PROVIDER} handleLeaveCall: No hay usuario local. Redirigiendo...`,
         );
+        router.push('/main/video-roulette');
+        return;
+      }
 
-        dispatch({
-          type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
-          payload: {
-            reason: disconnectReason,
-            duration: callDuration,
-            earnings: callEarnings,
-            host_id: currentChannel,
-          },
-        });
-        dispatch({
-          type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
-          payload: true,
-        });
+      hasTriggeredOutOfMinutesRef.current = true;
 
-        await sendCallSignal('HOST_ENDED_CALL', {
-          channelName: currentChannel,
-        });
+      let disconnectReason: FemaleCallSummaryInfo['reason'] =
+        'Desconexión inesperada';
+      let callDuration: string = callTimer;
+      let callEarnings: number | string | null = null;
 
-        await broadcastLocalFemaleStatusUpdate({
-          status: 'online',
-          host_id: null,
-          in_call: 0,
-          is_active: 1,
-        });
-        await agoraBackend.closeChannel(currentChannel, 'finished');
-      } else if (currentUser.role === 'male' && currentChannel) {
-        const [minutesStr, secondsStr] = callTimer.split(':');
-        const parsedMinutes = parseInt(minutesStr, 10);
-        const parsedSeconds = parseInt(secondsStr, 10);
-        const totalElapsedSeconds = parsedMinutes * 60 + parsedSeconds;
+      try {
+        if (currentUser.role === 'female' && currentChannel) {
+          disconnectReason = 'Finalizada por ti';
+          const [minutesStr, secondsStr] = callTimer.split(':');
+          const parsedMinutes = parseInt(minutesStr, 10);
+          const parsedSeconds = parseInt(secondsStr, 10);
+          callEarnings = getBalance(
+            { minutes: parsedMinutes, seconds: parsedSeconds },
+            femaleTotalPointsEarnedInCall,
+          );
 
-        const initialMinutesInSeconds = (maleInitialMinutesInCall || 0) * 60;
-        const giftMinutesSpentInSeconds = maleGiftMinutesSpent * 60;
-
-        if (
-          initialMinutesInSeconds -
-            totalElapsedSeconds -
-            giftMinutesSpentInSeconds <=
-            0 &&
-          maleInitialMinutesInCall !== null
-        ) {
-          disconnectReason = 'Saldo agotado';
-        } else {
-          disconnectReason = 'Usuario finalizó la llamada';
-        }
-
-        callEarnings = getBalance(
-          { minutes: parsedMinutes, seconds: parsedSeconds },
-          femaleTotalPointsEarnedInCall,
-        );
-
-        const targetFemale = onlineFemalesList.find(
-          (female) => female.host_id === currentChannel,
-        );
-
-        dispatch({
-          type: AgoraActionType.SET_SHOW_MALE_RATING_MODAL,
-          payload: {
-            show: true,
-            femaleInfo: {
-              femaleId: targetFemale?.user_id || currentChannel,
-              femaleName: targetFemale?.user_name,
-              femaleAvatar: targetFemale?.avatar,
-            },
-          },
-        });
-
-        if (isRtmChannelJoined) {
-          try {
-            const summaryPayload: FemaleCallSummaryInfo = {
-              reason: hostEndedCallInfo?.ended
-                ? 'Finalizada por ti'
-                : disconnectReason,
+          dispatch({
+            type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+            payload: {
+              reason: disconnectReason,
               duration: callDuration,
               earnings: callEarnings,
               host_id: currentChannel,
-            };
-            await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
-          } catch (error) {
-            console.error(
-              '[Male] Error enviando MALE_CALL_SUMMARY_SIGNAL:',
-              error,
-            );
+            },
+          });
+          dispatch({
+            type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+            payload: true,
+          });
+
+          await sendCallSignal('HOST_ENDED_CALL', {
+            channelName: currentChannel,
+          });
+
+          await broadcastLocalFemaleStatusUpdate({
+            status: 'online',
+            host_id: null,
+            in_call: 0,
+            is_active: 1,
+          });
+          await agoraBackend.closeChannel(currentChannel, 'finished');
+        } else if (currentUser.role === 'male' && currentChannel) {
+          const [minutesStr, secondsStr] = callTimer.split(':');
+          const parsedMinutes = parseInt(minutesStr, 10);
+          const parsedSeconds = parseInt(secondsStr, 10);
+          const totalElapsedSeconds = parsedMinutes * 60 + parsedSeconds;
+
+          const initialMinutesInSeconds = (maleInitialMinutesInCall || 0) * 60;
+          const giftMinutesSpentInSeconds = maleGiftMinutesSpent * 60;
+
+          if (
+            initialMinutesInSeconds -
+              totalElapsedSeconds -
+              giftMinutesSpentInSeconds <=
+              0 &&
+            maleInitialMinutesInCall !== null
+          ) {
+            disconnectReason = 'Saldo agotado';
+          } else {
+            disconnectReason = 'Usuario finalizó la llamada';
           }
-        }
 
-        if (localUser.user_id && currentChannel && current_room_id) {
-          try {
-            await agoraBackend.cleanupAfterMaleDisconnect(
-              String(localUser.user_id),
-              currentChannel,
-              current_room_id,
-            );
-          } catch (error) {
-            console.error(
-              '[Male] ❌ Error en limpieza completa, intentando limpieza básica:',
-              error,
-            );
+          callEarnings = getBalance(
+            { minutes: parsedMinutes, seconds: parsedSeconds },
+            femaleTotalPointsEarnedInCall,
+          );
 
+          const targetFemale = onlineFemalesList.find(
+            (female) => female.host_id === currentChannel,
+          );
+
+          dispatch({
+            type: AgoraActionType.SET_SHOW_MALE_RATING_MODAL,
+            payload: {
+              show: true,
+              femaleInfo: {
+                femaleId: targetFemale?.user_id || currentChannel,
+                femaleName: targetFemale?.user_name,
+                femaleAvatar: targetFemale?.avatar,
+              },
+            },
+          });
+
+          if (isRtmChannelJoined) {
             try {
-              await agoraBackend.closeMaleChannel(
+              const summaryPayload: FemaleCallSummaryInfo = {
+                reason: hostEndedCallInfo?.ended
+                  ? 'Finalizada por ti'
+                  : disconnectReason,
+                duration: callDuration,
+                earnings: callEarnings,
+                host_id: currentChannel,
+              };
+              await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
+            } catch (error) {
+              console.error(
+                '[Male] Error enviando MALE_CALL_SUMMARY_SIGNAL:',
+                error,
+              );
+            }
+          }
+
+          if (localUser.user_id && currentChannel && current_room_id) {
+            try {
+              await agoraBackend.cleanupAfterMaleDisconnect(
                 String(localUser.user_id),
                 currentChannel,
                 current_room_id,
               );
-
-              if (!hostEndedCallInfo?.ended) {
-                await agoraBackend.closeChannel(currentChannel, 'waiting');
-              }
-            } catch (fallbackError) {
+            } catch (error) {
               console.error(
-                '[Male] ❌ Error en limpieza básica también:',
-                fallbackError,
+                '[Male] ❌ Error en limpieza completa, intentando limpieza básica:',
+                error,
               );
+
+              try {
+                await agoraBackend.closeMaleChannel(
+                  String(localUser.user_id),
+                  currentChannel,
+                  current_room_id,
+                );
+
+                if (!hostEndedCallInfo?.ended) {
+                  await agoraBackend.closeChannel(currentChannel, 'finished');
+                }
+              } catch (fallbackError) {
+                console.error(
+                  '[Male] ❌ Error en limpieza básica también:',
+                  fallbackError,
+                );
+              }
             }
           }
         }
+
+        await leaveRtcChannel();
+        await leaveCallChannel();
+
+        if (
+          currentUser.role === 'male' &&
+          currentChannel &&
+          channelHoppingFunctions?.registerChannelLeave
+        ) {
+          channelHoppingFunctions.registerChannelLeave(currentChannel, false);
+        }
+
+        await handleGetInformation();
+      } catch (error: any) {
+        console.error(
+          `${LOG_PREFIX_PROVIDER} Error durante handleLeaveCall para ${currentUser.role} (${String(currentUser.user_id)}):`,
+          error,
+        );
+        dispatch({
+          type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
+          payload: true,
+        });
+      } finally {
+        console.log(`${LOG_PREFIX_PROVIDER} handleLeaveCall finally - redirigiendo para usuario:`, currentUser?.role);
+        router.push('/main/video-roulette');
       }
-
-      await leaveRtcChannel();
-      await leaveCallChannel();
-
-      if (
-        currentUser.role === 'male' &&
-        currentChannel &&
-        channelHoppingFunctions?.registerChannelLeave
-      ) {
-        channelHoppingFunctions.registerChannelLeave(currentChannel, false);
-      }
-
-      await handleGetInformation();
-    } catch (error: any) {
-      console.error(
-        `${LOG_PREFIX_PROVIDER} Error durante handleLeaveCall para ${currentUser.role} (${String(currentUser.user_id)}):`,
-        error,
-      );
-      dispatch({
-        type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
-        payload: true,
-      });
-    } finally {
-      router.push('/main/video-roulette');
-    }
-  }, [
-    router,
-    dispatch,
-    localUser,
-    currentChannelName,
-    agoraBackend,
-    current_room_id,
-    callTimer,
-    maleInitialMinutesInCall,
-    maleGiftMinutesSpent,
-    femaleTotalPointsEarnedInCall,
-    isRtmChannelJoined,
-    handleGetInformation,
-    channelHoppingFunctions,
-    leaveRtcChannel,
-    leaveCallChannel,
-    sendCallSignal,
-    broadcastLocalFemaleStatusUpdate,
-    hostEndedCallInfo,
-    onlineFemalesList,
-  ]);
+    },
+    [
+      router,
+      dispatch,
+      localUser,
+      currentChannelName,
+      agoraBackend,
+      current_room_id,
+      callTimer,
+      maleInitialMinutesInCall,
+      maleGiftMinutesSpent,
+      femaleTotalPointsEarnedInCall,
+      isRtmChannelJoined,
+      handleGetInformation,
+      channelHoppingFunctions,
+      leaveRtcChannel,
+      leaveCallChannel,
+      sendCallSignal,
+      broadcastLocalFemaleStatusUpdate,
+      hostEndedCallInfo,
+      onlineFemalesList,
+    ],
+  );
 
   const closeNoChannelsAvailableModal = useCallback(() => {
     dispatch({

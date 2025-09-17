@@ -37,6 +37,7 @@ export const useAgoraCallChannel = (
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const pendingProfilePromisesRef = useRef(new Map<string, () => void>());
+  const forceLeaveEventSentRef = useRef(false);
 
   const waitForUserProfile = useCallback(
     (uidToWaitFor: string | number) => {
@@ -216,15 +217,13 @@ export const useAgoraCallChannel = (
             } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
               if (localUser?.role === 'female') {
                 const disconnectionData = receivedMsg.payload;
-                console.log('[Female] 📨 Recibido MALE_DISCONNECTED_SIGNAL:', disconnectionData);
+                console.log('[Female] 📨 Recibido MALE_DISCONNECTED_SIGNAL, ejecutando desconexión completa:', disconnectionData);
 
-                // Limpiar todos los remote users males con cleanup de video tracks
                 const currentState = stateRef.current;
                 currentState.remoteUsers.forEach((remoteUser) => {
                   if (remoteUser.role === 'male') {
                     console.log(`[Female] 🧹 Removiendo remote male por desconexión: ${remoteUser.rtcUid}`);
                     
-                    // Limpiar video tracks antes de remover el usuario
                     if (remoteUser.videoTrack) {
                       try {
                         remoteUser.videoTrack.stop();
@@ -250,20 +249,16 @@ export const useAgoraCallChannel = (
                   }
                 });
 
-                // Limpiar mensajes de chat
                 dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
 
-                // Actualizar estado a available_call solo si no es channel hopping
-                if (disconnectionData.reason !== 'channel_hopping') {
-                  broadcastLocalFemaleStatusUpdate({
-                    in_call: 0,
-                    status: 'available_call',
-                    host_id: disconnectionData.channelName,
-                    is_active: 1,
-                  });
-                } else {
-                  console.log('[Female] 🔄 Male desconectado por channel hopping, manteniendo estado in_call temporalmente');
-                }
+                broadcastLocalFemaleStatusUpdate({
+                  in_call: 0,
+                  status: 'online',
+                  host_id: null,
+                  is_active: 1,
+                });
+
+                console.log('[Female] 📨 MALE_DISCONNECTED_SIGNAL procesado - MALE_CALL_SUMMARY_SIGNAL manejará la desconexión');
               }
             } else if (receivedMsg.type === 'GIFT_SENT') {
               const giftData = receivedMsg.payload;
@@ -361,7 +356,6 @@ export const useAgoraCallChannel = (
                     }, 500);
                   }
 
-                  // Log message for debugging
                   console.log(joinData.isReconnection
                     ? `[Female Client] ✅ Estado actualizado a 'in_call' por RECONEXIÓN de male`
                     : `[Female Client] ✅ Estado actualizado a 'in_call' por señal MALE_JOINED`);
@@ -410,15 +404,13 @@ export const useAgoraCallChannel = (
                 const summaryPayload =
                   receivedMsg.payload as FemaleCallSummaryInfo;
 
-                console.log('[Female] 📨 Recibido MALE_CALL_SUMMARY_SIGNAL, limpiando remote users');
+                console.log('[Female] 📨 Recibido MALE_CALL_SUMMARY_SIGNAL, ejecutando desconexión completa');
 
-                // Limpiar todos los remote users (especialmente males) con cleanup de video tracks
                 const currentState = stateRef.current;
                 currentState.remoteUsers.forEach((remoteUser) => {
                   if (remoteUser.role === 'male') {
                     console.log(`[Female] 🧹 Removiendo remote male: ${remoteUser.rtcUid}`);
                     
-                    // Limpiar video tracks antes de remover el usuario
                     if (remoteUser.videoTrack) {
                       try {
                         remoteUser.videoTrack.stop();
@@ -444,31 +436,30 @@ export const useAgoraCallChannel = (
                   }
                 });
 
-                // Limpiar mensajes de chat
                 dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
 
-                // Solo actualizar estado si no es channel hopping
-                if (!summaryPayload.isChannelHopping && summaryPayload.reason !== 'Finalizada por ti') {
-                  broadcastLocalFemaleStatusUpdate({
-                    in_call: 0,
-                    status: 'available_call',
-                    host_id: summaryPayload.host_id,
-                    is_active: 1,
-                  });
-                } else if (summaryPayload.isChannelHopping) {
-                  console.log('[Female] 🔄 Male salió por channel hopping, esperando nueva conexión...');
-                }
+                dispatch({
+                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+                  payload: summaryPayload,
+                });
+                dispatch({
+                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+                  payload: true,
+                });
 
-                // Solo mostrar modal si no es channel hopping
-                if (!summaryPayload.isChannelHopping) {
-                  dispatch({
-                    type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
-                    payload: summaryPayload,
-                  });
-                  dispatch({
-                    type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
-                    payload: true,
-                  });
+                if (typeof window !== 'undefined' && !forceLeaveEventSentRef.current) {
+                  forceLeaveEventSentRef.current = true;
+                  console.log('[Female] 🔄 Disparando evento para desconexión completa por male disconnect');
+                  window.dispatchEvent(
+                    new CustomEvent('maleDisconnectedForceLeave', {
+                      detail: {
+                        reason: summaryPayload.reason || 'El usuario finalizó la llamada',
+                        timestamp: Date.now(),
+                      },
+                    })
+                  );
+                } else if (forceLeaveEventSentRef.current) {
+                  console.log('[Female] ⚠️ Evento maleDisconnectedForceLeave ya enviado, evitando duplicado');
                 }
               }
             }
@@ -552,6 +543,8 @@ export const useAgoraCallChannel = (
       setIsRtmChannelJoined(true);
       setChatMessages([]);
       dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+      
+      forceLeaveEventSentRef.current = false;
 
       setupCallChannelListeners(channel);
 
@@ -666,17 +659,35 @@ export const useAgoraCallChannel = (
     if (rtmChannel && isRtmChannelJoined) {
       try {
         await rtmChannel.leave();
-      } catch (error) {
-        console.error(
-          `${LOG_PREFIX_RTM_LISTEN} Error al ejecutar rtmChannel.leave():`,
-          error,
-        );
+      } catch (error: any) {
+        if (error.code === 3) {
+          console.log(
+            `${LOG_PREFIX_RTM_LISTEN} Canal RTM ya estaba desconectado (Code 3) - continuando limpieza`,
+          );
+        } else {
+          console.error(
+            `${LOG_PREFIX_RTM_LISTEN} Error inesperado al ejecutar rtmChannel.leave():`,
+            error,
+          );
+        }
       } finally {
         setRtmChannel(null);
         setIsRtmChannelJoined(false);
         setChatMessages([]);
         dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
+        
+        forceLeaveEventSentRef.current = false;
       }
+    } else if (rtmChannel || isRtmChannelJoined) {
+      console.log(
+        `${LOG_PREFIX_RTM_LISTEN} Limpiando estado RTM sin hacer leave (canal ya desconectado)`,
+      );
+      setRtmChannel(null);
+      setIsRtmChannelJoined(false);
+      setChatMessages([]);
+      dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
+      
+      forceLeaveEventSentRef.current = false;
     }
   }, [dispatch, rtmChannel, isRtmChannelJoined]);
 

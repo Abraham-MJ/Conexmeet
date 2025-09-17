@@ -89,11 +89,11 @@ const translations: LanguageTranslations = {
         'modal.uploadStory.upload': 'Subir',
         'modal.uploadStory.clickToUpload': 'Haz clic para subir',
         'modal.uploadStory.orDragDrop': 'o arrastra y suelta',
-        'modal.insufficientMinutes.title': 'Minutos Insuficientes',
-        'modal.insufficientMinutes.description': 'No tienes suficientes minutos disponibles para iniciar esta conexión.',
+        'modal.insufficientMinutes.title': 'Monedas Insuficientes',
+        'modal.insufficientMinutes.description': 'No tienes suficientes monedas disponibles para iniciar esta conexión.',
         'modal.insufficientMinutes.instruction': 'Por favor, recarga tu saldo para poder conectar con nuestras modelos.',
-        'modal.insufficientMinutes.recharge': 'Recargar Minutos',
-        'modal.minutesExhausted.title': '¡Se Han Agotado tus Minutos!',
+        'modal.insufficientMinutes.recharge': 'Recargar Monedas',
+        'modal.minutesExhausted.title': '¡Se Han Agotado tus Monedas!',
         'modal.minutesExhausted.description': 'Tu tiempo en esta videollamada ha finalizado. Para seguir disfrutando de nuestras transmisiones',
         'modal.minutesExhausted.instruction': 'por favor, recarga tu saldo. ¡No te pierdas de nada!',
         'modal.minutesExhausted.rechargeNow': 'Recargar Ahora',
@@ -199,7 +199,7 @@ const translations: LanguageTranslations = {
         'header.myContacts': 'Mis Contactos',
         'header.contacts': 'Contactos',
         'header.balance': 'Saldo',
-        'header.minutes': 'Minutos',
+        'header.minutes': 'Monedas',
         'header.recharge': 'Recargar',
 
         // Pages
@@ -212,7 +212,7 @@ const translations: LanguageTranslations = {
         'ranking.position': 'Posición',
         'ranking.photo': 'Foto',
         'ranking.name': 'Nombre',
-        'ranking.minutes': 'Minutos',
+        'ranking.minutes': 'Monedas',
         'ranking.calculatingPosition': 'Calculando tu posición...',
         'ranking.loadingRanking': 'Cargando ranking...',
         'ranking.errorProcessingTime': 'Error procesando tu tiempo.',
@@ -385,7 +385,7 @@ const translations: LanguageTranslations = {
         'modal.rating.sending': 'Enviando...',
 
         // Modals - Package
-        'modal.package.minutes': 'Minutos:',
+        'modal.package.minutes': 'Monedas:',
 
         // Modals - Channel Not Found
         'modal.channelNotFound.title': '¡Te avisamos cuando {name} esté disponible!',
@@ -587,11 +587,11 @@ const translations: LanguageTranslations = {
         'modal.uploadStory.upload': 'Upload',
         'modal.uploadStory.clickToUpload': 'Click to upload',
         'modal.uploadStory.orDragDrop': 'or drag and drop',
-        'modal.insufficientMinutes.title': 'Insufficient Minutes',
-        'modal.insufficientMinutes.description': 'You don\'t have enough minutes available to start this connection.',
+        'modal.insufficientMinutes.title': 'Insufficient Coins',
+        'modal.insufficientMinutes.description': 'You don\'t have enough coins available to start this connection.',
         'modal.insufficientMinutes.instruction': 'Please recharge your balance to connect with our models.',
-        'modal.insufficientMinutes.recharge': 'Recharge Minutes',
-        'modal.minutesExhausted.title': 'Your Minutes Have Run Out!',
+        'modal.insufficientMinutes.recharge': 'Recharge Coins',
+        'modal.minutesExhausted.title': 'Your Coins Have Run Out!',
         'modal.minutesExhausted.description': 'Your time in this video call has ended. To continue enjoying our broadcasts',
         'modal.minutesExhausted.instruction': 'please recharge your balance. Don\'t miss out on anything!',
         'modal.minutesExhausted.rechargeNow': 'Recharge Now',
@@ -697,7 +697,7 @@ const translations: LanguageTranslations = {
         'header.myContacts': 'My Contacts',
         'header.contacts': 'Contacts',
         'header.balance': 'Balance',
-        'header.minutes': 'Minutes',
+        'header.minutes': 'Coins',
         'header.recharge': 'Recharge',
 
         // Pages
@@ -710,7 +710,7 @@ const translations: LanguageTranslations = {
         'ranking.position': 'Position',
         'ranking.photo': 'Photo',
         'ranking.name': 'Name',
-        'ranking.minutes': 'Minutes',
+        'ranking.minutes': 'Coins',
         'ranking.calculatingPosition': 'Calculating your position...',
         'ranking.loadingRanking': 'Loading ranking...',
         'ranking.errorProcessingTime': 'Error processing your time.',
@@ -883,7 +883,7 @@ const translations: LanguageTranslations = {
         'modal.rating.sending': 'Sending...',
 
         // Modals - Package
-        'modal.package.minutes': 'Minutes:',
+        'modal.package.minutes': 'Coins:',
 
         // Modals - Channel Not Found
         'modal.channelNotFound.title': 'We\'ll notify you when {name} is available!',

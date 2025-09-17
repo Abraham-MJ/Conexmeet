@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import StyledModal from '../../UI/StyledModal';
 import { cn } from '@/lib/utils';
 import { IoMdClose } from 'react-icons/io';
@@ -42,6 +42,17 @@ const ModalCallEndedFemaleSummary = () => {
   const { t } = useTranslation();
   const { state, closeFemaleCallEndedSummaryModal } = useAgoraContext();
   const { callSummaryInfo } = state;
+  const [preventAutoClose, setPreventAutoClose] = useState(false);
+
+  useEffect(() => {
+    if (state.showFemaleCallEndedModal && callSummaryInfo) {
+      setPreventAutoClose(true);
+      const timer = setTimeout(() => {
+        setPreventAutoClose(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.showFemaleCallEndedModal, callSummaryInfo]);
 
   if (!callSummaryInfo) {
     return null;
@@ -52,7 +63,11 @@ const ModalCallEndedFemaleSummary = () => {
   return (
     <StyledModal
       isOpen={state.showFemaleCallEndedModal}
-      onClose={closeFemaleCallEndedSummaryModal}
+      onClose={() => {
+        if (!preventAutoClose) {
+          closeFemaleCallEndedSummaryModal();
+        }
+      }}
       title=""
       position="center"
       noClose
@@ -66,7 +81,10 @@ const ModalCallEndedFemaleSummary = () => {
       >
         <div
           className="absolute right-4 top-4 z-10 cursor-pointer rounded-full border p-3 transition-all duration-300 hover:scale-110"
-          onClick={closeFemaleCallEndedSummaryModal}
+          onClick={() => {
+            setPreventAutoClose(false);
+            closeFemaleCallEndedSummaryModal();
+          }}
         >
           <IoMdClose className="h-6 w-6 text-[#747474]" />
         </div>

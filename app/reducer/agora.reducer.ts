@@ -236,7 +236,6 @@ export function agoraReducer(
         rtmChannel: null,
         isRtmChannelJoined: false,
         current_room_id: null,
-        showFemaleCallEndedModal: false,
         callSummaryInfo: null,
         femaleTotalPointsEarnedInCall: 0,
       };
@@ -497,9 +496,40 @@ export function agoraReducer(
     case AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL:
       return { ...state, showMinutesExhaustedModal: action.payload };
     case AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL:
+      // Actualizar localStorage cuando cambia el estado del modal
+      if (typeof window !== 'undefined') {
+        const savedSummary = localStorage.getItem('femaleCallSummary');
+        if (savedSummary && action.payload === true) {
+          // Si se está abriendo el modal, actualizar el estado en localStorage
+          try {
+            const parsed = JSON.parse(savedSummary);
+            localStorage.setItem('femaleCallSummary', JSON.stringify({
+              ...parsed,
+              showModal: true
+            }));
+          } catch (error) {
+            console.error('[AgoraReducer] Error actualizando localStorage:', error);
+          }
+        }
+        // No limpiar localStorage cuando se cierra el modal, 
+        // se limpiará desde closeFemaleCallEndedSummaryModal después del delay
+      }
+      
       return { ...state, showFemaleCallEndedModal: action.payload };
 
     case AgoraActionType.SET_FEMALE_CALL_ENDED_INFO:
+      // Persistir en localStorage si hay datos
+      if (typeof window !== 'undefined') {
+        if (action.payload) {
+          const persistData = {
+            callSummaryInfo: action.payload,
+            showModal: true,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('femaleCallSummary', JSON.stringify(persistData));
+        }
+      }
+      
       return { ...state, callSummaryInfo: action.payload };
     case AgoraActionType.ADD_FEMALE_POINTS_EARNED:
       return {

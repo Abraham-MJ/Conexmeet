@@ -144,35 +144,24 @@ export const useAgoraRtc = (
           payload: { rtcUid: String(remoteUserLeaving.uid) },
         });
 
-        // Si soy female y un male se desconectó, actualizar mi estado
-        // Pero solo si no hay otros males conectados
         if (localUser?.role === 'female') {
           const remainingMales = remoteUsersRef.current.filter(
             (user) => user.role === 'male' && String(user.rtcUid) !== String(remoteUserLeaving.uid)
           );
           
           if (remainingMales.length === 0) {
-            console.log('[Female] 🔄 Último male se desconectó, actualizando estado a available_call');
+            console.log('[Female] 🔄 Último male se desconectó por RTC user-left, ejecutando desconexión completa');
             
-            // Delay para permitir que channel hopping complete si está en progreso
-            setTimeout(async () => {
-              const currentRemoteMales = remoteUsersRef.current.filter(user => user.role === 'male');
-              
-              if (currentRemoteMales.length === 0) {
-                try {
-                  await broadcastLocalFemaleStatusUpdate({
-                    in_call: 0,
-                    status: 'available_call',
-                    host_id: localUser.host_id,
-                    is_active: 1,
-                  });
-                } catch (error) {
-                  console.warn('[Female] ⚠️ Error actualizando estado después de user-left:', error);
-                }
-              } else {
-                console.log('[Female] 🔄 Nuevos males detectados, manteniendo estado in_call');
-              }
-            }, 1000);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('maleDisconnectedForceLeave', {
+                  detail: {
+                    reason: 'El usuario se desconectó inesperadamente',
+                    timestamp: Date.now(),
+                  },
+                })
+              );
+            }
           } else {
             console.log(`[Female] 👥 Aún hay ${remainingMales.length} males conectados, manteniendo estado in_call`);
           }

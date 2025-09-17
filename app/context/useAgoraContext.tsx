@@ -10,7 +10,7 @@ import {
   useCallback,
   useRef,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 import { useUser } from './useClientContext';
 
@@ -150,9 +150,73 @@ const AgoraContext = createContext<{
 
 export function AgoraProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { state: userState, handleGetInformation } = useUser();
 
   const [state, dispatch] = useReducer(agoraReducer, initialState);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSummary = localStorage.getItem('femaleCallSummary');
+      if (savedSummary) {
+        try {
+          const parsed = JSON.parse(savedSummary);
+          const timeDiff = Date.now() - parsed.timestamp;
+
+          if (timeDiff < 5 * 60 * 1000) {
+            dispatch({
+              type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+              payload: parsed.callSummaryInfo,
+            });
+            dispatch({
+              type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+              payload: parsed.showModal,
+            });
+          } else {
+            localStorage.removeItem('femaleCallSummary');
+          }
+        } catch (error) {
+          console.error(
+            '[AgoraContext] Error restaurando desde localStorage:',
+            error,
+          );
+          localStorage.removeItem('femaleCallSummary');
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pathname === '/main/video-roulette' && typeof window !== 'undefined') {
+      const savedSummary = localStorage.getItem('femaleCallSummary');
+
+      if (savedSummary) {
+        try {
+          const parsed = JSON.parse(savedSummary);
+          const timeDiff = Date.now() - parsed.timestamp;
+
+          if (timeDiff < 5 * 60 * 1000) {
+            dispatch({
+              type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+              payload: parsed.callSummaryInfo,
+            });
+            dispatch({
+              type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+              payload: parsed.showModal,
+            });
+          } else {
+            localStorage.removeItem('femaleCallSummary');
+          }
+        } catch (error) {
+          console.error(
+            '[AgoraContext] Error en restauración por cambio de ruta:',
+            error,
+          );
+          localStorage.removeItem('femaleCallSummary');
+        }
+      }
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (userState.user) {
@@ -273,6 +337,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
 
   const prevRemoteUsersCount = useRef(state.remoteUsers.length);
   const prevIsCallTimerActive = useRef(isCallTimerActive);
+  const maleDisconnectHandlingRef = useRef(false);
 
   const {
     sendChatMessage: sendRtmChannelMessage,
@@ -335,7 +400,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.maleGiftMinutesSpent,
     state.femaleTotalPointsEarnedInCall,
     state.channelHopping.entries,
-    undefined, // channelHoppingFunctions
+    undefined,
     {
       registerConnectionAttempt,
       markConnectionSuccessful,
@@ -402,6 +467,10 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
 
       resetCallTimer();
+    }
+
+    if (!state.isRtcJoined) {
+      maleDisconnectHandlingRef.current = false;
     }
 
     prevRemoteUsersCount.current = currentRemoteUsersCount;
@@ -490,10 +559,16 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
       payload: false,
     });
-    dispatch({
-      type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
-      payload: null,
-    });
+
+    setTimeout(() => {
+      dispatch({
+        type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+        payload: null,
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('femaleCallSummary');
+      }
+    }, 30000);
   }, [dispatch]);
 
   const showFemaleDisconnectedNotification = useCallback(
@@ -525,7 +600,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         '[DEBUG] Sistema de zombies desactivado - ignorando detección:',
         zombieFemale,
       );
-      return; // Salir inmediatamente sin hacer nada
+      return;
 
       /* CÓDIGO ORIGINAL COMENTADO:
       if (zombieFemale.disconnectionType === 'male_disconnected') {
@@ -742,16 +817,77 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const handleMaleDisconnectedForceLeave = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { reason } = customEvent.detail;
+
+      console.log(
+        '[Female] 📨 Evento maleDisconnectedForceLeave recibido. Estado actual:',
+        {
+          role: state.localUser?.role,
+          isRtcJoined: state.isRtcJoined,
+          isCleaningUp,
+          maleDisconnectHandling: maleDisconnectHandlingRef.current,
+          localUserId: state.localUser?.user_id,
+        },
+      );
+
+      if (
+        state.localUser?.role === 'female' &&
+        state.isRtcJoined &&
+        !isCleaningUp &&
+        !maleDisconnectHandlingRef.current
+      ) {
+        maleDisconnectHandlingRef.current = true;
+        console.log(
+          '[Female] 📨 Recibido evento maleDisconnectedForceLeave, ejecutando handleLeaveCall',
+        );
+
+        const currentFemaleUser = state.localUser;
+
+        try {
+          console.log(
+            '[Female] 🔄 Ejecutando handleLeaveCall desde maleDisconnectedForceLeave...',
+          );
+          await handleLeaveCall();
+          console.log(
+            '[Female] ✅ handleLeaveCall completado desde maleDisconnectedForceLeave',
+          );
+        } catch (error) {
+          console.error(
+            '[Female] ❌ Error ejecutando handleLeaveCall por male disconnect:',
+            error,
+          );
+        } finally {
+          setTimeout(() => {
+            maleDisconnectHandlingRef.current = false;
+          }, 2000);
+        }
+      } else if (state.localUser?.role === 'female') {
+        console.log(
+          '[Female] ⚠️ Evento maleDisconnectedForceLeave ignorado - ya desconectando o no en llamada',
+        );
+      }
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener(
         'femaleDisconnectedFromCall',
         handleFemaleDisconnected,
+      );
+      window.addEventListener(
+        'maleDisconnectedForceLeave',
+        handleMaleDisconnectedForceLeave,
       );
 
       return () => {
         window.removeEventListener(
           'femaleDisconnectedFromCall',
           handleFemaleDisconnected,
+        );
+        window.removeEventListener(
+          'maleDisconnectedForceLeave',
+          handleMaleDisconnectedForceLeave,
         );
       };
     }
@@ -763,6 +899,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     leaveRtcChannel,
     leaveCallChannel,
     handleGetInformation,
+    isCleaningUp,
   ]);
 
   const submitMaleRating = useCallback(

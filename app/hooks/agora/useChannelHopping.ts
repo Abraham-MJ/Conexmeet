@@ -159,9 +159,9 @@ export const useChannelHopping = (
             try {
               await resources.agoraBackend.closeChannel(
                 currentChannelName,
-                'waiting',
+                'finished',
               );
-              console.log(`[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'waiting'`);
+              console.log(`[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'finished'`);
             } catch (forceCloseError) {
               console.warn(
                 '[Channel Hopping] ⚠️ Error forzando cierre a waiting:',
@@ -189,9 +189,9 @@ export const useChannelHopping = (
 
             await resources.agoraBackend.closeChannel(
               currentChannelName,
-              'waiting',
+              'finished',
             );
-            console.log(`[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'waiting' (fallback)`);
+            console.log(`[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'finished' (fallback)`);
           } catch (fallbackError) {
             console.error(
               '[Channel Hopping] ❌ Error en limpieza básica también:',
@@ -253,7 +253,7 @@ export const useChannelHopping = (
         dispatch({ type: AgoraActionType.LEAVE_RTC_CHANNEL });
         dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
         
-        console.log(`[Channel Hopping] ✅ Limpieza completa realizada - canal ${currentChannelName} debe estar en 'waiting' en backend`);
+        console.log(`[Channel Hopping] ✅ Limpieza completa realizada - canal ${currentChannelName} debe estar en 'finished' en backend`);
         
         return;
       }
@@ -304,14 +304,14 @@ export const useChannelHopping = (
 
       try {
         if (state.isRtmChannelJoined) {
-          console.log(`[Channel Hopping] 📨 Enviando señal de salida a female en ${currentChannelName}`);
+          console.log(`[Channel Hopping] 📨 Enviando señal de salida a female en ${currentChannelName} (desconexión completa)`);
           
           const summaryPayload = {
             reason: 'Usuario finalizó la llamada',
             duration: '00:00',
             earnings: 0,
             host_id: currentChannelName,
-            isChannelHopping: true, // Indicar que es channel hopping
+            // Removido: isChannelHopping flag - ahora siempre desconecta female
           };
 
           await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
@@ -320,7 +320,7 @@ export const useChannelHopping = (
           await sendCallSignal('MALE_DISCONNECTED_SIGNAL', {
             maleUserId: String(state.localUser.user_id),
             channelName: currentChannelName,
-            reason: 'channel_hopping',
+            reason: 'channel_hopping', // Mantener para logs, pero female se desconectará igual
             timestamp: Date.now(),
           });
 
