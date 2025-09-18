@@ -6,6 +6,25 @@ import {
   UserInformation,
 } from '@/app/types/streams';
 
+const setChannelHoppingFlag = (active: boolean, reason?: string) => {
+  if (typeof window !== 'undefined') {
+    if (active) {
+      window.localStorage.setItem('channelHopping_in_progress', 'true');
+      console.log(`[Channel Hopping] 🔒 Bandera de protección establecida${reason ? ` - ${reason}` : ''}`);
+    } else {
+      window.localStorage.removeItem('channelHopping_in_progress');
+      console.log(`[Channel Hopping] 🧹 Bandera de protección removida${reason ? ` - ${reason}` : ''}`);
+    }
+  }
+};
+
+const isChannelHoppingActive = (): boolean => {
+  if (typeof window !== 'undefined') {
+    return window.localStorage.getItem('channelHopping_in_progress') === 'true';
+  }
+  return false;
+};
+
 const waitForRTMChannelReady = async (
   channel: any,
   maxWait = 2000,
@@ -45,11 +64,12 @@ const isRTMChannelConnected = (channel: any): boolean => {
 };
 
 interface ChannelHoppingFunctions {
-  handleLeaveCall: () => Promise<void>;
+  handleLeaveCall: (isChannelHoppingOrEvent?: boolean | Event, endReason?: string) => Promise<void>;
   leaveCallChannel: () => Promise<void>;
   leaveRtcChannel: () => Promise<void>;
   joinCallChannel: (channelName: string) => Promise<any>;
   sendCallSignal: (type: string, payload: Record<string, any>) => Promise<void>;
+  router?: any; 
 }
 
 interface ChannelHoppingResources {
@@ -58,6 +78,12 @@ interface ChannelHoppingResources {
   localVideoTrack: any;
   agoraBackend: any;
 }
+
+export const channelHoppingUtils = {
+  setChannelHoppingFlag,
+  isChannelHoppingActive,
+  clearChannelHoppingFlag: () => setChannelHoppingFlag(false, 'limpieza externa'),
+};
 
 export const useChannelHopping = (
   dispatch: React.Dispatch<AgoraAction>,
@@ -69,6 +95,7 @@ export const useChannelHopping = (
     leaveRtcChannel,
     joinCallChannel,
     sendCallSignal,
+    router,
   }: ChannelHoppingFunctions,
   resources: ChannelHoppingResources,
 ) => {
@@ -77,6 +104,11 @@ export const useChannelHopping = (
       console.warn(
         '[Channel Hopping] Solo los males pueden hacer channel hopping',
       );
+      return;
+    }
+
+    if (isChannelHoppingActive()) {
+      console.warn('[Channel Hopping] ⚠️ Ya hay un channel hopping en progreso, ignorando nueva solicitud');
       return;
     }
 
@@ -108,6 +140,8 @@ export const useChannelHopping = (
       return;
     }
 
+    setChannelHoppingFlag(true, 'inicio de hopping');
+
     dispatch({
       type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
       payload: true,
@@ -117,6 +151,9 @@ export const useChannelHopping = (
       console.error(
         '[Channel Hopping] ❌ Timeout - operación cancelada después de 45 segundos',
       );
+      
+      setChannelHoppingFlag(false, 'timeout');
+      
       dispatch({
         type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
         payload: false,
@@ -255,6 +292,8 @@ export const useChannelHopping = (
         
         console.log(`[Channel Hopping] ✅ Limpieza completa realizada - canal ${currentChannelName} debe estar en 'finished' en backend`);
         
+        setChannelHoppingFlag(false, 'no hay canales disponibles');
+        
         return;
       }
 
@@ -295,7 +334,15 @@ export const useChannelHopping = (
           type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
           payload: true,
         });
-        await handleLeaveCall();
+        
+        dispatch({
+          type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+          payload: true,
+        });
+        
+        setChannelHoppingFlag(false, 'no hay canales verificados');
+        
+        await handleLeaveCall(true); 
         return;
       }
 
@@ -311,16 +358,14 @@ export const useChannelHopping = (
             duration: '00:00',
             earnings: 0,
             host_id: currentChannelName,
-            // Removido: isChannelHopping flag - ahora siempre desconecta female
           };
 
           await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
 
-          // Enviar señal adicional para asegurar limpieza
           await sendCallSignal('MALE_DISCONNECTED_SIGNAL', {
             maleUserId: String(state.localUser.user_id),
             channelName: currentChannelName,
-            reason: 'channel_hopping', // Mantener para logs, pero female se desconectará igual
+            reason: 'channel_hopping', 
             timestamp: Date.now(),
           });
 
@@ -523,7 +568,14 @@ export const useChannelHopping = (
                 type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
                 payload: true,
               });
-              await handleLeaveCall();
+              
+              setChannelHoppingFlag(false, 'no hay más canales después de conflicto');
+              
+              dispatch({
+                type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+                payload: true,
+              });
+              await handleLeaveCall(true); 
               return;
             }
           } else {
@@ -582,7 +634,14 @@ export const useChannelHopping = (
               type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
               payload: true,
             });
-            await handleLeaveCall();
+            
+            setChannelHoppingFlag(false, 'no hay más canales después de error de ocupado');
+            
+            dispatch({
+              type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+              payload: true,
+            });
+            await handleLeaveCall(true); 
             return;
           }
         }
@@ -919,6 +978,11 @@ export const useChannelHopping = (
         },
       });
 
+      if (router) {
+        console.log(`[Channel Hopping] 🔄 Actualizando URL de ${currentChannelName} a ${newChannelName}`);
+        router.replace(`/main/stream/${newChannelName}`, undefined, { shallow: true });
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const previousFemale = onlineFemalesList.find(
@@ -959,6 +1023,12 @@ export const useChannelHopping = (
         );
       }
 
+      dispatch({ type: AgoraActionType.REMOTE_HOST_ENDED_CALL, payload: null });
+      
+      setTimeout(() => {
+        setChannelHoppingFlag(false, 'hopping exitoso');
+      }, 3000);
+
       clearTimeout(timeoutId);
     } catch (error: any) {
       console.error(
@@ -972,15 +1042,19 @@ export const useChannelHopping = (
       });
 
       try {
-        await handleLeaveCall();
+        await handleLeaveCall(true); 
       } catch (cleanupError) {
         console.error(
           '[Channel Hopping] Error en limpieza de emergencia:',
           cleanupError,
         );
       }
+
+      setChannelHoppingFlag(false, 'error en hopping');
     } finally {
       clearTimeout(timeoutId);
+      
+      setChannelHoppingFlag(false, 'cleanup final');
     }
   }, [
     state.localUser?.role,

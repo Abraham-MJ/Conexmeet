@@ -2,6 +2,11 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { UserInformation } from '@/app/types/streams';
+import useApi from '@/app/hooks/useAPi';
+import {
+  AGORA_API_CONFIGS,
+  AGORA_LOG_PREFIXES,
+} from '@/app/hooks/agora/configs';
 
 interface BeforeUnloadCleanupOptions {
   localUser: UserInformation | null;
@@ -34,6 +39,15 @@ export const useBeforeUnloadCleanup = ({
   const isCleaningUpRef = useRef(false);
   const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const { execute: emergencyCleanupApi } = useApi<{
+    success: boolean;
+    message?: string;
+  }>(
+    '/api/agora/channels/emergency-cleanup',
+    AGORA_API_CONFIGS.emergencyCleanup,
+    false,
+  );
+
   const performCleanup = useCallback(
     async (reason: 'beforeunload' | 'pagehide' | 'visibilitychange') => {
       if (isCleaningUpRef.current || cleanupExecutedRef.current) {
@@ -44,6 +58,10 @@ export const useBeforeUnloadCleanup = ({
 
       try {
         if (!localUser || (!isRtcJoined && !isRtmChannelJoined)) {
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('channelHopping_in_progress');
+            console.log(`${AGORA_LOG_PREFIXES.CLEANUP} 🧹 Bandera de channel hopping limpiada en ${reason}`);
+          }
           return;
         }
 
@@ -65,15 +83,17 @@ export const useBeforeUnloadCleanup = ({
                 blob,
               );
             } else {
-              fetch('/api/agora/channels/emergency-cleanup', {
+              console.log(
+                `${AGORA_LOG_PREFIXES.CLEANUP} Emergency cleanup (fetch fallback) for user: ${localUser.user_id}`,
+              );
+              emergencyCleanupApi('/api/agora/channels/emergency-cleanup', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(cleanupData),
-                keepalive: true,
+                body: cleanupData,
               }).catch((error) => {
-                console.warn('[BeforeUnload] Error con fetch fallback:', error);
+                console.warn(
+                  `${AGORA_LOG_PREFIXES.CLEANUP} Error con fetch fallback:`,
+                  error,
+                );
               });
             }
           } catch (error) {
@@ -250,16 +270,15 @@ export const useBeforeUnloadCleanup = ({
           });
           navigator.sendBeacon('/api/agora/channels/emergency-cleanup', blob);
         } else {
-          fetch('/api/agora/channels/emergency-cleanup', {
+          console.log(
+            `${AGORA_LOG_PREFIXES.CLEANUP} Emergency cleanup (fetch fallback) for male user: ${localUser.user_id}`,
+          );
+          emergencyCleanupApi('/api/agora/channels/emergency-cleanup', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(cleanupData),
-            keepalive: true,
+            body: cleanupData,
           }).catch((error) => {
             console.warn(
-              '[BeforeUnload] Error con fetch fallback para male:',
+              `${AGORA_LOG_PREFIXES.CLEANUP} Error con fetch fallback para male:`,
               error,
             );
           });

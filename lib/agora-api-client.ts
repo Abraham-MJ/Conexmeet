@@ -1,4 +1,60 @@
 import { UserInformation } from '@/app/types/streams';
+import {
+  AGORA_API_CONFIGS,
+  AGORA_LOG_PREFIXES,
+  AGORA_ERROR_MESSAGES,
+} from '@/app/hooks/agora/configs';
+import { deduplicateRequest } from './requestDeduplication';
+
+const createOptimizedFetch = async <T>(
+  url: string,
+  configType: keyof typeof AGORA_API_CONFIGS,
+  options?: { method?: 'GET' | 'POST'; body?: any },
+): Promise<T> => {
+  const config = AGORA_API_CONFIGS[configType];
+  let attempt = 0;
+
+  while (attempt <= config.retryAttempts) {
+    try {
+      const fetchOptions: RequestInit = {
+        method: options?.method || config.method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+
+      if (options?.body) {
+        fetchOptions.body = JSON.stringify(options.body);
+      }
+
+      const response = await fetch(url, fetchOptions);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result as T;
+    } catch (error: any) {
+      attempt++;
+
+      if (attempt > config.retryAttempts) {
+        throw error;
+      }
+
+      console.warn(
+        `${AGORA_LOG_PREFIXES.RETRY} Attempt ${attempt}/${config.retryAttempts} failed for ${url}:`,
+        error.message,
+      );
+
+      if (attempt <= config.retryAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, config.retryDelay));
+      }
+    }
+  }
+
+  throw new Error(`All ${config.retryAttempts} attempts failed for ${url}`);
+};
 
 export const AgoraApiClient = {
   async fetchRtcToken(
@@ -6,137 +62,191 @@ export const AgoraApiClient = {
     roleForToken: 'publisher' | 'subscriber',
     rtcUid: string | number,
   ): Promise<string> {
-    const response = await fetch(
-      `/api/agora/get-token-rtc?channel=${channelName}&rol=${roleForToken}&type=uid&uid=${rtcUid}`,
-    );
-
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: 'Error desconocido al obtener token RTC.' }));
-      throw new Error(
-        errorData.message || `Failed to get RTC token: ${response.statusText}`,
+    try {
+      console.log(
+        `${AGORA_LOG_PREFIXES.TOKENS} Fetching RTC token for channel: ${channelName}, role: ${roleForToken}, uid: ${rtcUid}`,
       );
-    }
 
-    const { rtcToken } = await response.json();
+      const url = `/api/agora/get-token-rtc?channel=${channelName}&rol=${roleForToken}&type=uid&uid=${rtcUid}`;
+      const response = await createOptimizedFetch<{ rtcToken: string }>(
+        url,
+        'tokens',
+      );
 
-    if (!rtcToken) {
-      throw new Error('Token RTC no recibido en la respuesta.');
+      if (!response.rtcToken) {
+        throw new Error(AGORA_ERROR_MESSAGES.TOKEN_NOT_RECEIVED);
+      }
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.TOKENS} RTC token obtained successfully`,
+      );
+      return response.rtcToken;
+    } catch (error: any) {
+      console.error(
+        `${AGORA_LOG_PREFIXES.TOKENS} Error fetching RTC token:`,
+        error.message,
+      );
+      throw error;
     }
-    return rtcToken;
   },
 
   async fetchRtmToken(rtmUid: string | number): Promise<string> {
-    const response = await fetch(`/api/agora/get-token-rtm?uid=${rtmUid}`);
-
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: 'Error desconocido al obtener token RTM.' }));
-      throw new Error(
-        errorData.message || `Failed to get RTM token: ${response.statusText}`,
+    try {
+      console.log(
+        `${AGORA_LOG_PREFIXES.TOKENS} Fetching RTM token for uid: ${rtmUid}`,
       );
-    }
 
-    const { rtmToken } = await response.json();
+      const url = `/api/agora/get-token-rtm?uid=${rtmUid}`;
+      const response = await createOptimizedFetch<{ rtmToken: string }>(
+        url,
+        'tokens',
+      );
 
-    if (!rtmToken) {
-      throw new Error('Token RTM no recibido en la respuesta.');
+      if (!response.rtmToken) {
+        throw new Error(AGORA_ERROR_MESSAGES.TOKEN_NOT_RECEIVED);
+      }
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.TOKENS} RTM token obtained successfully`,
+      );
+      return response.rtmToken;
+    } catch (error: any) {
+      console.error(
+        `${AGORA_LOG_PREFIXES.TOKENS} Error fetching RTM token:`,
+        error.message,
+      );
+      throw error;
     }
-    return rtmToken;
   },
 
   async registerChannel(
     hostId: string,
   ): Promise<{ success: boolean; message?: string; data?: any }> {
-    const backendRegisterResponse = await fetch(
-      `/api/agora/channels/create-channel?host_id=${hostId}`,
-    );
-
-    if (!backendRegisterResponse.ok) {
-      const errorData = await backendRegisterResponse
-        .json()
-        .catch(() => ({ message: 'Error desconocido al registrar sesión.' }));
-      throw new Error(
-        errorData.message ||
-          `Failed to register session: ${backendRegisterResponse.statusText}`,
+    try {
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Registering channel for host: ${hostId}`,
       );
-    }
 
-    const backendResult = await backendRegisterResponse.json();
+      const url = `/api/agora/channels/create-channel?host_id=${hostId}`;
+      const response = await createOptimizedFetch<{
+        success: boolean;
+        message?: string;
+        data?: any;
+      }>(url, 'channelManagement', { method: 'GET' });
 
-    if (!backendResult.success) {
-      throw new Error(backendResult.message || 'Backend no pudo registrar F.');
+      if (!response.success) {
+        throw new Error(response.message || 'Backend no pudo registrar canal');
+      }
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Channel registered successfully for host: ${hostId}`,
+      );
+      return response;
+    } catch (error: any) {
+      console.error(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Error registering channel:`,
+        error.message,
+      );
+      throw error;
     }
-    return backendResult;
   },
 
   async verifyChannelAvailability(
     channelName: string,
   ): Promise<{ available: boolean; reason?: string }> {
     try {
-      const response = await fetch(
-        `/api/agora/channels/verify-availability?host_id=${channelName}`,
+      console.log(
+        `${AGORA_LOG_PREFIXES.VERIFICATION} Verifying channel availability: ${channelName}`,
       );
 
-      if (!response.ok) {
-        return { available: false, reason: 'Error verificando disponibilidad' };
-      }
+      const url = `/api/agora/channels/verify-availability?host_id=${channelName}`;
+      const response = await createOptimizedFetch<{
+        available: boolean;
+        reason?: string;
+      }>(url, 'channelVerification');
 
-      const result = await response.json();
-      return {
-        available: result.available || false,
-        reason: result.reason || 'Canal no disponible',
+      const result = {
+        available: response.available || false,
+        reason:
+          response.reason ||
+          (response.available
+            ? undefined
+            : AGORA_ERROR_MESSAGES.CHANNEL_NOT_AVAILABLE),
       };
-    } catch (error) {
-      console.warn('Error verificando disponibilidad del canal:', error);
-      return { available: false, reason: 'Error de conexión' };
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.VERIFICATION} Channel ${channelName} availability: ${result.available}`,
+      );
+      return result;
+    } catch (error: any) {
+      console.warn(
+        `${AGORA_LOG_PREFIXES.VERIFICATION} Error verifying channel availability:`,
+        error.message,
+      );
+      return {
+        available: false,
+        reason: AGORA_ERROR_MESSAGES.CONNECTION_ERROR,
+      };
     }
   },
 
   async notifyMaleJoining(
     channelName: string,
     appUserId: string | number,
-  ): Promise<{ success: boolean; message?: string; data?: any; errorType?: string }> {
-    const enterChannelResponse = await fetch(
-      `/api/agora/channels/enter-channel-male-v2`,
-      {
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    data?: any;
+    errorType?: string;
+  }> {
+    try {
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Notifying male joining - User: ${appUserId}, Channel: ${channelName}`,
+      );
+
+      const url = `/api/agora/channels/enter-channel-male-v2`;
+      const response = await createOptimizedFetch<{
+        success: boolean;
+        message?: string;
+        data?: any;
+        error?: string;
+      }>(url, 'channelManagement', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: appUserId, host_id: channelName }),
-      },
-    );
-    let enterChannelResult: {
-      success: boolean;
-      message?: string;
-      data?: any;
-      error?: string;
-    };
-    if (!enterChannelResponse.ok) {
-      let e = { m: `Err M backend: ${enterChannelResponse.statusText}` };
-      try {
-        const d = await enterChannelResponse.json();
-        e.m = d.message || d.error || e.m;
-        enterChannelResult = { success: false, message: e.m, data: d };
-      } catch (er) {
-        enterChannelResult = { success: false, message: e.m };
+        body: { user_id: appUserId, host_id: channelName },
+      });
+
+      if (typeof response.success === 'undefined') {
+        console.log(
+          `${AGORA_LOG_PREFIXES.MANAGEMENT} Male joining notification completed (success undefined, assuming true)`,
+        );
+        return { ...response, success: true };
       }
-      return enterChannelResult;
-    }
-    enterChannelResult = await enterChannelResponse.json();
 
-    if (typeof enterChannelResult.success === 'undefined') {
-      return { ...enterChannelResult, success: true };
-    }
+      if (!response.success) {
+        console.warn(
+          `${AGORA_LOG_PREFIXES.MANAGEMENT} Male joining notification failed:`,
+          response.message,
+        );
+        return {
+          success: false,
+          message: response.message || 'Backend no pudo actualizar male',
+        };
+      }
 
-    if (!enterChannelResult.success) {
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Male joining notification successful`,
+      );
+      return response;
+    } catch (error: any) {
+      console.error(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Error notifying male joining:`,
+        error.message,
+      );
       return {
         success: false,
-        message: enterChannelResult.message || 'Backend no pudo actualizar M.',
+        message: error.message || 'Error al notificar entrada de male',
       };
     }
-    return enterChannelResult;
   },
 
   async closeMaleChannel(
@@ -145,28 +255,38 @@ export const AgoraApiClient = {
     roomId: string | number,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await fetch('/api/agora/channels/close-channel-male', {
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Closing male channel - User: ${maleUserId}, Host: ${hostId}, Room: ${roomId}`,
+      );
+
+      const url = '/api/agora/channels/close-channel-male';
+      const response = await createOptimizedFetch<{
+        success: boolean;
+        message?: string;
+      }>(url, 'channelManagement', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           user_id: maleUserId,
           host_id: hostId,
           id: roomId,
-        }),
+        },
       });
 
-      const responseData = await response.json();
-      if (!response.ok || !responseData.success) {
+      if (!response.success) {
         throw new Error(
-          responseData.message ||
-            `Error al notificar cierre de canal del male al backend: ${response.status}`,
+          response.message ||
+            'Error al notificar cierre de canal del male al backend',
         );
       }
-      return responseData;
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Male channel closed successfully`,
+      );
+      return response;
     } catch (error: any) {
       console.error(
-        `Excepción al notificar cierre de canal del male al backend para ${maleUserId} (host: ${hostId}, room: ${roomId}):`,
-        error,
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Error closing male channel for ${maleUserId} (host: ${hostId}, room: ${roomId}):`,
+        error.message,
       );
       throw error;
     }
@@ -178,28 +298,46 @@ export const AgoraApiClient = {
     roomId: string | number,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await fetch('/api/agora/channels/cleanup-after-male-disconnect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Cleanup after male disconnect - User: ${maleUserId}, Host: ${hostId}, Room: ${roomId}`,
+      );
+
+      const url = '/api/agora/channels/cleanup-after-male-disconnect';
+      const requestOptions = {
+        method: 'POST' as const,
+        body: {
           user_id: maleUserId,
           host_id: hostId,
           room_id: roomId,
-        }),
-      });
+        },
+      };
 
-      const responseData = await response.json();
-      if (!response.ok || !responseData.success) {
+      const response = await deduplicateRequest(
+        url,
+        () =>
+          createOptimizedFetch<{ success: boolean; message?: string }>(
+            url,
+            'channelManagement',
+            requestOptions,
+          ),
+        requestOptions,
+      );
+
+      if (!response.success) {
         throw new Error(
-          responseData.message ||
-            `Error en limpieza después de desconexión del male: ${response.status}`,
+          response.message ||
+            'Error en limpieza después de desconexión del male',
         );
       }
-      return responseData;
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Cleanup after male disconnect completed successfully`,
+      );
+      return response;
     } catch (error: any) {
       console.error(
-        `Excepción en limpieza después de desconexión del male para ${maleUserId} (host: ${hostId}, room: ${roomId}):`,
-        error,
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Error in cleanup after male disconnect for ${maleUserId} (host: ${hostId}, room: ${roomId}):`,
+        error.message,
       );
       throw error;
     }
@@ -216,65 +354,84 @@ export const AgoraApiClient = {
       | 'offline',
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await fetch(`/api/agora/channels/close-channel`, {
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Closing channel - Host: ${hostId}, Status: ${status}`,
+      );
+
+      const url = '/api/agora/channels/close-channel';
+      const response = await createOptimizedFetch<{
+        success: boolean;
+        message?: string;
+      }>(url, 'channelManagement', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           host_id: hostId,
           status: status,
-        }),
+        },
       });
 
-      const responseData = await response.json();
-      if (!response.ok || !responseData.success) {
+      if (!response.success) {
         throw new Error(
-          responseData.message ||
-            `Error al notificar cierre de canal al backend (status: ${status}): ${response.status}`,
+          response.message ||
+            `Error al notificar cierre de canal al backend (status: ${status})`,
         );
       }
-      return responseData;
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Channel closed successfully - Host: ${hostId}, Status: ${status}`,
+      );
+      return response;
     } catch (error: any) {
       console.error(
-        `Excepción al notificar cierre de canal (status: ${status}) al backend para ${hostId}:`,
-        error,
+        `${AGORA_LOG_PREFIXES.MANAGEMENT} Error closing channel (status: ${status}) for ${hostId}:`,
+        error.message,
       );
       throw error;
     }
   },
 
   async fetchOnlineFemales(): Promise<UserInformation[]> {
-    const response = await fetch('/api/agora/host');
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        message: 'Error desconocido al obtener lista de females.',
-      }));
-      throw new Error(
-        errorData.message ||
-          `Failed to fetch female list: ${response.statusText}`,
+    try {
+      console.log(
+        `${AGORA_LOG_PREFIXES.FEMALES_LIST} Fetching online females list`,
       );
-    }
 
-    const result = await response.json();
+      const url = '/api/agora/host';
+      const response = await createOptimizedFetch<{
+        success: boolean;
+        data: any[];
+        message?: string;
+      }>(url, 'femalesList');
 
-    if (result.success && Array.isArray(result.data)) {
-      const femalesList = result.data.map((female: any) => ({
-        user_id: female.user_id,
-        rtcUid: String(female.user_id),
-        rtmUid: String(female.user_id),
-        user_name: female.user_name,
-        avatar: female.avatar,
-        role: 'female',
-        is_active: female.is_active,
-        in_call: female.in_call,
-        host_id: female.host_id,
-        status: female.status,
-      })) as UserInformation[];
-      return femalesList;
-    } else {
-      throw new Error(
-        result.message || 'Respuesta inválida de API de lista de females.',
+      if (response.success && Array.isArray(response.data)) {
+        const femalesList = response.data.map((female: any) => ({
+          user_id: female.user_id,
+          rtcUid: String(female.user_id),
+          rtmUid: String(female.user_id),
+          user_name: female.user_name,
+          avatar: female.avatar,
+          role: 'female',
+          is_active: female.is_active,
+          in_call: female.in_call,
+          host_id: female.host_id,
+          status: female.status,
+        })) as UserInformation[];
+
+        console.log(
+          `${AGORA_LOG_PREFIXES.FEMALES_LIST} Fetched ${femalesList.length} online females`,
+        );
+        return femalesList;
+      } else {
+        throw new Error(
+          response.message || 'Respuesta inválida de API de lista de females',
+        );
+      }
+    } catch (error: any) {
+      console.error(
+        `${AGORA_LOG_PREFIXES.FEMALES_LIST} Error fetching online females:`,
+        error.message,
       );
+      throw error;
     }
   },
 
@@ -286,34 +443,46 @@ export const AgoraApiClient = {
     giftCostInMinutes: number,
   ): Promise<{ success: boolean; message?: string; cost_in_minutes: number }> {
     try {
-      const response = await fetch('/api/gift/send-gifts', {
+      console.log(
+        `${AGORA_LOG_PREFIXES.GIFTS} Sending gift - From: ${senderUserId}, To: ${receiverUserId}, Gift: ${gifId}, Host: ${hostId}`,
+      );
+
+      const url = '/api/gift/send-gifts';
+      const response = await createOptimizedFetch<{
+        success: boolean;
+        message?: string;
+        cost_in_minutes?: number;
+      }>(url, 'gifts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           user_id_sends: senderUserId,
           user_id_receives: receiverUserId,
           gif_id: gifId,
           host_id: hostId,
           gift_cost_in_minutes: giftCostInMinutes,
-        }),
+        },
       });
 
-      const responseData = await response.json();
-      if (!response.ok || !responseData.success) {
+      if (!response.success) {
         throw new Error(
-          responseData.message ||
-            `Error al enviar regalo al backend: ${response.status}`,
+          response.message || 'Error al enviar regalo al backend',
         );
       }
-      return {
+
+      const result = {
         success: true,
-        message: responseData.message || 'Regalo enviado.',
-        cost_in_minutes: responseData.cost_in_minutes || giftCostInMinutes,
+        message: response.message || 'Regalo enviado.',
+        cost_in_minutes: response.cost_in_minutes || giftCostInMinutes,
       };
+
+      console.log(
+        `${AGORA_LOG_PREFIXES.GIFTS} Gift sent successfully - Cost: ${result.cost_in_minutes} minutes`,
+      );
+      return result;
     } catch (error: any) {
       console.error(
-        `Excepción al enviar regalo de ${senderUserId} a ${receiverUserId} (gifId: ${gifId}, hostId: ${hostId}):`,
-        error,
+        `${AGORA_LOG_PREFIXES.GIFTS} Error sending gift from ${senderUserId} to ${receiverUserId} (gifId: ${gifId}, hostId: ${hostId}):`,
+        error.message,
       );
       throw error;
     }

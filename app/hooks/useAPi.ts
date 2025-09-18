@@ -198,7 +198,10 @@ function useApi<T>(
             );
           }
 
-          const { data }: any = await response.json();
+          const responseData: any = await response.json();
+
+          const data =
+            responseData.data !== undefined ? responseData.data : responseData;
 
           if (finalOptions.method === 'GET') {
             setCachedData(cacheKey, data, mergedOptions.cacheTime || 300000);

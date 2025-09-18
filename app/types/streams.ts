@@ -73,11 +73,7 @@ export interface LoadingStatus {
 }
 
 export interface FemaleCallSummaryInfo {
-  reason:
-    | 'Finalizada por ti'
-    | 'Usuario finalizó la llamada'
-    | 'Saldo agotado'
-    | 'Desconexión inesperada';
+  reason: 'La llama ha finalizado' | 'Saldo agotado' | 'Desconexión inesperada';
   duration: string;
   earnings: number | string | null;
   host_id: string | null;
@@ -175,9 +171,16 @@ export interface AgoraState {
   showChannelHoppingBlockedModal: boolean;
   isChannelHoppingLoading: boolean;
   showMaleRatingModal: boolean;
-  maleRatingInfo: { femaleId: string | number; femaleName?: string; femaleAvatar?: string } | null;
+  maleRatingInfo: {
+    femaleId: string | number;
+    femaleName?: string;
+    femaleAvatar?: string;
+  } | null;
   showFemaleDisconnectedModal: boolean;
-  femaleDisconnectedInfo: { femaleName?: string; disconnectionReason?: 'refresh' | 'connection_lost' | 'unknown' } | null;
+  femaleDisconnectedInfo: {
+    femaleName?: string;
+    disconnectionReason?: 'refresh' | 'connection_lost' | 'unknown';
+  } | null;
 }
 
 interface RemoteHostEndedCallAction {
@@ -464,17 +467,24 @@ interface ChannelHoppingRtcLeaveAction {
 
 interface SetShowMaleRatingModalAction {
   type: AgoraActionType.SET_SHOW_MALE_RATING_MODAL;
-  payload: { 
-    show: boolean; 
-    femaleInfo?: { femaleId: string | number; femaleName?: string; femaleAvatar?: string } | null;
+  payload: {
+    show: boolean;
+    femaleInfo?: {
+      femaleId: string | number;
+      femaleName?: string;
+      femaleAvatar?: string;
+    } | null;
   };
 }
 
 interface SetShowFemaleDisconnectedModalAction {
   type: AgoraActionType.SET_SHOW_FEMALE_DISCONNECTED_MODAL;
-  payload: { 
-    show: boolean; 
-    femaleInfo?: { femaleName?: string; disconnectionReason?: 'refresh' | 'connection_lost' | 'unknown' } | null;
+  payload: {
+    show: boolean;
+    femaleInfo?: {
+      femaleName?: string;
+      disconnectionReason?: 'refresh' | 'connection_lost' | 'unknown';
+    } | null;
   };
 }
 

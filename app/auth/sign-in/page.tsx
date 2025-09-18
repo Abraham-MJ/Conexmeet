@@ -18,7 +18,7 @@ import {
   PASSWORD_ERROR,
   SESSION_ACTIVE,
 } from '@/app/environment/errors-code';
-import { redirect, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 export default function SignInScreen() {
@@ -89,16 +89,13 @@ export default function SignInScreen() {
           setFieldError('password', PASSWORD_ERROR);
           break;
         case SESSION_ACTIVE:
-          setFieldError(
-            'password',
-            t('auth.signIn.sessionActive'),
-          );
+          setFieldError('password', t('auth.signIn.sessionActive'));
           break;
         default:
           break;
       }
     } else if (login_result.success) {
-      redirect('/main/video-roulette');
+      router.push('/main/video-roulette');
     }
   };
 

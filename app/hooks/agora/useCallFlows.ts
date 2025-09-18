@@ -18,6 +18,12 @@ import {
   LOG_PREFIX_MALE_ADMIN,
   LOG_PREFIX_PROVIDER,
 } from '@/lib/constants';
+import useApi from '@/app/hooks/useAPi';
+import {
+  AGORA_API_CONFIGS,
+  AGORA_LOG_PREFIXES,
+} from '@/app/hooks/agora/configs';
+import { deduplicateRequest } from '@/lib/requestDeduplication';
 import { useAgoraServer } from './useAgoraServer';
 import { useUser } from '@/app/context/useClientContext';
 import { converterMinutes } from '@/app/utils/converter-minutes';
@@ -109,10 +115,21 @@ export const useCallFlows = (
     markConnectionFailed: (channelId: string) => void;
     hasActiveConnectionConflict: (channelId: string, userId: string) => boolean;
   },
+  isChannelHoppingLoading?: boolean,
 ) => {
   const { handleGetInformation, state: user } = useUser();
   const { validateChannelAvailability, clearChannelAttempt } =
     useChannelValidation();
+
+  const { execute: enterChannelMaleApi } = useApi<{
+    success: boolean;
+    message?: string;
+    data?: any;
+  }>(
+    '/api/agora/channels/enter-channel-male-v2',
+    AGORA_API_CONFIGS.channelManagement,
+    false,
+  );
 
   const hasTriggeredOutOfMinutesRef = useRef(false);
 
@@ -510,17 +527,27 @@ export const useCallFlows = (
                 String(appUserId),
               );
 
-              const backendJoinResponse = await fetch(
-                '/api/agora/channels/enter-channel-male-v2',
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    user_id: appUserId,
-                    host_id: determinedChannelName,
-                  }),
+              console.log(
+                `${AGORA_LOG_PREFIXES.MANAGEMENT} Entering channel - User: ${appUserId}, Channel: ${determinedChannelName}`,
+              );
+
+              const requestOptions = {
+                method: 'POST' as const,
+                body: {
+                  user_id: appUserId,
+                  host_id: determinedChannelName,
                 },
-              ).then((res) => res.json());
+              };
+
+              const backendJoinResponse = await deduplicateRequest(
+                '/api/agora/channels/enter-channel-male-v2',
+                () =>
+                  enterChannelMaleApi(
+                    '/api/agora/channels/enter-channel-male-v2',
+                    requestOptions,
+                  ),
+                requestOptions,
+              );
 
               if (backendJoinResponse.success) {
                 connectionSuccessful = true;
@@ -680,17 +707,27 @@ export const useCallFlows = (
               String(appUserId),
             );
 
-            const backendJoinResponse = await fetch(
-              '/api/agora/channels/enter-channel-male-v2',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  user_id: appUserId,
-                  host_id: determinedChannelName,
-                }),
+            console.log(
+              `${AGORA_LOG_PREFIXES.MANAGEMENT} Entering channel (retry) - User: ${appUserId}, Channel: ${determinedChannelName}`,
+            );
+
+            const requestOptions = {
+              method: 'POST' as const,
+              body: {
+                user_id: appUserId,
+                host_id: determinedChannelName,
               },
-            ).then((res) => res.json());
+            };
+
+            const backendJoinResponse = await deduplicateRequest(
+              '/api/agora/channels/enter-channel-male-v2',
+              () =>
+                enterChannelMaleApi(
+                  '/api/agora/channels/enter-channel-male-v2',
+                  requestOptions,
+                ),
+              requestOptions,
+            );
 
             if (!backendJoinResponse.success) {
               connectionMonitor?.markConnectionFailed(determinedChannelName);
@@ -1161,10 +1198,44 @@ export const useCallFlows = (
     broadcastLocalFemaleStatusUpdate,
   ]);
 
-  const handleLeaveCall = useCallback(async () => {
+  const handleLeaveCall = useCallback(
+    async (
+      isChannelHoppingOrEvent: boolean | Event = false,
+      endReason?: string,
+    ) => {
+      const isChannelHopping =
+        typeof isChannelHoppingOrEvent === 'boolean'
+          ? isChannelHoppingOrEvent
+          : false;
+
       const currentUser = localUser;
       const currentChannel = currentChannelName;
-      console.log(`${LOG_PREFIX_PROVIDER} handleLeaveCall iniciado para usuario:`, currentUser?.role, currentUser?.user_id);
+
+      console.log(
+        `${LOG_PREFIX_PROVIDER} handleLeaveCall iniciado para usuario:`,
+        currentUser?.role,
+        currentUser?.user_id,
+        `isChannelHopping: ${isChannelHopping}`,
+      );
+
+      console.trace(`${LOG_PREFIX_PROVIDER} handleLeaveCall stack trace`);
+
+      const isChannelHoppingActiveLS =
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem('channelHopping_in_progress') === 'true';
+      console.log(
+        `${LOG_PREFIX_PROVIDER} Channel hopping state - Loading: ${isChannelHoppingLoading}, localStorage: ${isChannelHoppingActiveLS}`,
+      );
+
+      if (
+        !isChannelHopping &&
+        (isChannelHoppingLoading || isChannelHoppingActiveLS)
+      ) {
+        console.log(
+          `${LOG_PREFIX_PROVIDER} Saltando handleLeaveCall - channel hopping activo (Loading: ${isChannelHoppingLoading}, localStorage: ${isChannelHoppingActiveLS})`,
+        );
+        return;
+      }
 
       if (!currentUser) {
         console.warn(
@@ -1183,7 +1254,10 @@ export const useCallFlows = (
 
       try {
         if (currentUser.role === 'female' && currentChannel) {
-          disconnectReason = 'Finalizada por ti';
+          disconnectReason = 'La llama ha finalizado';
+          console.log(
+            `[Female] Estableciendo disconnectReason: "${disconnectReason}"`,
+          );
           const [minutesStr, secondsStr] = callTimer.split(':');
           const parsedMinutes = parseInt(minutesStr, 10);
           const parsedSeconds = parseInt(secondsStr, 10);
@@ -1206,9 +1280,31 @@ export const useCallFlows = (
             payload: true,
           });
 
-          await sendCallSignal('HOST_ENDED_CALL', {
-            channelName: currentChannel,
-          });
+          if (!isChannelHopping) {
+            console.log(
+              `${LOG_PREFIX_PROVIDER} Redirigiendo female inmediatamente para mejor UX`,
+            );
+            router.push('/main/video-roulette');
+          }
+
+          setTimeout(async () => {
+            try {
+              if (!isChannelHopping) {
+                await sendCallSignal('HOST_ENDED_CALL', {
+                  channelName: currentChannel,
+                });
+              } else {
+                console.log(
+                  '[Channel Hopping] 🚫 Saltando HOST_ENDED_CALL signal durante channel hopping',
+                );
+              }
+            } catch (error) {
+              console.warn(
+                '[Female Background Cleanup] Error enviando HOST_ENDED_CALL:',
+                error,
+              );
+            }
+          }, 100);
 
           await broadcastLocalFemaleStatusUpdate({
             status: 'online',
@@ -1218,6 +1314,7 @@ export const useCallFlows = (
           });
           await agoraBackend.closeChannel(currentChannel, 'finished');
         } else if (currentUser.role === 'male' && currentChannel) {
+          console.log(`[Male] Entrando en sección de male`);
           const [minutesStr, secondsStr] = callTimer.split(':');
           const parsedMinutes = parseInt(minutesStr, 10);
           const parsedSeconds = parseInt(secondsStr, 10);
@@ -1226,7 +1323,9 @@ export const useCallFlows = (
           const initialMinutesInSeconds = (maleInitialMinutesInCall || 0) * 60;
           const giftMinutesSpentInSeconds = maleGiftMinutesSpent * 60;
 
-          if (
+          if (endReason === 'female_ended_call') {
+            disconnectReason = 'La llama ha finalizado';
+          } else if (
             initialMinutesInSeconds -
               totalElapsedSeconds -
               giftMinutesSpentInSeconds <=
@@ -1235,8 +1334,12 @@ export const useCallFlows = (
           ) {
             disconnectReason = 'Saldo agotado';
           } else {
-            disconnectReason = 'Usuario finalizó la llamada';
+            disconnectReason = 'La llama ha finalizado';
           }
+
+          console.log(
+            `[Male] Estableciendo disconnectReason: "${disconnectReason}"`,
+          );
 
           callEarnings = getBalance(
             { minutes: parsedMinutes, seconds: parsedSeconds },
@@ -1259,70 +1362,126 @@ export const useCallFlows = (
             },
           });
 
-          if (isRtmChannelJoined) {
-            try {
-              const summaryPayload: FemaleCallSummaryInfo = {
-                reason: hostEndedCallInfo?.ended
-                  ? 'Finalizada por ti'
-                  : disconnectReason,
-                duration: callDuration,
-                earnings: callEarnings,
-                host_id: currentChannel,
-              };
-              await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
-            } catch (error) {
-              console.error(
-                '[Male] Error enviando MALE_CALL_SUMMARY_SIGNAL:',
-                error,
-              );
-            }
+          if (!isChannelHopping) {
+            console.log(
+              `${LOG_PREFIX_PROVIDER} Redirigiendo male inmediatamente para mejor UX`,
+            );
+            router.push('/main/video-roulette');
           }
 
-          if (localUser.user_id && currentChannel && current_room_id) {
+          setTimeout(async () => {
             try {
-              await agoraBackend.cleanupAfterMaleDisconnect(
-                String(localUser.user_id),
-                currentChannel,
-                current_room_id,
-              );
-            } catch (error) {
-              console.error(
-                '[Male] ❌ Error en limpieza completa, intentando limpieza básica:',
-                error,
-              );
+              if (isRtmChannelJoined) {
+                try {
+                  const summaryPayload: FemaleCallSummaryInfo = {
+                    reason: disconnectReason,
+                    duration: callDuration,
+                    earnings: callEarnings,
+                    host_id: currentChannel,
+                  };
 
-              try {
-                await agoraBackend.closeMaleChannel(
-                  String(localUser.user_id),
-                  currentChannel,
-                  current_room_id,
-                );
+                  console.log(
+                    `[Male] Enviando MALE_CALL_SUMMARY_SIGNAL con reason: "${disconnectReason}", hostEndedCallInfo?.ended: ${hostEndedCallInfo?.ended}`,
+                  );
 
-                if (!hostEndedCallInfo?.ended) {
-                  await agoraBackend.closeChannel(currentChannel, 'finished');
+                  const signalPromise = sendCallSignal(
+                    'MALE_CALL_SUMMARY_SIGNAL',
+                    summaryPayload,
+                  );
+                  const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Signal timeout')), 5000),
+                  );
+
+                  await Promise.race([signalPromise, timeoutPromise]);
+                } catch (error) {
+                  console.error(
+                    '[Male] Error enviando MALE_CALL_SUMMARY_SIGNAL (continuando con cleanup):',
+                    error,
+                  );
                 }
-              } catch (fallbackError) {
-                console.error(
-                  '[Male] ❌ Error en limpieza básica también:',
-                  fallbackError,
-                );
               }
+
+              if (localUser.user_id && currentChannel && current_room_id) {
+                try {
+                  await agoraBackend.cleanupAfterMaleDisconnect(
+                    String(localUser.user_id),
+                    currentChannel,
+                    current_room_id,
+                  );
+                } catch (error) {
+                  console.error(
+                    '[Male] ❌ Error en limpieza completa, intentando limpieza básica:',
+                    error,
+                  );
+
+                  try {
+                    await agoraBackend.closeMaleChannel(
+                      String(localUser.user_id),
+                      currentChannel,
+                      current_room_id,
+                    );
+
+                    if (!hostEndedCallInfo?.ended) {
+                      await agoraBackend.closeChannel(
+                        currentChannel,
+                        'finished',
+                      );
+                    }
+                  } catch (fallbackError) {
+                    console.error(
+                      '[Male] ❌ Error en limpieza básica también:',
+                      fallbackError,
+                    );
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn(
+                '[Male Background Cleanup] Error en cleanup:',
+                error,
+              );
             }
+          }, 100);
+        }
+
+        setTimeout(async () => {
+          try {
+            const rtcPromise = leaveRtcChannel();
+            const rtcTimeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('RTC leave timeout')), 3000),
+            );
+            await Promise.race([rtcPromise, rtcTimeoutPromise]);
+          } catch (error) {
+            console.warn('[Background Cleanup] Error cerrando RTC:', error);
           }
-        }
 
-        await leaveRtcChannel();
-        await leaveCallChannel();
+          try {
+            const rtmPromise = leaveCallChannel();
+            const rtmTimeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('RTM leave timeout')), 3000),
+            );
+            await Promise.race([rtmPromise, rtmTimeoutPromise]);
+          } catch (error) {
+            console.warn('[Background Cleanup] Error cerrando RTM:', error);
+          }
 
-        if (
-          currentUser.role === 'male' &&
-          currentChannel &&
-          channelHoppingFunctions?.registerChannelLeave
-        ) {
-          channelHoppingFunctions.registerChannelLeave(currentChannel, false);
-        }
+          if (
+            currentUser.role === 'male' &&
+            currentChannel &&
+            channelHoppingFunctions?.registerChannelLeave
+          ) {
+            channelHoppingFunctions.registerChannelLeave(currentChannel, false);
+          }
 
-        await handleGetInformation();
+          try {
+            await handleGetInformation();
+          } catch (error) {
+            console.warn(
+              '[Background Cleanup] Error actualizando información:',
+              error,
+            );
+          }
+        }, 200);
       } catch (error: any) {
         console.error(
           `${LOG_PREFIX_PROVIDER} Error durante handleLeaveCall para ${currentUser.role} (${String(currentUser.user_id)}):`,
@@ -1333,8 +1492,9 @@ export const useCallFlows = (
           payload: true,
         });
       } finally {
-        console.log(`${LOG_PREFIX_PROVIDER} handleLeaveCall finally - redirigiendo para usuario:`, currentUser?.role);
-        router.push('/main/video-roulette');
+        console.log(
+          `${LOG_PREFIX_PROVIDER} handleLeaveCall finally - redirección ya realizada para mejor UX`,
+        );
       }
     },
     [
@@ -1400,6 +1560,24 @@ export const useCallFlows = (
       return;
     }
 
+    if (isChannelHoppingLoading) {
+      console.log(
+        '[Minutes Check] Saltando verificación de minutos durante channel hopping',
+      );
+      return;
+    }
+
+    const isChannelHoppingActive =
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem('channelHopping_in_progress') === 'true';
+
+    if (isChannelHoppingActive) {
+      console.log(
+        '[Minutes Check] Saltando verificación de minutos - channel hopping activo en localStorage',
+      );
+      return;
+    }
+
     const [minutesStr, secondsStr] = callTimer.split(':');
     const totalElapsedSeconds =
       parseInt(minutesStr, 10) * 60 + parseInt(secondsStr, 10);
@@ -1427,6 +1605,7 @@ export const useCallFlows = (
     maleGiftMinutesSpent,
     dispatch,
     handleLeaveCall,
+    isChannelHoppingLoading,
   ]);
 
   return {

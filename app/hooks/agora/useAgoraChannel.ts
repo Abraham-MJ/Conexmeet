@@ -10,6 +10,11 @@ import {
 } from '@/app/types/streams';
 import { useAgoraServer } from './useAgoraServer';
 import { LOG_PREFIX_RTM_LISTEN } from '@/lib/constants';
+import useApi from '@/app/hooks/useAPi';
+import {
+  AGORA_API_CONFIGS,
+  AGORA_LOG_PREFIXES,
+} from '@/app/hooks/agora/configs';
 
 export const useAgoraCallChannel = (
   dispatch: React.Dispatch<AgoraAction>,
@@ -28,6 +33,12 @@ export const useAgoraCallChannel = (
 ) => {
   const [rtmChannel, setRtmChannel] = useState<RtmChannel | null>(null);
   const [isRtmChannelJoined, setIsRtmChannelJoined] = useState(false);
+
+  const { execute: translateApi } = useApi<{ translatedText: string }>(
+    '/api/translate',
+    AGORA_API_CONFIGS.translation,
+    false,
+  );
 
   const stateRef = useRef(state);
 
@@ -213,35 +224,49 @@ export const useAgoraCallChannel = (
                   ended: true,
                 },
               });
-              // } else if (receivedMsg.type === 'FEMALE_DISCONNECTED_SIGNAL') {
             } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
               if (localUser?.role === 'female') {
                 const disconnectionData = receivedMsg.payload;
-                console.log('[Female] 📨 Recibido MALE_DISCONNECTED_SIGNAL, ejecutando desconexión completa:', disconnectionData);
+                console.log(
+                  '[Female] 📨 Recibido MALE_DISCONNECTED_SIGNAL, ejecutando desconexión completa:',
+                  disconnectionData,
+                );
 
                 const currentState = stateRef.current;
                 currentState.remoteUsers.forEach((remoteUser) => {
                   if (remoteUser.role === 'male') {
-                    console.log(`[Female] 🧹 Removiendo remote male por desconexión: ${remoteUser.rtcUid}`);
-                    
+                    console.log(
+                      `[Female] 🧹 Removiendo remote male por desconexión: ${remoteUser.rtcUid}`,
+                    );
+
                     if (remoteUser.videoTrack) {
                       try {
                         remoteUser.videoTrack.stop();
-                        console.log(`[Female] 🎥 Video track detenido para male ${remoteUser.rtcUid}`);
+                        console.log(
+                          `[Female] 🎥 Video track detenido para male ${remoteUser.rtcUid}`,
+                        );
                       } catch (videoError) {
-                        console.warn(`[Female] ⚠️ Error deteniendo video track:`, videoError);
+                        console.warn(
+                          `[Female] ⚠️ Error deteniendo video track:`,
+                          videoError,
+                        );
                       }
                     }
-                    
+
                     if (remoteUser.audioTrack) {
                       try {
                         remoteUser.audioTrack.stop();
-                        console.log(`[Female] 🎵 Audio track detenido para male ${remoteUser.rtcUid}`);
+                        console.log(
+                          `[Female] 🎵 Audio track detenido para male ${remoteUser.rtcUid}`,
+                        );
                       } catch (audioError) {
-                        console.warn(`[Female] ⚠️ Error deteniendo audio track:`, audioError);
+                        console.warn(
+                          `[Female] ⚠️ Error deteniendo audio track:`,
+                          audioError,
+                        );
                       }
                     }
-                    
+
                     dispatch({
                       type: AgoraActionType.REMOVE_REMOTE_USER,
                       payload: { rtcUid: String(remoteUser.rtcUid) },
@@ -258,7 +283,9 @@ export const useAgoraCallChannel = (
                   is_active: 1,
                 });
 
-                console.log('[Female] 📨 MALE_DISCONNECTED_SIGNAL procesado - MALE_CALL_SUMMARY_SIGNAL manejará la desconexión');
+                console.log(
+                  '[Female] 📨 MALE_DISCONNECTED_SIGNAL procesado - MALE_CALL_SUMMARY_SIGNAL manejará la desconexión',
+                );
               }
             } else if (receivedMsg.type === 'GIFT_SENT') {
               const giftData = receivedMsg.payload;
@@ -356,9 +383,11 @@ export const useAgoraCallChannel = (
                     }, 500);
                   }
 
-                  console.log(joinData.isReconnection
-                    ? `[Female Client] ✅ Estado actualizado a 'in_call' por RECONEXIÓN de male`
-                    : `[Female Client] ✅ Estado actualizado a 'in_call' por señal MALE_JOINED`);
+                  console.log(
+                    joinData.isReconnection
+                      ? `[Female Client] ✅ Estado actualizado a 'in_call' por RECONEXIÓN de male`
+                      : `[Female Client] ✅ Estado actualizado a 'in_call' por señal MALE_JOINED`,
+                  );
                 } else {
                   console.warn(
                     `[Female Client] ⚠️ No se pudo actualizar estado - Datos faltantes:`,
@@ -404,31 +433,45 @@ export const useAgoraCallChannel = (
                 const summaryPayload =
                   receivedMsg.payload as FemaleCallSummaryInfo;
 
-                console.log('[Female] 📨 Recibido MALE_CALL_SUMMARY_SIGNAL, ejecutando desconexión completa');
+                console.log(
+                  '[Female] 📨 Recibido MALE_CALL_SUMMARY_SIGNAL, ejecutando desconexión completa',
+                );
 
                 const currentState = stateRef.current;
                 currentState.remoteUsers.forEach((remoteUser) => {
                   if (remoteUser.role === 'male') {
-                    console.log(`[Female] 🧹 Removiendo remote male: ${remoteUser.rtcUid}`);
-                    
+                    console.log(
+                      `[Female] 🧹 Removiendo remote male: ${remoteUser.rtcUid}`,
+                    );
+
                     if (remoteUser.videoTrack) {
                       try {
                         remoteUser.videoTrack.stop();
-                        console.log(`[Female] 🎥 Video track detenido para male ${remoteUser.rtcUid}`);
+                        console.log(
+                          `[Female] 🎥 Video track detenido para male ${remoteUser.rtcUid}`,
+                        );
                       } catch (videoError) {
-                        console.warn(`[Female] ⚠️ Error deteniendo video track:`, videoError);
+                        console.warn(
+                          `[Female] ⚠️ Error deteniendo video track:`,
+                          videoError,
+                        );
                       }
                     }
-                    
+
                     if (remoteUser.audioTrack) {
                       try {
                         remoteUser.audioTrack.stop();
-                        console.log(`[Female] 🎵 Audio track detenido para male ${remoteUser.rtcUid}`);
+                        console.log(
+                          `[Female] 🎵 Audio track detenido para male ${remoteUser.rtcUid}`,
+                        );
                       } catch (audioError) {
-                        console.warn(`[Female] ⚠️ Error deteniendo audio track:`, audioError);
+                        console.warn(
+                          `[Female] ⚠️ Error deteniendo audio track:`,
+                          audioError,
+                        );
                       }
                     }
-                    
+
                     dispatch({
                       type: AgoraActionType.REMOVE_REMOTE_USER,
                       payload: { rtcUid: String(remoteUser.rtcUid) },
@@ -447,19 +490,28 @@ export const useAgoraCallChannel = (
                   payload: true,
                 });
 
-                if (typeof window !== 'undefined' && !forceLeaveEventSentRef.current) {
+                if (
+                  typeof window !== 'undefined' &&
+                  !forceLeaveEventSentRef.current
+                ) {
                   forceLeaveEventSentRef.current = true;
-                  console.log('[Female] 🔄 Disparando evento para desconexión completa por male disconnect');
+                  console.log(
+                    '[Female] 🔄 Disparando evento para desconexión completa por male disconnect',
+                  );
                   window.dispatchEvent(
                     new CustomEvent('maleDisconnectedForceLeave', {
                       detail: {
-                        reason: summaryPayload.reason || 'El usuario finalizó la llamada',
+                        reason:
+                          summaryPayload.reason ||
+                          'El usuario finalizó la llamada',
                         timestamp: Date.now(),
                       },
-                    })
+                    }),
                   );
                 } else if (forceLeaveEventSentRef.current) {
-                  console.log('[Female] ⚠️ Evento maleDisconnectedForceLeave ya enviado, evitando duplicado');
+                  console.log(
+                    '[Female] ⚠️ Evento maleDisconnectedForceLeave ya enviado, evitando duplicado',
+                  );
                 }
               }
             }
@@ -543,7 +595,7 @@ export const useAgoraCallChannel = (
       setIsRtmChannelJoined(true);
       setChatMessages([]);
       dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
-      
+
       forceLeaveEventSentRef.current = false;
 
       setupCallChannelListeners(channel);
@@ -580,31 +632,32 @@ export const useAgoraCallChannel = (
       ) {
         let translatedText: string | undefined;
         try {
-          const translateResponse = await fetch('/api/translate', {
+          console.log(
+            `${AGORA_LOG_PREFIXES.TRANSLATION} Translating message: ${messageText.substring(0, 50)}...`,
+          );
+
+          const data = await translateApi('/api/translate', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text: messageText }),
+            body: { text: messageText },
           });
 
-          if (translateResponse.ok) {
-            const data = await translateResponse.json();
+          if (data?.translatedText) {
             translatedText = data.translatedText;
-          } else {
-            const errorData = await translateResponse.json();
-            console.error(
-              `${LOG_PREFIX_RTM_LISTEN} Error al traducir mensaje:`,
-              errorData.details || errorData.error,
+            console.log(
+              `${AGORA_LOG_PREFIXES.TRANSLATION} Translation successful`,
             );
-            translatedText = undefined;
+          } else {
+            console.warn(
+              `${AGORA_LOG_PREFIXES.TRANSLATION} No translation received, using original text`,
+            );
+            translatedText = messageText;
           }
-        } catch (translationError) {
+        } catch (translationError: any) {
           console.error(
-            `${LOG_PREFIX_RTM_LISTEN} Excepción al llamar a la API de traducción:`,
-            translationError,
+            `${AGORA_LOG_PREFIXES.TRANSLATION} Translation failed:`,
+            translationError.message,
           );
-          translatedText = undefined;
+          translatedText = messageText;
         }
 
         const chatMsgPayload = {
@@ -675,7 +728,7 @@ export const useAgoraCallChannel = (
         setIsRtmChannelJoined(false);
         setChatMessages([]);
         dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
-        
+
         forceLeaveEventSentRef.current = false;
       }
     } else if (rtmChannel || isRtmChannelJoined) {
@@ -686,7 +739,7 @@ export const useAgoraCallChannel = (
       setIsRtmChannelJoined(false);
       setChatMessages([]);
       dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
-      
+
       forceLeaveEventSentRef.current = false;
     }
   }, [dispatch, rtmChannel, isRtmChannelJoined]);

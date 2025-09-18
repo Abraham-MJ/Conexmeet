@@ -40,6 +40,7 @@ const useLogin = () => {
 
       return { success: false, message: 'Error en el login' };
     } catch (err) {
+      console.error('Login error:', err);
       return { success: false, message: 'Error en el login' };
     } finally {
       setIsLoading(false);

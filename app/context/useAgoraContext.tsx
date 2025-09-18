@@ -407,6 +407,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       markConnectionFailed,
       hasActiveConnectionConflict,
     },
+    state.isChannelHoppingLoading, 
   );
 
   const { hopToRandomChannel } = useChannelHopping(
@@ -419,6 +420,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       leaveRtcChannel,
       joinCallChannel,
       sendCallSignal,
+      router,
     },
     {
       rtcClient,
@@ -434,11 +436,34 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (state.hostEndedCallInfo && state.hostEndedCallInfo.ended) {
-      handleLeaveCall();
+      if (state.isChannelHoppingLoading) {
+        console.log(
+          '[Host Ended Call] Saltando handleLeaveCall durante channel hopping',
+        );
+        return;
+      }
+
+      const isChannelHoppingActive =
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem('channelHopping_in_progress') === 'true';
+
+      if (isChannelHoppingActive) {
+        console.log(
+          '[Host Ended Call] Saltando handleLeaveCall - channel hopping activo en localStorage',
+        );
+        return;
+      }
+
+      handleLeaveCall(false, 'female_ended_call');
 
       dispatch({ type: AgoraActionType.REMOTE_HOST_ENDED_CALL, payload: null });
     }
-  }, [state.hostEndedCallInfo, handleLeaveCall, dispatch]);
+  }, [
+    state.hostEndedCallInfo,
+    handleLeaveCall,
+    dispatch,
+    state.isChannelHoppingLoading,
+  ]);
 
   useEffect(() => {
     const currentRemoteUsersCount = state.remoteUsers.length;
@@ -836,7 +861,8 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         state.localUser?.role === 'female' &&
         state.isRtcJoined &&
         !isCleaningUp &&
-        !maleDisconnectHandlingRef.current
+        !maleDisconnectHandlingRef.current &&
+        !state.isChannelHoppingLoading // Protección adicional durante channel hopping
       ) {
         maleDisconnectHandlingRef.current = true;
         console.log(

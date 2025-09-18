@@ -8,7 +8,13 @@ import { FaDollarSign, FaHourglassEnd, FaInfoCircle } from 'react-icons/fa';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
 import { useTranslation } from '@/app/hooks/useTranslation';
 
-const CallEndedSummaryIcon = ({ reasonType, t }: { reasonType: string; t: (key: string) => string }) => {
+const CallEndedSummaryIcon = ({
+  reasonType,
+  t,
+}: {
+  reasonType: string;
+  t: (key: string) => string;
+}) => {
   let icon;
   let color = '#a1a1aa';
 
@@ -102,19 +108,22 @@ const ModalCallEndedFemaleSummary = () => {
           </h2>
 
           <p className="mb-4 text-lg text-gray-700">
-            {t('modal.callEnded.reason')}:{' '}
             <span className="font-semibold text-[#fc3d6b]">{reason}</span>
           </p>
 
           <div className="mb-8 w-full space-y-3">
             <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-              <span className="font-medium text-gray-600">{t('modal.callEnded.duration')}:</span>
+              <span className="font-medium text-gray-600">
+                {t('modal.callEnded.duration')}:
+              </span>
               <span className="text-xl font-bold text-gray-800">
                 {duration}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-              <span className="font-medium text-gray-600">{t('modal.callEnded.earnings')}:</span>
+              <span className="font-medium text-gray-600">
+                {t('modal.callEnded.earnings')}:
+              </span>
               <span className="text-xl font-bold text-green-600">
                 ${earnings}
               </span>
