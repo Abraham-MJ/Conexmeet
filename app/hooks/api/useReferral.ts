@@ -1,23 +1,11 @@
 import { useState, useCallback } from 'react';
+import useApi from '../useAPi';
 
 export interface ReferralItem {
   id: number;
   name: string;
   created_at: string;
 }
-
-interface ApiSuccessResponse {
-  status: string;
-  message: string;
-  data: ReferralItem[];
-}
-
-interface ApiErrorResponse {
-  success: false;
-  message: string;
-}
-
-type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
 
 interface UseMyReferralsDataReturn {
   referrals: ReferralItem[] | null;
@@ -30,71 +18,46 @@ interface UseMyReferralsDataReturn {
 
 export function useReferral(): UseMyReferralsDataReturn {
   const [referrals, setReferrals] = useState<ReferralItem[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<string | undefined>(undefined);
   const [apiMessage, setApiMessage] = useState<string | undefined>(undefined);
 
+  const {
+    data: referralsData,
+    loading: isLoading,
+    error: apiError,
+    execute: fetchReferralsRequest,
+  } = useApi<ReferralItem[]>(
+    '/api/referral',
+    {
+      cacheTime: 5 * 60 * 1000,
+      staleTime: 2 * 60 * 1000,
+      retryAttempts: 3,
+    },
+    false,
+  );
+
+  const error = apiError ? apiError.message : null;
+
   const fetchMyReferrals = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    setReferrals(null);
     setApiStatus(undefined);
     setApiMessage(undefined);
 
-    try {
-      const response = await fetch('/api/referral', {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+    const result = await fetchReferralsRequest();
 
-      const result: ApiResponse = await response.json();
-
-      if (!response.ok) {
-        const errorResult = result as ApiErrorResponse;
-        throw new Error(
-          errorResult.message ||
-            `Error ${response.status}: Failed to fetch referrals.`,
-        );
-      }
-
-      const successResult = result as ApiSuccessResponse;
-
-      if (successResult.status === 'Success' && successResult.data) {
-        setReferrals(successResult.data);
-        setApiStatus(successResult.status);
-        setApiMessage(successResult.message);
-      } else if (successResult.status !== 'Success') {
-        throw new Error(
-          successResult.message ||
-            'The referrals API did not indicate success.',
-        );
-      } else {
-        setReferrals([]);
-        setApiStatus(successResult.status);
-        setApiMessage(
-          successResult.message ||
-            'Successful response but no referral data found.',
-        );
-        console.warn(
-          'Successful API response but no referral data or unexpected format:',
-          successResult,
-        );
-      }
-    } catch (err: any) {
-      console.error('Error in useMyReferralsData hook:', err);
-      setError(
-        err.message || 'An unknown error occurred while fetching referrals.',
-      );
+    if (result?.success && result.data) {
+      setReferrals(result.data);
+      setApiStatus('Success');
+      setApiMessage('Referrals fetched successfully');
+    } else if (result?.error) {
       setReferrals(null);
-      setApiStatus(undefined);
-      setApiMessage(undefined);
-    } finally {
-      setIsLoading(false);
+      setApiStatus('Error');
+      setApiMessage(result.error.message);
+    } else {
+      setReferrals([]);
+      setApiStatus('Success');
+      setApiMessage('No referral data found');
     }
-  }, []);
+  }, [fetchReferralsRequest]);
 
   return {
     referrals,

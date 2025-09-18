@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useContacts } from '@/app/context/useContactsContext';
 import { useAgoraContext } from '@/app/context/useAgoraContext';
-import useFeatures from './useFeatures';
+import useApi from '../useAPi';
 
 export interface ToggleContactApiResponse {
   success: boolean;
@@ -26,6 +26,26 @@ export const useAddContacts = (): UseToggleContactOutput => {
     useContacts();
   const { sendContactNotificationThroughLobby } = useAgoraContext();
 
+  const { execute: handleAddContact } = useApi<any>(
+    '/api/add-contacts',
+    {
+      method: 'POST',
+      retryAttempts: 2,
+      retryDelay: 1500,
+    },
+    false,
+  );
+
+  const { execute: handleDeleteContact } = useApi<any>(
+    '/api/delete-contacts',
+    {
+      method: 'DELETE',
+      retryAttempts: 2,
+      retryDelay: 1500,
+    },
+    false,
+  );
+
   const toggleContact = async (
     userId: number | string,
     userName?: string,
@@ -34,88 +54,109 @@ export const useAddContacts = (): UseToggleContactOutput => {
     setError(null);
 
     try {
-      const addResponse = await fetch('/api/add-contacts', {
+      const result = await handleAddContact('/api/add-contacts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId }),
+        body: { user_id: userId },
       });
 
-      const addResult: ToggleContactApiResponse = await addResponse.json();
+      let addResult: ToggleContactApiResponse;
 
-      // const isContactAlreadyExists =
-      //   addResult.message === 'El usuario ya es tu contacto' ||
-      //   (!addResponse.ok && addResponse.status === 409);
+      if (result?.success && result.data) {
+        addResult = {
+          success: true,
+          message: 'Contact added successfully',
+          data: result.data,
+        };
+      } else if (result?.error) {
+        addResult = { success: false, message: result.error.message };
+      } else {
+        addResult = { success: false, message: 'Error adding contact' };
+      }
 
-      // if (isContactAlreadyExists) {
-      //   const deleteResponse = await fetch('/api/delete-contacts', {
-      //     method: 'DELETE',
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //       Accept: 'application/json',
-      //     },
-      //     body: JSON.stringify({ user_id: 0 }),
-      //   });
+      const isContactAlreadyExists =
+        addResult.message === 'El usuario ya es tu contacto' ||
+        addResult.message?.includes('already') ||
+        (!addResult.success && addResult.message?.includes('contacto'));
 
-      //   const deleteResult: ToggleContactApiResponse =
-      //     await deleteResponse.json();
+      if (isContactAlreadyExists) {
+        const deleteResult = await handleDeleteContact('/api/delete-contacts', {
+          method: 'DELETE',
+          body: { user_id: userId },
+        });
 
-      //   if (!deleteResponse.ok || !deleteResult.success) {
-      //     const errorMessage =
-      //       deleteResult.message || 'Ocurrió un error al eliminar el contacto.';
-      //     setError(errorMessage);
-      //     setIsLoading(false);
-      //     console.error(
-      //       '[useAddContacts] Error eliminando contacto:',
-      //       errorMessage,
-      //     );
-      //     return deleteResult;
-      //   }
+        let deleteResponse: ToggleContactApiResponse;
 
-      //   try {
-      //     const rtmSuccess = await sendContactNotificationThroughLobby(
-      //       userId,
-      //       userName || `Usuario ${userId}`,
-      //       'removed',
-      //     );
+        if (deleteResult?.success && deleteResult.data) {
+          deleteResponse = {
+            success: true,
+            message: 'Contact removed successfully',
+            data: deleteResult.data,
+          };
+        } else if (deleteResult?.error) {
+          deleteResponse = {
+            success: false,
+            message: deleteResult.error.message,
+          };
+        } else {
+          deleteResponse = {
+            success: false,
+            message: 'Error removing contact',
+          };
+        }
 
-      //     if (rtmSuccess) {
-      //     } else {
-      //       console.warn(
-      //         '[useAddContacts] ⚠️ Notificación RTM de eliminación falló, pero API fue exitosa',
-      //       );
-      //     }
-      //   } catch (rtmError) {
-      //     console.error(
-      //       '[useAddContacts] ❌ Error enviando notificación RTM de eliminación:',
-      //       rtmError,
-      //     );
-      //   }
+        if (!deleteResponse.success) {
+          const errorMessage =
+            deleteResponse.message ||
+            'Ocurrió un error al eliminar el contacto.';
+          setError(errorMessage);
+          setIsLoading(false);
+          console.error(
+            '[useAddContacts] Error eliminando contacto:',
+            errorMessage,
+          );
+          return deleteResponse;
+        }
 
-      //   try {
-      //     await sendContactRemovedNotification(
-      //       userId,
-      //       userName || `Usuario ${userId}`,
-      //     );
-      //   } catch (localError) {
-      //     console.error(
-      //       '[useAddContacts] ❌ Error mostrando notificación local:',
-      //       localError,
-      //     );
-      //   }
+        try {
+          const rtmSuccess = await sendContactNotificationThroughLobby(
+            userId,
+            userName || `Usuario ${userId}`,
+            'removed',
+          );
 
-      //   setIsLoading(false);
+          if (!rtmSuccess) {
+            console.warn(
+              '[useAddContacts] ⚠️ Notificación RTM de eliminación falló, pero API fue exitosa',
+            );
+          }
+        } catch (rtmError) {
+          console.error(
+            '[useAddContacts] ❌ Error enviando notificación RTM de eliminación:',
+            rtmError,
+          );
+        }
 
-      //   return {
-      //     success: true,
-      //     message: 'Contacto eliminado exitosamente',
-      //     data: deleteResult.data,
-      //   };
-      // }
+        try {
+          await sendContactRemovedNotification(
+            userId,
+            userName || `Usuario ${userId}`,
+          );
+        } catch (localError) {
+          console.error(
+            '[useAddContacts] ❌ Error mostrando notificación local:',
+            localError,
+          );
+        }
 
-      if (!addResponse.ok || !addResult.success) {
+        setIsLoading(false);
+        return {
+          success: true,
+          message: 'Contacto eliminado exitosamente',
+          data: deleteResponse.data,
+        };
+      }
+
+      if (!addResult.success) {
         const errorMessage =
           addResult.message || 'Ocurrió un error al agregar el contacto.';
         setError(errorMessage);

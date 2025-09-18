@@ -28,23 +28,28 @@ const useKycUpload = (): uploadFileProps => {
       url: string,
       formdata: FormData,
       uploadType: string,
+      retryCount: number = 0,
     ): Promise<any> => {
-      const myHeaders = new Headers();
-      myHeaders.append('Accept', 'application/json');
-      myHeaders.append('Authorization', `Bearer ${user.user?.token || ''}`);
-
-      const requestOptions: RequestInit = {
-        method: 'POST',
-        headers: myHeaders,
-        body: formdata,
-        redirect: 'follow' as RequestRedirect,
-      };
+      const maxRetries = 2;
+      const retryDelay = 2000;
 
       try {
-        const response = await fetch(url, requestOptions);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${user.user?.token || ''}`,
+          },
+          body: formdata,
+        });
+
         const result = await response.json();
 
         if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error('Too Many Requests - Please try again later');
+          }
+
           throw new Error(
             result.message ||
               `Error al subir ${uploadType}: ${response.status} ${response.statusText}`,
@@ -53,6 +58,17 @@ const useKycUpload = (): uploadFileProps => {
         return result;
       } catch (err: any) {
         console.error(`Error al subir ${uploadType}:`, err);
+
+        if (
+          retryCount < maxRetries &&
+          (err.message.includes('fetch') || err.message.includes('network'))
+        ) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelay * (retryCount + 1)),
+          );
+          return makeApiCall(url, formdata, uploadType, retryCount + 1);
+        }
+
         throw new Error(
           `Error al subir ${uploadType}: ${err.message || 'Error desconocido'}`,
         );

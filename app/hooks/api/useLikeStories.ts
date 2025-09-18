@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import useApi from '../useAPi';
 
 interface LikeApiResponse {
   success: boolean;
@@ -16,6 +17,12 @@ export const useLikeStory = (): UseLikeStoryOutput => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { execute: likeStoryRequest } = useApi<LikeApiResponse>('/api/like-stories', {
+    method: 'POST',
+    retryAttempts: 2,
+    retryDelay: 1000,
+  }, false);
+
   const toggleLike = async (
     story_id: number | string,
   ): Promise<LikeApiResponse | null> => {
@@ -23,33 +30,39 @@ export const useLikeStory = (): UseLikeStoryOutput => {
     setError(null);
 
     try {
-      const response = await fetch('/api/like-stories', {
+      const result = await likeStoryRequest('/api/like-stories', {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ story_id: story_id }),
+        body: { story_id },
       });
 
-      const result: LikeApiResponse = await response.json();
-
-      if (!response.ok || !result.success) {
-        setError(
-          result.message || 'Ocurrió un error al dar like a la historia.',
-        );
+      if (result?.success && result.data) {
         setIsLoading(false);
-        return result;
+        return result.data;
+      } else if (result?.error) {
+        const errorMessage = result.error.message || 'Ocurrió un error al dar like a la historia.';
+        setError(errorMessage);
+        setIsLoading(false);
+        return {
+          success: false,
+          message: errorMessage,
+        };
       }
-
-      setIsLoading(false);
-      return result;
-    } catch (err: any) {
-      console.error('Error en useLikeStory:', err);
-      setError(err.message || 'Un error inesperado ocurrió.');
+      
+      const defaultError = 'Ocurrió un error al dar like a la historia.';
+      setError(defaultError);
       setIsLoading(false);
       return {
         success: false,
-        message: err.message || 'Un error inesperado ocurrió.',
+        message: defaultError,
+      };
+    } catch (err: any) {
+      console.error('Error en useLikeStory:', err);
+      const errorMessage = err.message || 'Un error inesperado ocurrió.';
+      setError(errorMessage);
+      setIsLoading(false);
+      return {
+        success: false,
+        message: errorMessage,
       };
     }
   };

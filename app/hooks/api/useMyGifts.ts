@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import useApi from '../useAPi';
 
 export interface AugmentedGifItem {
   id: number;
@@ -20,13 +21,6 @@ interface ApiSuccessResponse {
   data: AugmentedGifItem[];
 }
 
-interface ApiErrorResponse {
-  success: false;
-  message: string;
-}
-
-type ApiResponse = ApiSuccessResponse | ApiErrorResponse;
-
 interface UseMyGiftsDataReturn {
   gifts: AugmentedGifItem[] | null;
   isLoading: boolean;
@@ -37,71 +31,47 @@ interface UseMyGiftsDataReturn {
 }
 
 export function useMyGiftsData(): UseMyGiftsDataReturn {
-  const [gifts, setGifts] = useState<AugmentedGifItem[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<string | undefined>(undefined);
   const [apiMessage, setApiMessage] = useState<string | undefined>(undefined);
 
+  const {
+    data: apiData,
+    loading: isLoading,
+    error: apiError,
+    execute,
+  } = useApi<AugmentedGifItem[]>(
+    '/api/gift/get-gifts-female',
+    {
+      cacheTime: 3 * 60 * 1000,
+      staleTime: 60 * 1000,
+      retryAttempts: 3,
+    },
+    false,
+  );
+
   const fetchMyGifts = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    setGifts(null);
     setApiStatus(undefined);
     setApiMessage(undefined);
 
-    try {
-      const response = await fetch('/api/gift/get-gifts-female', {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+    const result = await execute();
 
-      const result: ApiResponse = await response.json();
-
-      if (!response.ok) {
-        const errorResult = result as ApiErrorResponse;
-        throw new Error(
-          errorResult.message ||
-            `Error ${response.status}: Failed to fetch gifts.`,
-        );
-      }
-
-      const successResult = result as ApiSuccessResponse;
-
-      if (successResult.status === 'Success' && successResult.data) {
-        setGifts(successResult.data);
-        setApiStatus(successResult.status);
-        setApiMessage(successResult.message);
-      } else if (successResult.status !== 'Success') {
-        throw new Error(
-          successResult.message || 'The API did not indicate success.',
-        );
-      } else {
-        setGifts([]);
-        setApiStatus(successResult.status);
-        setApiMessage(
-          successResult.message ||
-            'Successful response but no gift data found.',
-        );
-        console.warn(
-          'Successful API response but no gift data or unexpected format:',
-          successResult,
-        );
-      }
-    } catch (err: any) {
-      console.error('Error in useMyGiftsData hook:', err);
-      setError(
-        err.message || 'An unknown error occurred while fetching gifts.',
-      );
-      setGifts(null);
-      setApiStatus(undefined);
-      setApiMessage(undefined);
-    } finally {
-      setIsLoading(false);
+    if (result?.success && result.data) {
+      setApiStatus('Success');
+      setApiMessage('Gifts fetched successfully');
+    } else if (result?.error) {
+      setApiStatus('Error');
+      setApiMessage(result.error.message);
     }
-  }, []);
+  }, [execute]);
 
-  return { gifts, isLoading, error, fetchMyGifts, apiStatus, apiMessage };
+  const error = apiError ? apiError.message : null;
+
+  return {
+    gifts: apiData,
+    isLoading,
+    error,
+    fetchMyGifts,
+    apiStatus,
+    apiMessage,
+  };
 }

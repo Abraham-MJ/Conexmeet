@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import useApi from '../useAPi';
 
 export function usePasswordRecovery() {
   const [sendIsLoading, setSendIsLoading] = useState(false);
@@ -9,23 +10,47 @@ export function usePasswordRecovery() {
   const [success, setSuccess] = useState(false);
   const [errorToken, setErrorToken] = useState(false);
 
+  const { execute: validateTokenRequest } = useApi<any>('/api/auth/recovery-password', {
+    retryAttempts: 2,
+    retryDelay: 1500,
+  }, false);
+
+  const { execute: sendEmailRequest } = useApi<any>('/api/auth/recovery-password/recovery', {
+    method: 'POST',
+    retryAttempts: 2,
+    retryDelay: 2000,
+  }, false);
+
+  const { execute: resetPasswordRequest } = useApi<any>('/api/auth/recovery-password/forgot-password', {
+    method: 'POST',
+    retryAttempts: 2,
+    retryDelay: 2000,
+  }, false);
+
   const validToken = async (token: string) => {
     setIsLoadingToken(true);
+    setErrorToken(false);
+    
     try {
-      const response = await fetch(`/api/auth/recovery-password/${token}`);
-      const result = await response.json();
+      const result = await validateTokenRequest(`/api/auth/recovery-password/${token}`);
 
-      if (!response.ok) {
+      if (result?.success && result.data) {
+        setData({ 
+          email: result.data.email || '', 
+          token: result.data.token || token 
+        });
+      } else {
         setErrorToken(true);
       }
 
-      setData({ ...data, email: result.data.email, token: result.data.token });
       setTimeout(() => {
         setIsLoadingToken(false);
       }, 2000);
-      return result;
+      
+      return result?.data || result;
     } catch (err) {
       setIsLoadingToken(false);
+      setErrorToken(true);
       console.error(err);
     }
   };
@@ -45,10 +70,9 @@ export function usePasswordRecovery() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        return;
+      if (response.ok) {
+        setSuccessEmail(true);
       }
-      setSuccessEmail(true);
 
       return data;
     } catch (err: any) {
@@ -71,6 +95,8 @@ export function usePasswordRecovery() {
     password_confirmation: string;
   }) => {
     setForgotLoading(true);
+    setSuccess(false);
+    
     try {
       const formData = new FormData();
       formData.append('token', token);
@@ -88,16 +114,14 @@ export function usePasswordRecovery() {
 
       const result = await response.json();
 
-      if (!response.ok) {
-        setSuccess(false);
-        setForgotLoading(false);
+      if (response.ok) {
+        setSuccess(true);
       }
-      setSuccess(true);
-      setForgotLoading(false);
+      
       return result;
     } catch (err: any) {
-      setForgotLoading(false);
       setSuccess(false);
+      console.error('Reset password error:', err);
     } finally {
       setForgotLoading(false);
     }

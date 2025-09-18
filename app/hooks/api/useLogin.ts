@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
+import useApi from '../useAPi';
 
 interface LoginResponse {
   success: boolean;
@@ -11,28 +12,33 @@ interface LoginResponse {
 const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
 
+  const { execute } = useApi<LoginResponse>(
+    '/api/auth/sign-in',
+    {
+      method: 'POST',
+      retryAttempts: 2,
+      retryDelay: 1500,
+    },
+    false,
+  );
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
 
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('password', password);
-
     try {
-      const response = await fetch('/api/auth/sign-in', {
+      const result = await execute('/api/auth/sign-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
+        body: { email, password },
       });
 
-      const data: LoginResponse = await response.json();
-
-      if (!response.ok) {
-        return data;
+      if (result?.success && result.data) {
+        return result.data;
+      } else if (result?.error) {
+        return { success: false, message: result.error.message };
       }
 
-      return data;
+      return { success: false, message: 'Error en el login' };
     } catch (err) {
       return { success: false, message: 'Error en el login' };
     } finally {
@@ -42,23 +48,20 @@ const useLogin = () => {
 
   const logout = async () => {
     try {
-      // Primero llamar a nuestro endpoint de logout para limpiar cookies
       await fetch('/api/auth/logout', {
         method: 'GET',
         credentials: 'include',
       });
 
-      // Luego usar signOut de NextAuth
-      await signOut({ 
-        redirect: true, 
-        callbackUrl: '/auth/sign-in' 
+      await signOut({
+        redirect: true,
+        callbackUrl: '/auth/sign-in',
       });
     } catch (error) {
       console.error('Error during logout:', error);
-      // En caso de error, forzar el signOut
-      await signOut({ 
-        redirect: true, 
-        callbackUrl: '/auth/sign-in' 
+      await signOut({
+        redirect: true,
+        callbackUrl: '/auth/sign-in',
       });
     }
   };

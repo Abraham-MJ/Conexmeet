@@ -3,49 +3,35 @@ import {
   RankingItem,
   UseRankingDataReturn,
 } from '@/app/types/ranking';
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import useApi from '../useAPi';
 
 export function useRanking(): UseRankingDataReturn {
-  const [data, setData] = useState<RankingItem[] | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: apiData,
+    loading,
+    error: apiError,
+    execute,
+  } = useApi<RankingItem[]>(
+    '/api/ranking',
+    {
+      cacheTime: 2 * 60 * 1000,
+      staleTime: 30 * 1000,
+      retryAttempts: 3,
+    },
+    false,
+  );
 
   const fetchRanking = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setData(null);
+    await execute();
+  }, [execute]);
 
-    try {
-      const response = await fetch('/api/ranking', {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+  const error = apiError ? apiError.message : null;
 
-      const result: ApiResponse = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message ||
-            `Error ${response.status}: Fallo al obtener el ranking.`,
-        );
-      }
-
-      if (result.data) {
-        setData(result.data);
-      } else {
-        setData([]);
-        console.warn('Respuesta exitosa pero sin datos de ranking.');
-      }
-    } catch (err: any) {
-      console.error('Error en el hook useRankingData:', err);
-      setError(err.message || 'Ocurrió un error desconocido.');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  return { data, loading, error, fetchRanking };
+  return {
+    data: apiData,
+    loading,
+    error,
+    fetchRanking,
+  };
 }

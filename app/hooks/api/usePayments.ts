@@ -1,5 +1,6 @@
 import { Package } from '@/app/types/package';
 import { useState, useEffect, useCallback } from 'react';
+import useApi from '../useAPi';
 
 interface ApiResponse {
   success: boolean;
@@ -22,7 +23,7 @@ interface UseFetchPackagesReturn {
     payload: PaymentRegistrationPayload,
   ) => Promise<{ success: boolean; data?: Package[]; message?: string }>;
 }
- 
+
 export interface IntentPayment {
   customer: string;
   ephemeralKey: string;
@@ -63,32 +64,32 @@ function usePayments(): UseFetchPackagesReturn {
   const [isLoadingPaymentIntent, setIsLoadingPaymentIntent] =
     useState<boolean>(false);
 
+  const {
+    data: packagesData,
+    loading: packagesLoading,
+    error: packagesError,
+    execute: fetchPackages,
+  } = useApi<Package[]>(
+    '/api/get-package',
+    {
+      cacheTime: 10 * 60 * 1000,
+      staleTime: 5 * 60 * 1000,
+      retryAttempts: 3,
+    },
+    false,
+  );
+
   const getListPackage = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    const result = await fetchPackages();
 
-    try {
-      const response = await fetch('/api/get-package');
-      const result: ApiResponse = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || `Error HTTP: ${response.status}`);
-      }
-
-      if (result.success && result.data) {
-        setData(result.data);
-      } else {
-        setError(result.message || 'No se pudieron obtener los paquetes.');
-        setData(null);
-      }
-    } catch (err: any) {
-      console.error('useFetchPackages Error:', err);
-      setError(err.message || 'Ocurrió un error al realizar la solicitud.');
+    if (result?.success && result.data) {
+      setData(result.data);
+      setError(null);
+    } else if (result?.error) {
+      setError(result.error.message);
       setData(null);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [fetchPackages]);
 
   useEffect(() => {
     if (steps === 'payment') {
@@ -100,30 +101,32 @@ function usePayments(): UseFetchPackagesReturn {
     }
   }, [steps]);
 
+  const { execute: createPaymentIntent } = useApi<IntentPayment>(
+    '/api/payments/intent-payment',
+    {
+      method: 'POST',
+      retryAttempts: 2,
+      retryDelay: 2000,
+    },
+    false,
+  );
+
   const handlePaymentIntent = async () => {
     try {
       setIsLoadingPaymentIntent(true);
-      const response = await fetch('/api/payments/intent-payment', {
+
+      const result = await createPaymentIntent('/api/payments/intent-payment', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ package_id: selectedPackage?.id }),
+        body: { package_id: selectedPackage?.id },
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setIntentPayment(result.data.data);
-        return result.data;
-      } else {
-        console.error(
-          'Error al crear el pago:',
-          result.message,
-          result.details,
-        );
+      if (result?.success && result.data) {
+        setIntentPayment(result.data);
+        return { data: result.data };
+      } else if (result?.error) {
+        console.error('Error al crear el pago:', result.error.message);
         throw new Error(
-          result.message || 'Error desconocido al crear el pago.',
+          result.error.message || 'Error desconocido al crear el pago.',
         );
       }
     } catch (error) {
@@ -138,6 +141,16 @@ function usePayments(): UseFetchPackagesReturn {
     setSteps('payment');
   };
 
+  const { execute: registerPayment } = useApi<Package[]>(
+    '/api/payments/register-payment',
+    {
+      method: 'POST',
+      retryAttempts: 3,
+      retryDelay: 1500,
+    },
+    false,
+  );
+
   const handlePaymentRegistration = useCallback(
     async ({
       payment_intent,
@@ -151,24 +164,29 @@ function usePayments(): UseFetchPackagesReturn {
           status,
         };
 
-        const response = await fetch('/api/payments/register-payment', {
+        const result = await registerPayment('/api/payments/register-payment', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
+          body: payload,
         });
 
-        const result: ApiResponse = await response.json();
-
-        if (result.success) {
-          return { success: true, data: result.data, message: result.message };
-        } else {
+        if (result?.success && result.data) {
+          return {
+            success: true,
+            data: result.data,
+            message: 'Payment registered successfully',
+          };
+        } else if (result?.error) {
           return {
             success: false,
-            message: result.message || 'Ocurrió un error al registrar el pago.',
+            message:
+              result.error.message || 'Ocurrió un error al registrar el pago.',
           };
         }
+
+        return {
+          success: false,
+          message: 'Ocurrió un error al registrar el pago.',
+        };
       } catch (err: any) {
         console.error('handlePaymentRegistration Error:', err);
         const errorMessage =
@@ -176,7 +194,7 @@ function usePayments(): UseFetchPackagesReturn {
         return { success: false, message: errorMessage };
       }
     },
-    [],
+    [registerPayment],
   );
 
   return {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import useApi from '../useAPi';
 
 interface UseGifsResult {
   contentGifts: ExternalGifItem[];
@@ -46,42 +47,37 @@ export interface AugmentedGifItem extends ExternalGifItem {
 
 export const useListGifts = (): UseGifsResult => {
   const [contentGifts, setContentGifts] = useState<ExternalGifItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [shouldRefetch, setShouldRefetch] = useState(0);
 
-  const fetchGifs = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/gift/get-gifts');
+  const {
+    data: giftsData,
+    loading,
+    error: apiError,
+    execute: fetchGifts,
+  } = useApi<ExternalGifItem[]>(
+    '/api/gift/get-gifts',
+    {
+      cacheTime: 5 * 60 * 1000,
+      staleTime: 2 * 60 * 1000,
+      retryAttempts: 3,
+    },
+    false,
+  );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || `Error al obtener los GIFs: ${response.status}`,
-        );
-      }
+  const error = apiError ? apiError.message : null;
 
-      const data: ExternalGifsApiResponse = await response.json();
+  const loadGifts = async () => {
+    const result = await fetchGifts();
 
-      if (data.status === 'Success' && Array.isArray(data.data)) {
-        setContentGifts(data.data);
-      } else {
-        throw new Error(
-          data.message || 'Formato de datos inesperado de la API.',
-        );
-      }
-    } catch (err: any) {
-      console.error('Error fetching GIFs:', err);
-      setError(err.message || 'Ocurrió un error desconocido.');
-    } finally {
-      setLoading(false);
+    if (result?.success && result.data) {
+      setContentGifts(result.data);
+    } else {
+      setContentGifts([]);
     }
   };
 
   useEffect(() => {
-    fetchGifs();
+    loadGifts();
   }, [shouldRefetch]);
 
   return { contentGifts, loading, error };

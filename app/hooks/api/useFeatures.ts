@@ -55,14 +55,30 @@ const useFeatures = ({
     loading: storiesLoading,
     error: storiesError,
     execute: fetchStories,
-  } = useApi<HistoryData[]>('/api/histories', {}, false);
+  } = useApi<HistoryData[]>(
+    '/api/histories',
+    {
+      cacheTime: 2 * 60 * 1000,
+      staleTime: 30 * 1000,
+      retryAttempts: 3,
+    },
+    false,
+  );
 
   const {
     data: contactsData,
     loading: contactsLoading,
     error: contactsError,
     execute: fetchContacts,
-  } = useApi<ContactData[]>('/api/auth/my-contacts', {}, false);
+  } = useApi<ContactData[]>(
+    '/api/auth/my-contacts',
+    {
+      cacheTime: 5 * 60 * 1000,
+      staleTime: 2 * 60 * 1000,
+      retryAttempts: 3,
+    },
+    false,
+  );
 
   const handleTabChange = useCallback((tab: TabName) => {
     setActiveTab(tab);

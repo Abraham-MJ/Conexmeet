@@ -1,11 +1,8 @@
 import { useState, useCallback } from 'react';
+import useApi from '../useAPi';
 
 interface RtmTokenApiResponse {
   rtmToken: string;
-}
-
-interface RtmTokenApiErrorResponse {
-  error: string;
 }
 
 const API_ROUTE_GET_RTM_TOKEN = '/api/agora/get-token-rtm';
@@ -22,6 +19,17 @@ export function useAgoraRtmToken(): UseAgoraRtmTokenReturn {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { execute: getRtmTokenRequest } = useApi<RtmTokenApiResponse>(
+    API_ROUTE_GET_RTM_TOKEN,
+    {
+      cacheTime: 10 * 60 * 1000,
+      staleTime: 5 * 60 * 1000,
+      retryAttempts: 3,
+      retryDelay: 1500,
+    },
+    false,
+  );
+
   const fetchRtmToken = useCallback(
     async (uid: string): Promise<string | null> => {
       if (!uid || uid.trim() === '') {
@@ -37,30 +45,16 @@ export function useAgoraRtmToken(): UseAgoraRtmTokenReturn {
       setToken(null);
 
       try {
-        const response = await fetch(
+        const result = await getRtmTokenRequest(
           `${API_ROUTE_GET_RTM_TOKEN}?uid=${encodeURIComponent(uid)}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          },
         );
 
-        const responseData: RtmTokenApiResponse | RtmTokenApiErrorResponse =
-          await response.json();
-
-        if (!response.ok) {
-          const errorMessage =
-            (responseData as RtmTokenApiErrorResponse).error ||
-            `Error del servidor: ${response.status}`;
-          throw new Error(errorMessage);
-        }
-
-        const successData = responseData as RtmTokenApiResponse;
-        if (successData.rtmToken) {
-          setToken(successData.rtmToken);
-          return successData.rtmToken;
+        if (result?.success && result.data?.rtmToken) {
+          setToken(result.data.rtmToken);
+          setIsLoading(false);
+          return result.data.rtmToken;
+        } else if (result?.error) {
+          throw new Error(result.error.message || 'Error del servidor');
         } else {
           throw new Error('Token RTM no encontrado en la respuesta de la API.');
         }
@@ -72,12 +66,11 @@ export function useAgoraRtmToken(): UseAgoraRtmTokenReturn {
         console.error('Error al obtener el token RTM:', caughtError);
         setError(caughtError);
         setToken(null);
-        return null;
-      } finally {
         setIsLoading(false);
+        return null;
       }
     },
-    [],
+    [getRtmTokenRequest],
   );
 
   return { token, isLoading, error, fetchRtmToken };

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import useApi from '../useAPi';
 
 interface RegisterUserPayload {
   email: string;
@@ -22,9 +23,15 @@ interface UseRegisterUser {
 }
 
 export function useRegisterUser(): UseRegisterUser {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const { execute } = useApi<any>('/api/auth/register', {
+    method: 'POST',
+    retryAttempts: 2,
+    retryDelay: 2000,
+  }, false);
 
   const registerUser = async (payload: RegisterUserPayload) => {
     setIsLoading(true);
@@ -32,27 +39,30 @@ export function useRegisterUser(): UseRegisterUser {
     setSuccess(false);
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const result = await execute('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: payload,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || 'Error en el registro');
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 3000);
-      } else {
+      if (result?.success && result.data) {
         setSuccess(true);
         setTimeout(() => {
           setIsLoading(false);
         }, 3000);
+        return result.data;
+      } else if (result?.error) {
+        setError(result.error.message || 'Error en el registro');
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 3000);
+        return { success: false, message: result.error.message };
       }
-
-      return data;
+      
+      setError('Error en el registro');
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 3000);
+      return { success: false, message: 'Error en el registro' };
     } catch (err) {
       setError('Error al conectar con el servidor');
       setTimeout(() => {

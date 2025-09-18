@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import useApi from '../useAPi';
 
 interface ApiResponse {
   success: boolean;
@@ -10,22 +11,39 @@ export function useOTP() {
   const [loadingRequest, setLoadingRequest] = useState(false);
   const [loadingVerify, setLoadingVerify] = useState(false);
 
+  const { execute: sendOTPRequest } = useApi<ApiResponse>('/api/auth/sign-in-opt/send-opt', {
+    method: 'POST',
+    retryAttempts: 2,
+    retryDelay: 2000,
+  }, false);
+
+  const { execute: verifyOTPRequest } = useApi<ApiResponse>('/api/auth/sign-in-opt/valid-opt', {
+    method: 'POST',
+    retryAttempts: 2,
+    retryDelay: 1500,
+  }, false);
+
   const requestOTP = async (email: string): Promise<ApiResponse> => {
     setLoadingRequest(true);
     try {
-      const response = await fetch('/api/auth/sign-in-opt/send-opt', {
+      const result = await sendOTPRequest('/api/auth/sign-in-opt/send-opt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: { email },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Error en la solicitud OTP');
+      if (result?.success && result.data) {
+        return result.data;
+      } else if (result?.error) {
+        return {
+          success: false,
+          message: result.error.message || 'Error en la solicitud OTP',
+        };
       }
-
-      return data;
+      
+      return {
+        success: false,
+        message: 'Error en la solicitud OTP',
+      };
     } catch (error: any) {
       console.error(error);
       return {
@@ -43,19 +61,24 @@ export function useOTP() {
   ): Promise<ApiResponse> => {
     setLoadingVerify(true);
     try {
-      const response = await fetch('/api/auth/sign-in-opt/valid-opt', {
+      const result = await verifyOTPRequest('/api/auth/sign-in-opt/valid-opt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
+        body: { email, otp },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Error en la verificación OTP');
+      if (result?.success && result.data) {
+        return result.data;
+      } else if (result?.error) {
+        return {
+          success: false,
+          message: result.error.message || 'Error en la verificación OTP',
+        };
       }
-
-      return data;
+      
+      return {
+        success: false,
+        message: 'Error en la verificación OTP',
+      };
     } catch (error: any) {
       console.error(error);
       return {

@@ -4,6 +4,7 @@ import { useUser } from '@/app/context/useClientContext';
 import { HistoryData } from '@/app/types/histories';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import useApi from '../useAPi';
 
 export const useVideoRouletteMale = () => {
   const router = useRouter();
@@ -11,8 +12,23 @@ export const useVideoRouletteMale = () => {
 
   const [currentDate, setCurrentDate] = useState('');
   const [histories, setHistories] = useState<HistoryData[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const {
+    data: historiesData,
+    loading: isLoading,
+    error: apiError,
+    execute: fetchHistories,
+  } = useApi<HistoryData[]>(
+    '/api/histories',
+    {
+      cacheTime: 2 * 60 * 1000,
+      staleTime: 30 * 1000,
+      retryAttempts: 3,
+    },
+    true,
+  );
+
+  const error = apiError ? apiError.message : null;
 
   useEffect(() => {
     const timeInterval = setInterval(() => {
@@ -32,36 +48,16 @@ export const useVideoRouletteMale = () => {
   }, []);
 
   useEffect(() => {
-    const getHistories = async () => {
-      try {
-        const response = await fetch('/api/histories', {
-          method: 'GET',
-          cache: 'no-store',
-        });
+    if (historiesData) {
+      setHistories(Array.isArray(historiesData) ? historiesData : []);
+    }
+  }, [historiesData]);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.message || `Error en API externa: ${response.statusText}`,
-          );
-        }
-
-        const data = await response.json();
-        if (data.success === true) {
-          setHistories(data.data);
-        } else {
-          setHistories([]);
-        }
-
-        return data;
-      } catch (error) {
-        console.error('Error al obtener historiales:', error);
-        throw error;
-      }
-    };
-
-    getHistories();
-  }, []);
-
-  return { histories, isLoading, error, currentDate };
+  return {
+    histories,
+    isLoading,
+    error,
+    currentDate,
+    refreshHistories: fetchHistories,
+  };
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import useApi from '../useAPi';
 
 interface Country {
   code: string;
@@ -9,30 +10,24 @@ interface Country {
 
 export const useCountries = () => {
   const [countries, setCountries] = useState<Country[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const {
+    data: countriesData,
+    loading: isLoading,
+    error: apiError,
+  } = useApi<Country[]>('/api/auth/countris', {
+    cacheTime: 30 * 60 * 1000, 
+    staleTime: 15 * 60 * 1000, 
+    retryAttempts: 3,
+  }, true); 
+
+  const error = apiError ? apiError.message : null;
 
   useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('/api/auth/countris');
-        const data = await response.json();
-
-        if (!data.success) {
-          throw new Error(data.message);
-        }
-
-        setCountries(data.data.data);
-      } catch (error) {
-        setError(error instanceof Error ? error.message : 'Error desconocido');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCountries();
-  }, []);
+    if (countriesData) {
+      setCountries(Array.isArray(countriesData) ? countriesData : []);
+    }
+  }, [countriesData]);
 
   return { countries, isLoading, error };
 };

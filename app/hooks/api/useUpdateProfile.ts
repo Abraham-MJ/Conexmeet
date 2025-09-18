@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useForm } from '@/app/hooks/useForm';
+import useApi from '../useAPi';
 
 interface UseUpdateProfileProps {
   initialUser: {
@@ -65,6 +66,49 @@ export function useUpdateProfile({
 }: UseUpdateProfileProps): UseUpdateProfileEnhancedReturn {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<HookError | null>(null);
+
+  const optimizedFetch = useCallback(
+    async (
+      url: string,
+      formData: FormData,
+      retryCount: number = 0,
+    ): Promise<Response> => {
+      const maxRetries = 2;
+      const retryDelay = 2000;
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.status === 429) {
+          if (retryCount < maxRetries) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, retryDelay * (retryCount + 1)),
+            );
+            return optimizedFetch(url, formData, retryCount + 1);
+          }
+          throw new Error('Too Many Requests - Please try again later');
+        }
+
+        return response;
+      } catch (error) {
+        if (
+          retryCount < maxRetries &&
+          error instanceof Error &&
+          (error.message.includes('fetch') || error.message.includes('network'))
+        ) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelay * (retryCount + 1)),
+          );
+          return optimizedFetch(url, formData, retryCount + 1);
+        }
+        throw error;
+      }
+    },
+    [],
+  );
 
   const {
     credentials,
@@ -193,10 +237,10 @@ export function useUpdateProfile({
       );
 
       try {
-        const response = await fetch('/api/update-profile/update-photo', {
-          method: 'POST',
-          body: photoFormData,
-        });
+        const response = await optimizedFetch(
+          '/api/update-profile/update-photo',
+          photoFormData,
+        );
         photoUpdateOutcome = (await response.json()) as UpdateOperationResult;
 
         if (!response.ok || !photoUpdateOutcome.success) {
@@ -236,10 +280,10 @@ export function useUpdateProfile({
         }
 
         try {
-          const response = await fetch('/api/update-profile/update-user', {
-            method: 'POST',
-            body: dataFormData,
-          });
+          const response = await optimizedFetch(
+            '/api/update-profile/update-user',
+            dataFormData,
+          );
           dataUpdateOutcome = (await response.json()) as UpdateOperationResult;
 
           if (!response.ok || !dataUpdateOutcome.success) {
@@ -312,10 +356,10 @@ export function useUpdateProfile({
         );
 
         try {
-          const response = await fetch('/api/update-profile/update-password', {
-            method: 'POST',
-            body: passwordFormData,
-          });
+          const response = await optimizedFetch(
+            '/api/update-profile/update-password',
+            passwordFormData,
+          );
           passwordUpdateOutcome =
             (await response.json()) as UpdateOperationResult;
 
@@ -438,6 +482,7 @@ export function useUpdateProfile({
     formErrors,
     clearFormFieldError,
     setFormFieldError,
+    optimizedFetch,
   ]);
 
   return {
