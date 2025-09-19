@@ -224,6 +224,35 @@ export const useAgoraCallChannel = (
                   ended: true,
                 },
               });
+            } else if (receivedMsg.type === 'MALE_NO_CHANNELS_SIGNAL') {
+              if (localUser?.role === 'female') {
+                console.log('[Female] 📨 Recibido MALE_NO_CHANNELS_SIGNAL - male no encontró más canales');
+                
+                // Establecer el modal de la female con la información correcta
+                dispatch({
+                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
+                  payload: {
+                    reason: "Usuario finalizó la llamada",
+                    duration: '00:00', // Duración mínima ya que no hubo llamada real
+                    earnings: 0, // Sin ganancias
+                    host_id: receivedMsg.payload?.channelName || null,
+                  },
+                });
+                
+                dispatch({
+                  type: AgoraActionType.SET_FEMALE_CALL_ENDED_MODAL,
+                  payload: true,
+                });
+                
+                // Establecer la información para que handleLeaveCall se ejecute
+                dispatch({
+                  type: AgoraActionType.REMOTE_HOST_ENDED_CALL,
+                  payload: {
+                    message: receivedMsg.payload?.message || 'El usuario no encontró más modelos disponibles',
+                    ended: true,
+                  },
+                });
+              }
             } else if (receivedMsg.type === 'MALE_DISCONNECTED_SIGNAL') {
               if (localUser?.role === 'female') {
                 const disconnectionData = receivedMsg.payload;

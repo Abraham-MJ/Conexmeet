@@ -73,7 +73,11 @@ export interface LoadingStatus {
 }
 
 export interface FemaleCallSummaryInfo {
-  reason: 'La llama ha finalizado' | 'Saldo agotado' | 'Desconexión inesperada';
+  reason:
+    | 'Finalizada por ti'
+    | 'Usuario finalizó la llamada'
+    | 'Saldo agotado'
+    | 'Desconexión inesperada';
   duration: string;
   earnings: number | string | null;
   host_id: string | null;
