@@ -49,8 +49,6 @@ export const useAgoraRtc = (
       currentRtcClient.on('user-published', async (remoteUser, mediaType) => {
         if (mediaType !== 'audio' && mediaType !== 'video') return;
 
-        console.log(`[RTC] 📹 Usuario publicó ${mediaType}: ${remoteUser.uid}`);
-
         try {
           await currentRtcClient!.subscribe(remoteUser, mediaType);
 
@@ -72,10 +70,6 @@ export const useAgoraRtc = (
           }
 
           if (localUser?.role === 'female' && mediaType === 'video') {
-            console.log(
-              '[Female] 📹 Male publicó video, actualizando estado a in_call',
-            );
-
             setTimeout(async () => {
               try {
                 await broadcastLocalFemaleStatusUpdate({
@@ -116,10 +110,6 @@ export const useAgoraRtc = (
       );
 
       currentRtcClient.on('user-left', (remoteUserLeaving) => {
-        console.log(
-          `[RTC] 👋 Usuario salió del canal: ${remoteUserLeaving.uid}`,
-        );
-
         const leavingUser = remoteUsersRef.current.find(
           (user) => String(user.rtcUid) === String(remoteUserLeaving.uid),
         );
@@ -128,9 +118,6 @@ export const useAgoraRtc = (
           if (leavingUser.videoTrack) {
             try {
               leavingUser.videoTrack.stop();
-              console.log(
-                `[RTC] 🎥 Video track limpiado para usuario saliente: ${remoteUserLeaving.uid}`,
-              );
             } catch (videoError) {
               console.warn(`[RTC] ⚠️ Error limpiando video track:`, videoError);
             }
@@ -139,9 +126,6 @@ export const useAgoraRtc = (
           if (leavingUser.audioTrack) {
             try {
               leavingUser.audioTrack.stop();
-              console.log(
-                `[RTC] 🎵 Audio track limpiado para usuario saliente: ${remoteUserLeaving.uid}`,
-              );
             } catch (audioError) {
               console.warn(`[RTC] ⚠️ Error limpiando audio track:`, audioError);
             }
@@ -167,18 +151,8 @@ export const useAgoraRtc = (
                 'true';
 
             if (isChannelHoppingActive) {
-              console.log(
-                '[Female] 🔄 Male se desconectó pero hay channel hopping en progreso - NO desconectando female',
-              );
-              console.log(
-                '[Female] 🔒 Protección de channel hopping activa, manteniendo female conectada',
-              );
               return;
             }
-
-            console.log(
-              '[Female] 🔄 Último male se desconectó por RTC user-left, ejecutando desconexión completa',
-            );
 
             if (typeof window !== 'undefined') {
               window.dispatchEvent(
@@ -191,9 +165,6 @@ export const useAgoraRtc = (
               );
             }
           } else {
-            console.log(
-              `[Female] 👥 Aún hay ${remainingMales.length} males conectados, manteniendo estado in_call`,
-            );
           }
         }
       });

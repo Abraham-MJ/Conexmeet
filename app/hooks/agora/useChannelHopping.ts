@@ -10,14 +10,8 @@ const setChannelHoppingFlag = (active: boolean, reason?: string) => {
   if (typeof window !== 'undefined') {
     if (active) {
       window.localStorage.setItem('channelHopping_in_progress', 'true');
-      console.log(
-        `[Channel Hopping] 🔒 Bandera de protección establecida${reason ? ` - ${reason}` : ''}`,
-      );
     } else {
       window.localStorage.removeItem('channelHopping_in_progress');
-      console.log(
-        `[Channel Hopping] 🧹 Bandera de protección removida${reason ? ` - ${reason}` : ''}`,
-      );
     }
   }
 };
@@ -29,7 +23,6 @@ const isChannelHoppingActive = (): boolean => {
   return false;
 };
 
-// Función helper para manejar cuando no hay canales disponibles durante channel hopping
 const handleNoChannelsAvailable = async (
   currentChannelName: string,
   state: AgoraState,
@@ -39,9 +32,6 @@ const handleNoChannelsAvailable = async (
   router: any,
   reason: string,
 ) => {
-  console.warn(`[Channel Hopping] ❌ ${reason}`);
-  
-  // Mostrar modal del male ANTES de hacer cleanup
   dispatch({
     type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
     payload: true,
@@ -49,7 +39,6 @@ const handleNoChannelsAvailable = async (
 
   try {
     if (state.isRtmChannelJoined) {
-      // Enviar señal de resumen al male
       const summaryPayload = {
         reason: 'Usuario finalizó la llamada',
         duration: '00:00',
@@ -58,10 +47,6 @@ const handleNoChannelsAvailable = async (
       };
       await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
 
-      // Enviar señal específica a la female para que se desconecte con el modal correcto
-      console.log(
-        `[Channel Hopping] 📨 Enviando MALE_NO_CHANNELS_SIGNAL a female - ${reason}`,
-      );
       await sendCallSignal('MALE_NO_CHANNELS_SIGNAL', {
         channelName: currentChannelName,
         reason: reason,
@@ -76,22 +61,16 @@ const handleNoChannelsAvailable = async (
   }
 
   setChannelHoppingFlag(false, reason);
-  
-  // Redirección inmediata para el male
-  console.log(`[Channel Hopping] 🔄 Redirigiendo male inmediatamente - ${reason}`);
+
   router.push('/main/video-roulette');
-  
-  // Ejecutar cleanup en segundo plano
+
   setTimeout(async () => {
     try {
-      console.log(`[Channel Hopping] 🧹 Ejecutando cleanup en segundo plano - ${reason}`);
-      await handleLeaveCall(true); // Usar true para evitar redirección duplicada
+      await handleLeaveCall(true);
     } catch (error) {
       console.warn(`[Channel Hopping] ⚠️ Error en cleanup: ${error}`);
     }
   }, 100);
-  
-  console.log(`[Channel Hopping] ✅ Redirección y cleanup iniciados - ${reason}`);
 };
 
 const waitForRTMChannelReady = async (
@@ -258,10 +237,6 @@ export const useChannelHopping = (
         state.current_room_id
       ) {
         try {
-          console.log(
-            `[Channel Hopping] 🧹 Limpiando canal anterior: ${currentChannelName}`,
-          );
-
           const cleanupResult =
             await resources.agoraBackend.cleanupAfterMaleDisconnect(
               String(state.localUser.user_id),
@@ -274,9 +249,6 @@ export const useChannelHopping = (
               await resources.agoraBackend.closeChannel(
                 currentChannelName,
                 'finished',
-              );
-              console.log(
-                `[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'finished'`,
               );
             } catch (forceCloseError) {
               console.warn(
@@ -307,9 +279,6 @@ export const useChannelHopping = (
               currentChannelName,
               'finished',
             );
-            console.log(
-              `[Channel Hopping] ✅ Canal ${currentChannelName} cerrado a 'finished' (fallback)`,
-            );
           } catch (fallbackError) {
             console.error(
               '[Channel Hopping] ❌ Error en limpieza básica también:',
@@ -329,7 +298,6 @@ export const useChannelHopping = (
       }
 
       if (availableChannels.length === 0) {
-        // Actualizar estado de la female anterior
         const previousFemale = onlineFemalesList.find(
           (f) => f.host_id === currentChannelName,
         );
@@ -342,12 +310,8 @@ export const useChannelHopping = (
               status: 'available_call',
             },
           });
-          console.log(
-            `[Channel Hopping] ✅ Estado de female ${currentChannelName} actualizado a 'available_call' en lobby`,
-          );
         }
 
-        // Hacer cleanup básico antes de usar handleNoChannelsAvailable
         await leaveCallChannel();
         await leaveRtcChannel();
         dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
@@ -379,10 +343,6 @@ export const useChannelHopping = (
         );
         const candidateChannel = availableChannels[randomIndex];
 
-        console.log(
-          `[Channel Hopping] 🔍 Verificando disponibilidad de ${candidateChannel.host_id}...`,
-        );
-
         try {
           const availability =
             await resources.agoraBackend.verifyChannelAvailability(
@@ -391,14 +351,9 @@ export const useChannelHopping = (
 
           if (availability.available) {
             selectedChannel = candidateChannel;
-            console.log(
-              `[Channel Hopping] ✅ Canal ${candidateChannel.host_id} verificado como disponible`,
-            );
+
             break;
           } else {
-            console.log(
-              `[Channel Hopping] ❌ Canal ${candidateChannel.host_id} no disponible: ${availability.reason}`,
-            );
             const channelIndex = availableChannels.findIndex(
               (c) => c.host_id === candidateChannel.host_id,
             );
@@ -437,16 +392,9 @@ export const useChannelHopping = (
       }
 
       newChannelName = selectedChannel.host_id!;
-      console.log(
-        `[Channel Hopping] 🎯 Canal seleccionado para hopping: ${newChannelName}`,
-      );
 
       try {
         if (state.isRtmChannelJoined) {
-          console.log(
-            `[Channel Hopping] 📨 Enviando señal de salida a female en ${currentChannelName} (desconexión completa)`,
-          );
-
           const summaryPayload = {
             reason: 'Usuario finalizó la llamada',
             duration: '00:00',
@@ -646,10 +594,6 @@ export const useChannelHopping = (
             );
 
             if (remainingChannels.length > 0) {
-              console.log(
-                `[Channel Hopping] 🔄 Intentando con otro canal, ${remainingChannels.length} disponibles...`,
-              );
-
               dispatch({
                 type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
                 payload: false,
@@ -717,10 +661,6 @@ export const useChannelHopping = (
           );
 
           if (remainingChannels.length > 0) {
-            console.log(
-              `[Channel Hopping] 🔄 Reintentando con otro canal después de error, ${remainingChannels.length} disponibles...`,
-            );
-
             dispatch({
               type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
               payload: false,
@@ -755,11 +695,7 @@ export const useChannelHopping = (
         await processRemoteUser(user);
       };
 
-      const handleUserLeft = (user: any) => {
-        console.log(
-          `[Channel Hopping] 👋 Usuario se fue después del hopping: ${user.uid}`,
-        );
-      };
+      const handleUserLeft = (user: any) => {};
 
       const handleConnectionStateChanged = (curState: any, revState: any) => {
         if (curState === 'DISCONNECTED' || curState === 'FAILED') {
@@ -857,16 +793,9 @@ export const useChannelHopping = (
         if (rtmChannel && isRTMChannelConnected(rtmChannel)) {
           const isReady = await waitForRTMChannelReady(rtmChannel, 2000);
           if (!isReady) {
-            console.log(
-              '[Channel Hopping] ⚠️ Canal RTM no confirmado como listo, pero continuando (esto es normal)...',
-            );
           } else {
-            console.log('[Channel Hopping] ✅ Canal RTM confirmado como listo');
           }
         } else {
-          console.log(
-            '[Channel Hopping] ⏳ Esperando tiempo fijo para estabilización RTM...',
-          );
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
 
@@ -885,9 +814,6 @@ export const useChannelHopping = (
                 await new Promise((resolve) => setTimeout(resolve, 500));
                 continue;
               } else if (signalError.code === 5) {
-                console.log(
-                  `[Channel Hopping] ⚠️ ${signalType} no se pudo enviar después de ${maxRetries} intentos, continuando...`,
-                );
                 return false;
               } else {
                 throw signalError;
@@ -1004,18 +930,9 @@ export const useChannelHopping = (
               payload: false,
             });
           } else if (remoteUser.hasVideo) {
-            console.log(
-              '[Channel Hopping] 📹 Female tiene video pero track no disponible aún, manteniendo loading...',
-            );
           } else {
-            console.log(
-              '[Channel Hopping] 📷 Female sin video, manteniendo loading...',
-            );
           }
         } else {
-          console.log(
-            `[Channel Hopping] ⚠️ No se encontró información de female para UID ${remoteUser.uid}`,
-          );
         }
       };
 
@@ -1083,9 +1000,6 @@ export const useChannelHopping = (
       });
 
       if (router) {
-        console.log(
-          `[Channel Hopping] 🔄 Actualizando URL de ${currentChannelName} a ${newChannelName}`,
-        );
         router.replace(`/main/stream/${newChannelName}`, undefined, {
           shallow: true,
         });

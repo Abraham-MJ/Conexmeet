@@ -407,7 +407,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       markConnectionFailed,
       hasActiveConnectionConflict,
     },
-    state.isChannelHoppingLoading, 
+    state.isChannelHoppingLoading,
   );
 
   const { hopToRandomChannel } = useChannelHopping(
@@ -437,9 +437,6 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (state.hostEndedCallInfo && state.hostEndedCallInfo.ended) {
       if (state.isChannelHoppingLoading) {
-        console.log(
-          '[Host Ended Call] Saltando handleLeaveCall durante channel hopping',
-        );
         return;
       }
 
@@ -448,9 +445,6 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         window.localStorage.getItem('channelHopping_in_progress') === 'true';
 
       if (isChannelHoppingActive) {
-        console.log(
-          '[Host Ended Call] Saltando handleLeaveCall - channel hopping activo en localStorage',
-        );
         return;
       }
 
@@ -621,10 +615,6 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         disconnectionType?: 'male_disconnected';
       },
     ) => {
-      console.log(
-        '[DEBUG] Sistema de zombies desactivado - ignorando detección:',
-        zombieFemale,
-      );
       return;
 
       /* CÓDIGO ORIGINAL COMENTADO:
@@ -846,39 +836,19 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       const customEvent = event as CustomEvent;
       const { reason } = customEvent.detail;
 
-      console.log(
-        '[Female] 📨 Evento maleDisconnectedForceLeave recibido. Estado actual:',
-        {
-          role: state.localUser?.role,
-          isRtcJoined: state.isRtcJoined,
-          isCleaningUp,
-          maleDisconnectHandling: maleDisconnectHandlingRef.current,
-          localUserId: state.localUser?.user_id,
-        },
-      );
-
       if (
         state.localUser?.role === 'female' &&
         state.isRtcJoined &&
         !isCleaningUp &&
         !maleDisconnectHandlingRef.current &&
-        !state.isChannelHoppingLoading // Protección adicional durante channel hopping
+        !state.isChannelHoppingLoading
       ) {
         maleDisconnectHandlingRef.current = true;
-        console.log(
-          '[Female] 📨 Recibido evento maleDisconnectedForceLeave, ejecutando handleLeaveCall',
-        );
 
         const currentFemaleUser = state.localUser;
 
         try {
-          console.log(
-            '[Female] 🔄 Ejecutando handleLeaveCall desde maleDisconnectedForceLeave...',
-          );
           await handleLeaveCall();
-          console.log(
-            '[Female] ✅ handleLeaveCall completado desde maleDisconnectedForceLeave',
-          );
         } catch (error) {
           console.error(
             '[Female] ❌ Error ejecutando handleLeaveCall por male disconnect:',
@@ -890,9 +860,6 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
           }, 2000);
         }
       } else if (state.localUser?.role === 'female') {
-        console.log(
-          '[Female] ⚠️ Evento maleDisconnectedForceLeave ignorado - ya desconectando o no en llamada',
-        );
       }
     };
 

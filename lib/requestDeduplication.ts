@@ -32,11 +32,9 @@ export const deduplicateRequest = async <T>(
 
   const existingRequest = pendingRequests.get(requestKey);
   if (existingRequest) {
-    console.log(`[DEDUPLICATION] Using existing request for: ${url}`);
     return existingRequest.promise;
   }
 
-  console.log(`[DEDUPLICATION] Creating new request for: ${url}`);
   const promise = executeFunction().finally(() => {
     pendingRequests.delete(requestKey);
   });

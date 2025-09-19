@@ -63,10 +63,6 @@ export const AgoraApiClient = {
     rtcUid: string | number,
   ): Promise<string> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.TOKENS} Fetching RTC token for channel: ${channelName}, role: ${roleForToken}, uid: ${rtcUid}`,
-      );
-
       const url = `/api/agora/get-token-rtc?channel=${channelName}&rol=${roleForToken}&type=uid&uid=${rtcUid}`;
       const response = await createOptimizedFetch<{ rtcToken: string }>(
         url,
@@ -77,9 +73,6 @@ export const AgoraApiClient = {
         throw new Error(AGORA_ERROR_MESSAGES.TOKEN_NOT_RECEIVED);
       }
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.TOKENS} RTC token obtained successfully`,
-      );
       return response.rtcToken;
     } catch (error: any) {
       console.error(
@@ -92,10 +85,6 @@ export const AgoraApiClient = {
 
   async fetchRtmToken(rtmUid: string | number): Promise<string> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.TOKENS} Fetching RTM token for uid: ${rtmUid}`,
-      );
-
       const url = `/api/agora/get-token-rtm?uid=${rtmUid}`;
       const response = await createOptimizedFetch<{ rtmToken: string }>(
         url,
@@ -106,9 +95,6 @@ export const AgoraApiClient = {
         throw new Error(AGORA_ERROR_MESSAGES.TOKEN_NOT_RECEIVED);
       }
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.TOKENS} RTM token obtained successfully`,
-      );
       return response.rtmToken;
     } catch (error: any) {
       console.error(
@@ -123,10 +109,6 @@ export const AgoraApiClient = {
     hostId: string,
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Registering channel for host: ${hostId}`,
-      );
-
       const url = `/api/agora/channels/create-channel?host_id=${hostId}`;
       const response = await createOptimizedFetch<{
         success: boolean;
@@ -138,9 +120,6 @@ export const AgoraApiClient = {
         throw new Error(response.message || 'Backend no pudo registrar canal');
       }
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Channel registered successfully for host: ${hostId}`,
-      );
       return response;
     } catch (error: any) {
       console.error(
@@ -155,10 +134,6 @@ export const AgoraApiClient = {
     channelName: string,
   ): Promise<{ available: boolean; reason?: string }> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.VERIFICATION} Verifying channel availability: ${channelName}`,
-      );
-
       const url = `/api/agora/channels/verify-availability?host_id=${channelName}`;
       const response = await createOptimizedFetch<{
         available: boolean;
@@ -174,9 +149,6 @@ export const AgoraApiClient = {
             : AGORA_ERROR_MESSAGES.CHANNEL_NOT_AVAILABLE),
       };
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.VERIFICATION} Channel ${channelName} availability: ${result.available}`,
-      );
       return result;
     } catch (error: any) {
       console.warn(
@@ -200,10 +172,6 @@ export const AgoraApiClient = {
     errorType?: string;
   }> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Notifying male joining - User: ${appUserId}, Channel: ${channelName}`,
-      );
-
       const url = `/api/agora/channels/enter-channel-male-v2`;
       const response = await createOptimizedFetch<{
         success: boolean;
@@ -216,9 +184,6 @@ export const AgoraApiClient = {
       });
 
       if (typeof response.success === 'undefined') {
-        console.log(
-          `${AGORA_LOG_PREFIXES.MANAGEMENT} Male joining notification completed (success undefined, assuming true)`,
-        );
         return { ...response, success: true };
       }
 
@@ -233,9 +198,6 @@ export const AgoraApiClient = {
         };
       }
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Male joining notification successful`,
-      );
       return response;
     } catch (error: any) {
       console.error(
@@ -255,10 +217,6 @@ export const AgoraApiClient = {
     roomId: string | number,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Closing male channel - User: ${maleUserId}, Host: ${hostId}, Room: ${roomId}`,
-      );
-
       const url = '/api/agora/channels/close-channel-male';
       const response = await createOptimizedFetch<{
         success: boolean;
@@ -279,9 +237,6 @@ export const AgoraApiClient = {
         );
       }
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Male channel closed successfully`,
-      );
       return response;
     } catch (error: any) {
       console.error(
@@ -298,10 +253,6 @@ export const AgoraApiClient = {
     roomId: string | number,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Cleanup after male disconnect - User: ${maleUserId}, Host: ${hostId}, Room: ${roomId}`,
-      );
-
       const url = '/api/agora/channels/cleanup-after-male-disconnect';
       const requestOptions = {
         method: 'POST' as const,
@@ -330,9 +281,6 @@ export const AgoraApiClient = {
         );
       }
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Cleanup after male disconnect completed successfully`,
-      );
       return response;
     } catch (error: any) {
       console.error(
@@ -354,10 +302,6 @@ export const AgoraApiClient = {
       | 'offline',
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Closing channel - Host: ${hostId}, Status: ${status}`,
-      );
-
       const url = '/api/agora/channels/close-channel';
       const response = await createOptimizedFetch<{
         success: boolean;
@@ -377,9 +321,6 @@ export const AgoraApiClient = {
         );
       }
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.MANAGEMENT} Channel closed successfully - Host: ${hostId}, Status: ${status}`,
-      );
       return response;
     } catch (error: any) {
       console.error(
@@ -392,10 +333,6 @@ export const AgoraApiClient = {
 
   async fetchOnlineFemales(): Promise<UserInformation[]> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.FEMALES_LIST} Fetching online females list`,
-      );
-
       const url = '/api/agora/host';
       const response = await createOptimizedFetch<{
         success: boolean;
@@ -417,9 +354,6 @@ export const AgoraApiClient = {
           status: female.status,
         })) as UserInformation[];
 
-        console.log(
-          `${AGORA_LOG_PREFIXES.FEMALES_LIST} Fetched ${femalesList.length} online females`,
-        );
         return femalesList;
       } else {
         throw new Error(
@@ -443,10 +377,6 @@ export const AgoraApiClient = {
     giftCostInMinutes: number,
   ): Promise<{ success: boolean; message?: string; cost_in_minutes: number }> {
     try {
-      console.log(
-        `${AGORA_LOG_PREFIXES.GIFTS} Sending gift - From: ${senderUserId}, To: ${receiverUserId}, Gift: ${gifId}, Host: ${hostId}`,
-      );
-
       const url = '/api/gift/send-gifts';
       const response = await createOptimizedFetch<{
         success: boolean;
@@ -475,9 +405,6 @@ export const AgoraApiClient = {
         cost_in_minutes: response.cost_in_minutes || giftCostInMinutes,
       };
 
-      console.log(
-        `${AGORA_LOG_PREFIXES.GIFTS} Gift sent successfully - Cost: ${result.cost_in_minutes} minutes`,
-      );
       return result;
     } catch (error: any) {
       console.error(

@@ -60,7 +60,6 @@ export const useBeforeUnloadCleanup = ({
         if (!localUser || (!isRtcJoined && !isRtmChannelJoined)) {
           if (typeof window !== 'undefined') {
             window.localStorage.removeItem('channelHopping_in_progress');
-            console.log(`${AGORA_LOG_PREFIXES.CLEANUP} 🧹 Bandera de channel hopping limpiada en ${reason}`);
           }
           return;
         }
@@ -83,9 +82,6 @@ export const useBeforeUnloadCleanup = ({
                 blob,
               );
             } else {
-              console.log(
-                `${AGORA_LOG_PREFIXES.CLEANUP} Emergency cleanup (fetch fallback) for user: ${localUser.user_id}`,
-              );
               emergencyCleanupApi('/api/agora/channels/emergency-cleanup', {
                 method: 'POST',
                 body: cleanupData,
@@ -270,9 +266,6 @@ export const useBeforeUnloadCleanup = ({
           });
           navigator.sendBeacon('/api/agora/channels/emergency-cleanup', blob);
         } else {
-          console.log(
-            `${AGORA_LOG_PREFIXES.CLEANUP} Emergency cleanup (fetch fallback) for male user: ${localUser.user_id}`,
-          );
           emergencyCleanupApi('/api/agora/channels/emergency-cleanup', {
             method: 'POST',
             body: cleanupData,

@@ -78,10 +78,6 @@ export const useChannelValidation = () => {
 
       if (authToken) {
         try {
-          console.log(
-            `${AGORA_LOG_PREFIXES.VERIFICATION} Validating channel availability: ${targetChannel} for user: ${currentUserId}`,
-          );
-
           const url = `/api/agora/channels/verify-availability?host_id=${targetChannel}&user_id=${currentUserId}`;
           const verificationData = await verifyChannelApi(url, {
             headers: {
@@ -91,19 +87,12 @@ export const useChannelValidation = () => {
           });
 
           if (verificationData && !verificationData.available) {
-            console.log(
-              `${AGORA_LOG_PREFIXES.VERIFICATION} Channel ${targetChannel} not available: ${verificationData.reason}`,
-            );
             return {
               isValid: false,
               reason: verificationData.reason || 'Canal no disponible.',
               shouldRetry: verificationData.reason?.includes('ocupado'),
             };
           }
-
-          console.log(
-            `${AGORA_LOG_PREFIXES.VERIFICATION} Channel ${targetChannel} verified as available`,
-          );
         } catch (error: any) {
           console.warn(
             `${AGORA_LOG_PREFIXES.VERIFICATION} Error en verificación backend:`,

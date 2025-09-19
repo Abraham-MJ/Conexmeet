@@ -527,10 +527,6 @@ export const useCallFlows = (
                 String(appUserId),
               );
 
-              console.log(
-                `${AGORA_LOG_PREFIXES.MANAGEMENT} Entering channel - User: ${appUserId}, Channel: ${determinedChannelName}`,
-              );
-
               const requestOptions = {
                 method: 'POST' as const,
                 body: {
@@ -705,10 +701,6 @@ export const useCallFlows = (
             connectionMonitor?.registerConnectionAttempt(
               determinedChannelName,
               String(appUserId),
-            );
-
-            console.log(
-              `${AGORA_LOG_PREFIXES.MANAGEMENT} Entering channel (retry) - User: ${appUserId}, Channel: ${determinedChannelName}`,
             );
 
             const requestOptions = {
@@ -1211,29 +1203,14 @@ export const useCallFlows = (
       const currentUser = localUser;
       const currentChannel = currentChannelName;
 
-      console.log(
-        `${LOG_PREFIX_PROVIDER} handleLeaveCall iniciado para usuario:`,
-        currentUser?.role,
-        currentUser?.user_id,
-        `isChannelHopping: ${isChannelHopping}`,
-      );
-
-      console.trace(`${LOG_PREFIX_PROVIDER} handleLeaveCall stack trace`);
-
       const isChannelHoppingActiveLS =
         typeof window !== 'undefined' &&
         window.localStorage.getItem('channelHopping_in_progress') === 'true';
-      console.log(
-        `${LOG_PREFIX_PROVIDER} Channel hopping state - Loading: ${isChannelHoppingLoading}, localStorage: ${isChannelHoppingActiveLS}`,
-      );
 
       if (
         !isChannelHopping &&
         (isChannelHoppingLoading || isChannelHoppingActiveLS)
       ) {
-        console.log(
-          `${LOG_PREFIX_PROVIDER} Saltando handleLeaveCall - channel hopping activo (Loading: ${isChannelHoppingLoading}, localStorage: ${isChannelHoppingActiveLS})`,
-        );
         return;
       }
 
@@ -1255,9 +1232,7 @@ export const useCallFlows = (
       try {
         if (currentUser.role === 'female' && currentChannel) {
           disconnectReason = 'La llamada ha finalizado';
-          console.log(
-            `[Female] Estableciendo disconnectReason: "${disconnectReason}"`,
-          );
+
           const [minutesStr, secondsStr] = callTimer.split(':');
           const parsedMinutes = parseInt(minutesStr, 10);
           const parsedSeconds = parseInt(secondsStr, 10);
@@ -1281,9 +1256,6 @@ export const useCallFlows = (
           });
 
           if (!isChannelHopping) {
-            console.log(
-              `${LOG_PREFIX_PROVIDER} Redirigiendo female inmediatamente para mejor UX`,
-            );
             router.push('/main/video-roulette');
           }
 
@@ -1294,9 +1266,6 @@ export const useCallFlows = (
                   channelName: currentChannel,
                 });
               } else {
-                console.log(
-                  '[Channel Hopping] 🚫 Saltando HOST_ENDED_CALL signal durante channel hopping',
-                );
               }
             } catch (error) {
               console.warn(
@@ -1314,7 +1283,6 @@ export const useCallFlows = (
           });
           await agoraBackend.closeChannel(currentChannel, 'finished');
         } else if (currentUser.role === 'male' && currentChannel) {
-          console.log(`[Male] Entrando en sección de male`);
           const [minutesStr, secondsStr] = callTimer.split(':');
           const parsedMinutes = parseInt(minutesStr, 10);
           const parsedSeconds = parseInt(secondsStr, 10);
@@ -1336,10 +1304,6 @@ export const useCallFlows = (
           } else {
             disconnectReason = 'La llamada ha finalizado';
           }
-
-          console.log(
-            `[Male] Estableciendo disconnectReason: "${disconnectReason}"`,
-          );
 
           callEarnings = getBalance(
             { minutes: parsedMinutes, seconds: parsedSeconds },
@@ -1363,9 +1327,6 @@ export const useCallFlows = (
           });
 
           if (!isChannelHopping) {
-            console.log(
-              `${LOG_PREFIX_PROVIDER} Redirigiendo male inmediatamente para mejor UX`,
-            );
             router.push('/main/video-roulette');
           }
 
@@ -1379,10 +1340,6 @@ export const useCallFlows = (
                     earnings: callEarnings,
                     host_id: currentChannel,
                   };
-
-                  console.log(
-                    `[Male] Enviando MALE_CALL_SUMMARY_SIGNAL con reason: "${disconnectReason}", hostEndedCallInfo?.ended: ${hostEndedCallInfo?.ended}`,
-                  );
 
                   const signalPromise = sendCallSignal(
                     'MALE_CALL_SUMMARY_SIGNAL',
@@ -1492,9 +1449,6 @@ export const useCallFlows = (
           payload: true,
         });
       } finally {
-        console.log(
-          `${LOG_PREFIX_PROVIDER} handleLeaveCall finally - redirección ya realizada para mejor UX`,
-        );
       }
     },
     [
@@ -1561,9 +1515,6 @@ export const useCallFlows = (
     }
 
     if (isChannelHoppingLoading) {
-      console.log(
-        '[Minutes Check] Saltando verificación de minutos durante channel hopping',
-      );
       return;
     }
 
@@ -1572,9 +1523,6 @@ export const useCallFlows = (
       window.localStorage.getItem('channelHopping_in_progress') === 'true';
 
     if (isChannelHoppingActive) {
-      console.log(
-        '[Minutes Check] Saltando verificación de minutos - channel hopping activo en localStorage',
-      );
       return;
     }
 
