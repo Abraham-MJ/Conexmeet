@@ -1254,7 +1254,7 @@ export const useCallFlows = (
 
       try {
         if (currentUser.role === 'female' && currentChannel) {
-          disconnectReason = 'La llama ha finalizado';
+          disconnectReason = 'La llamada ha finalizado';
           console.log(
             `[Female] Estableciendo disconnectReason: "${disconnectReason}"`,
           );
@@ -1324,7 +1324,7 @@ export const useCallFlows = (
           const giftMinutesSpentInSeconds = maleGiftMinutesSpent * 60;
 
           if (endReason === 'female_ended_call') {
-            disconnectReason = 'La llama ha finalizado';
+            disconnectReason = 'La llamada ha finalizado';
           } else if (
             initialMinutesInSeconds -
               totalElapsedSeconds -
@@ -1334,7 +1334,7 @@ export const useCallFlows = (
           ) {
             disconnectReason = 'Saldo agotado';
           } else {
-            disconnectReason = 'La llama ha finalizado';
+            disconnectReason = 'La llamada ha finalizado';
           }
 
           console.log(

@@ -232,7 +232,7 @@ export const useAgoraCallChannel = (
                 dispatch({
                   type: AgoraActionType.SET_FEMALE_CALL_ENDED_INFO,
                   payload: {
-                    reason: "Usuario finalizó la llamada",
+                    reason: "La llamada ha finalizado",
                     duration: '00:00', // Duración mínima ya que no hubo llamada real
                     earnings: 0, // Sin ganancias
                     host_id: receivedMsg.payload?.channelName || null,

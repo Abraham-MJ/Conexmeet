@@ -74,8 +74,7 @@ export interface LoadingStatus {
 
 export interface FemaleCallSummaryInfo {
   reason:
-    | 'Finalizada por ti'
-    | 'Usuario finalizó la llamada'
+    | 'La llamada ha finalizado'
     | 'Saldo agotado'
     | 'Desconexión inesperada';
   duration: string;
