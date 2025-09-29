@@ -59,6 +59,23 @@ export default function SignInScreen() {
     }
   }, [status, session, isLoading, router]);
 
+  const handleRetryLogin = async () => {
+    try {
+      const retry_result = await login(credentials.email, credentials.password, true);
+      if (retry_result.success) {
+        router.push('/main/video-roulette');
+      } else if (retry_result.message !== SESSION_ACTIVE) {
+        setFieldError('password', retry_result.message);
+      } else {
+        setFieldError('password', 'Error al iniciar sesión. Intenta nuevamente.');
+      }
+    } catch (error) {
+      setFieldError('password', 'Error al iniciar sesión. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -89,9 +106,10 @@ export default function SignInScreen() {
           setFieldError('password', PASSWORD_ERROR);
           break;
         case SESSION_ACTIVE:
-          setFieldError('password', t('auth.signIn.sessionActive'));
+          setTimeout(handleRetryLogin, 1500);
           break;
         default:
+          setFieldError('password', login_result.message || 'Error al iniciar sesión');
           break;
       }
     } else if (login_result.success) {

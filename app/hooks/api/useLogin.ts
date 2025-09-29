@@ -22,8 +22,10 @@ const useLogin = () => {
     false,
   );
 
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
+  const login = async (email: string, password: string, isRetry: boolean = false) => {
+    if (!isRetry) {
+      setIsLoading(true);
+    }
 
     try {
       const result = await execute('/api/auth/sign-in', {
@@ -33,6 +35,9 @@ const useLogin = () => {
       });
 
       if (result?.success && result.data) {
+        if (!isRetry) {
+          setIsLoading(false);
+        }
         return result.data;
       } else if (result?.error) {
         return { success: false, message: result.error.message };
@@ -43,7 +48,9 @@ const useLogin = () => {
       console.error('Login error:', err);
       return { success: false, message: 'Error en el login' };
     } finally {
-      setIsLoading(false);
+      if (!isRetry) {
+        setIsLoading(false);
+      }
     }
   };
 
