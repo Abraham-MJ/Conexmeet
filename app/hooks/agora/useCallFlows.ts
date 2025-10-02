@@ -362,15 +362,17 @@ export const useCallFlows = (
         role: localUserRole,
         user_id: appUserId,
       } = localUser;
-      let determinedChannelName: string | undefined = undefined;
-      let targetFemale: UserInformation | undefined = undefined;
 
       const publishTracksFlag = localUserRole !== 'admin';
       let preCreatedTracks = null;
 
+      // 🔥 RACE CONDITION FIX: Solicitar permisos de medios PRIMERO
+      // Esto evita que dos males compitan por el mismo canal mientras uno espera permisos
       if (publishTracksFlag) {
+        console.log(`[Race Condition Fix] Solicitando permisos de medios ANTES de validaciones de canal para usuario ${appUserId}`);
         try {
           preCreatedTracks = await requestMediaPermissions();
+          console.log(`[Race Condition Fix] Permisos obtenidos exitosamente para usuario ${appUserId}, continuando con validaciones...`);
         } catch (permissionError: any) {
           console.error(
             '[Media Permissions] Error en permisos:',
@@ -435,6 +437,12 @@ export const useCallFlows = (
           throw new Error(userFriendlyMessage);
         }
       }
+
+      // Ahora que tenemos los permisos, continuamos con la lógica de canal
+      let determinedChannelName: string | undefined = undefined;
+      let targetFemale: UserInformation | undefined = undefined;
+
+      console.log(`[Race Condition Fix] Iniciando validaciones de canal para usuario ${appUserId} ${channelToJoin ? `con canal específico: ${channelToJoin}` : 'con selección aleatoria'}`);
 
       try {
         const channelResult = await determineJoinChannelName(
@@ -1479,7 +1487,11 @@ export const useCallFlows = (
       type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
       payload: false,
     });
-  }, [dispatch]);
+    
+    // 🔥 FIX: Redireccionar automáticamente cuando se cierra el modal de "no channels available"
+    console.log('[No Channels Modal] 🔧 Redireccionando a video-roulette después de cerrar modal...');
+    router.push('/main/video-roulette');
+  }, [dispatch, router]);
 
   const closeChannelIsBusyModal = useCallback(() => {
     dispatch({

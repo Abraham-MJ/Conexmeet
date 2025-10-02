@@ -62,15 +62,20 @@ const handleNoChannelsAvailable = async (
 
   setChannelHoppingFlag(false, reason);
 
-  router.push('/main/video-roulette');
+  // 🔥 FIX: Limpiar la llamada ANTES de redireccionar
+  try {
+    console.log('[Channel Hopping] 🔧 Ejecutando handleLeaveCall antes de redireccionar...');
+    await handleLeaveCall(true);
+    console.log('[Channel Hopping] ✅ handleLeaveCall completado, redireccionando...');
+  } catch (error) {
+    console.warn(`[Channel Hopping] ⚠️ Error en cleanup: ${error}`);
+  }
 
-  setTimeout(async () => {
-    try {
-      await handleLeaveCall(true);
-    } catch (error) {
-      console.warn(`[Channel Hopping] ⚠️ Error en cleanup: ${error}`);
-    }
-  }, 100);
+  // Redireccionar automáticamente después de 3 segundos
+  setTimeout(() => {
+    console.log('[Channel Hopping] 🔧 Auto-redireccionando después de 3 segundos...');
+    router.push('/main/video-roulette');
+  }, 3000);
 };
 
 const waitForRTMChannelReady = async (
