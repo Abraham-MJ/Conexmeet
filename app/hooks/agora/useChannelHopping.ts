@@ -1,10 +1,16 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   AgoraAction,
   AgoraActionType,
   AgoraState,
   UserInformation,
 } from '@/app/types/streams';
+import {
+  tryAcquireChannelLock,
+  hasValidChannelLock,
+  releaseChannelLock,
+  startLockCleanupProcess,
+} from '@/app/utils/channelLocking';
 
 const setChannelHoppingFlag = (active: boolean, reason?: string) => {
   if (typeof window !== 'undefined') {
@@ -156,6 +162,14 @@ export const useChannelHopping = (
   }: ChannelHoppingFunctions,
   resources: ChannelHoppingResources,
 ) => {
+  // 🔥 RACE CONDITION FIX: Inicializar sistema de limpieza automática de locks
+  useEffect(() => {
+    const stopCleanup = startLockCleanupProcess();
+    
+    return () => {
+      stopCleanup();
+    };
+  }, []);
   const hopToRandomChannel = useCallback(async () => {
     if (state.localUser?.role !== 'male') {
       console.warn(
@@ -336,8 +350,9 @@ export const useChannelHopping = (
       }
 
       let selectedChannel = null;
+      let selectedChannelLockId: string | undefined = undefined;
       let verificationAttempts = 0;
-      const maxVerificationAttempts = Math.min(availableChannels.length, 3);
+      const maxVerificationAttempts = Math.min(availableChannels.length, 5);
 
       while (
         !selectedChannel &&
@@ -348,17 +363,62 @@ export const useChannelHopping = (
         );
         const candidateChannel = availableChannels[randomIndex];
 
+        console.log(`[Channel Hopping] 🎯 Intentando canal ${candidateChannel.host_id} (intento ${verificationAttempts + 1}/${maxVerificationAttempts})`);
+
+        // 🔥 RACE CONDITION FIX: Intentar adquirir lock optimista PRIMERO
+        const lockResult = tryAcquireChannelLock(
+          candidateChannel.host_id!,
+          state.localUser.user_id,
+        );
+
+        if (!lockResult.success) {
+          console.log(`[Channel Hopping] 🔒 Canal ${candidateChannel.host_id} bloqueado por otro usuario, probando siguiente...`);
+          
+          // Remover este canal de la lista y continuar
+          const channelIndex = availableChannels.findIndex(
+            (c) => c.host_id === candidateChannel.host_id,
+          );
+          if (channelIndex > -1) {
+            availableChannels.splice(channelIndex, 1);
+          }
+          
+          verificationAttempts++;
+          continue;
+        }
+
+        console.log(`[Channel Hopping] 🔓 Lock adquirido para canal ${candidateChannel.host_id}, verificando disponibilidad...`);
+
         try {
+          // Verificar que aún tenemos el lock antes de hacer la verificación
+          if (!hasValidChannelLock(candidateChannel.host_id!, state.localUser.user_id, lockResult.lockId!)) {
+            console.log(`[Channel Hopping] ❌ Lock perdido durante verificación para canal ${candidateChannel.host_id}`);
+            verificationAttempts++;
+            continue;
+          }
+
           const availability =
             await resources.agoraBackend.verifyChannelAvailability(
               candidateChannel.host_id!,
             );
 
+          // Verificar lock nuevamente después de la llamada async
+          if (!hasValidChannelLock(candidateChannel.host_id!, state.localUser.user_id, lockResult.lockId!)) {
+            console.log(`[Channel Hopping] ❌ Lock perdido después de verificación para canal ${candidateChannel.host_id}`);
+            verificationAttempts++;
+            continue;
+          }
+
           if (availability.available) {
             selectedChannel = candidateChannel;
-
+            selectedChannelLockId = lockResult.lockId;
+            console.log(`[Channel Hopping] ✅ Canal ${candidateChannel.host_id} seleccionado y bloqueado exitosamente`);
             break;
           } else {
+            console.log(`[Channel Hopping] ❌ Canal ${candidateChannel.host_id} no disponible según backend, liberando lock...`);
+            
+            // Liberar el lock ya que el canal no está disponible
+            releaseChannelLock(candidateChannel.host_id!, state.localUser.user_id, lockResult.lockId!);
+            
             const channelIndex = availableChannels.findIndex(
               (c) => c.host_id === candidateChannel.host_id,
             );
@@ -371,6 +431,9 @@ export const useChannelHopping = (
             `[Channel Hopping] ⚠️ Error verificando ${candidateChannel.host_id}:`,
             verificationError,
           );
+          
+          // Liberar el lock en caso de error
+          releaseChannelLock(candidateChannel.host_id!, state.localUser.user_id, lockResult.lockId!);
         }
 
         verificationAttempts++;
@@ -560,6 +623,14 @@ export const useChannelHopping = (
       }
 
       try {
+        // 🔥 RACE CONDITION FIX: Verificar lock una última vez antes de backend call
+        if (selectedChannelLockId && !hasValidChannelLock(newChannelName, state.localUser.user_id, selectedChannelLockId)) {
+          console.error(`[Channel Hopping] ❌ Lock perdido justo antes de backend call para canal ${newChannelName}`);
+          throw new Error('Lock perdido antes de unirse al canal');
+        }
+
+        console.log(`[Channel Hopping] 🚀 Llamando al backend para unirse a canal ${newChannelName} con lock válido...`);
+        
         const backendJoinResponse =
           await resources.agoraBackend.notifyMaleJoining(
             newChannelName,
@@ -584,6 +655,12 @@ export const useChannelHopping = (
             console.warn(
               `[Channel Hopping] ❌ Canal ${newChannelName} ocupado durante hopping, intentando otro canal...`,
             );
+
+            // 🔥 RACE CONDITION FIX: Liberar lock cuando el canal está ocupado
+            if (selectedChannelLockId) {
+              releaseChannelLock(newChannelName, state.localUser.user_id, selectedChannelLockId);
+              console.log(`[Channel Hopping] 🔓 Lock liberado por canal ocupado: ${newChannelName}`);
+            }
 
             dispatch({
               type: AgoraActionType.CHANNEL_HOP_JOIN,
@@ -651,6 +728,12 @@ export const useChannelHopping = (
           console.warn(
             `[Channel Hopping] ❌ Error de canal ocupado durante hopping, intentando otro canal...`,
           );
+
+          // 🔥 RACE CONDITION FIX: Liberar lock cuando hay error de canal ocupado
+          if (selectedChannelLockId) {
+            releaseChannelLock(newChannelName, state.localUser.user_id, selectedChannelLockId);
+            console.log(`[Channel Hopping] 🔓 Lock liberado por error de canal ocupado: ${newChannelName}`);
+          }
 
           dispatch({
             type: AgoraActionType.CHANNEL_HOP_JOIN,
@@ -1052,6 +1135,12 @@ export const useChannelHopping = (
 
       dispatch({ type: AgoraActionType.REMOTE_HOST_ENDED_CALL, payload: null });
 
+      // 🔥 RACE CONDITION FIX: Liberar lock después de hopping exitoso
+      if (selectedChannelLockId && newChannelName) {
+        releaseChannelLock(newChannelName, state.localUser.user_id, selectedChannelLockId);
+        console.log(`[Channel Hopping] 🔓 Lock liberado después de hopping exitoso para canal ${newChannelName}`);
+      }
+
       setTimeout(() => {
         setChannelHoppingFlag(false, 'hopping exitoso');
       }, 3000);
@@ -1078,8 +1167,20 @@ export const useChannelHopping = (
       }
 
       setChannelHoppingFlag(false, 'error en hopping');
+      
+      // 🔥 RACE CONDITION FIX: Liberar lock en caso de error
+      if (selectedChannelLockId && newChannelName) {
+        releaseChannelLock(newChannelName, state.localUser.user_id, selectedChannelLockId);
+        console.log(`[Channel Hopping] 🔓 Lock liberado por error para canal ${newChannelName}`);
+      }
     } finally {
       clearTimeout(timeoutId);
+
+      // 🔥 RACE CONDITION FIX: Liberar lock en cleanup final
+      if (selectedChannelLockId && newChannelName) {
+        releaseChannelLock(newChannelName, state.localUser.user_id, selectedChannelLockId);
+        console.log(`[Channel Hopping] 🔓 Lock liberado en cleanup final para canal ${newChannelName}`);
+      }
 
       setChannelHoppingFlag(false, 'cleanup final');
     }
