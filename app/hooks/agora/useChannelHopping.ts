@@ -239,6 +239,7 @@ export const useChannelHopping = (
 
     const currentChannelName = state.channelName;
     let newChannelName: string | null = null;
+    let selectedChannelLockId: string | undefined = undefined;
 
     try {
       const availableChannels = onlineFemalesList.filter(
@@ -350,7 +351,6 @@ export const useChannelHopping = (
       }
 
       let selectedChannel = null;
-      let selectedChannelLockId: string | undefined = undefined;
       let verificationAttempts = 0;
       const maxVerificationAttempts = Math.min(availableChannels.length, 5);
 
