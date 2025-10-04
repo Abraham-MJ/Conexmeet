@@ -5,6 +5,9 @@ import {
   AgoraState,
   UserInformation,
 } from '@/app/types/streams';
+import { deduplicateRequest } from '@/lib/requestDeduplication';
+import useApi from '@/app/hooks/useAPi';
+import { AGORA_API_CONFIGS } from '@/app/hooks/agora/configs';
 
 const setChannelHoppingFlag = (active: boolean, reason?: string) => {
   if (typeof window !== 'undefined') {
@@ -64,16 +67,22 @@ const handleNoChannelsAvailable = async (
 
   // 🔥 FIX: Limpiar la llamada ANTES de redireccionar
   try {
-    console.log('[Channel Hopping] 🔧 Ejecutando handleLeaveCall antes de redireccionar...');
+    console.log(
+      '[Channel Hopping] 🔧 Ejecutando handleLeaveCall antes de redireccionar...',
+    );
     await handleLeaveCall(true);
-    console.log('[Channel Hopping] ✅ handleLeaveCall completado, redireccionando...');
+    console.log(
+      '[Channel Hopping] ✅ handleLeaveCall completado, redireccionando...',
+    );
   } catch (error) {
     console.warn(`[Channel Hopping] ⚠️ Error en cleanup: ${error}`);
   }
 
   // Redireccionar automáticamente después de 3 segundos
   setTimeout(() => {
-    console.log('[Channel Hopping] 🔧 Auto-redireccionando después de 3 segundos...');
+    console.log(
+      '[Channel Hopping] 🔧 Auto-redireccionando después de 3 segundos...',
+    );
     router.push('/main/video-roulette');
   }, 3000);
 };
@@ -126,6 +135,12 @@ interface ChannelHoppingFunctions {
   joinCallChannel: (channelName: string) => Promise<any>;
   sendCallSignal: (type: string, payload: Record<string, any>) => Promise<void>;
   router?: any;
+  validateChannelAvailability: (
+    targetChannel: string,
+    currentUserId: string,
+    onlineFemalesList: UserInformation[],
+  ) => Promise<{ isValid: boolean; reason?: string; shouldRetry?: boolean }>;
+  clearChannelAttempt: (channelId: string) => void;
 }
 
 interface ChannelHoppingResources {
@@ -153,9 +168,21 @@ export const useChannelHopping = (
     joinCallChannel,
     sendCallSignal,
     router,
+    validateChannelAvailability,
+    clearChannelAttempt,
   }: ChannelHoppingFunctions,
   resources: ChannelHoppingResources,
 ) => {
+  const { execute: enterChannelMaleApi } = useApi<{
+    success: boolean;
+    message?: string;
+    data?: any;
+  }>(
+    '/api/agora/channels/enter-channel-male',
+    AGORA_API_CONFIGS.channelManagement,
+    false,
+  );
+
   const hopToRandomChannel = useCallback(async () => {
     if (state.localUser?.role !== 'male') {
       console.warn(
@@ -335,56 +362,153 @@ export const useChannelHopping = (
         return;
       }
 
+      // 🔥 NUEVO: Sistema de validación y reserva atómica igual que la conexión inicial
       let selectedChannel = null;
-      let verificationAttempts = 0;
-      const maxVerificationAttempts = Math.min(availableChannels.length, 3);
+      let connectionSuccessful = false;
+      let attemptedChannels = new Set<string>();
+      const maxAttempts = Math.min(availableChannels.length, 5);
+      let attemptCount = 0;
+
+      console.log(
+        `[Channel Hopping] 🔍 Iniciando búsqueda de canal disponible. Canales candidatos: ${availableChannels.length}`,
+      );
 
       while (
-        !selectedChannel &&
-        verificationAttempts < maxVerificationAttempts
+        attemptedChannels.size < maxAttempts &&
+        !connectionSuccessful &&
+        attemptCount < maxAttempts
       ) {
-        const randomIndex = Math.floor(
-          Math.random() * availableChannels.length,
-        );
-        const candidateChannel = availableChannels[randomIndex];
+        attemptCount++;
 
+        // Filtrar canales no intentados
+        const remainingChannels = availableChannels.filter(
+          (female) => !attemptedChannels.has(female.host_id!),
+        );
+
+        if (remainingChannels.length === 0) {
+          console.warn('[Channel Hopping] ⚠️ No quedan canales por intentar');
+          break;
+        }
+
+        // Selección aleatoria
+        const randomIndex = Math.floor(
+          Math.random() * remainingChannels.length,
+        );
+        const candidateChannel = remainingChannels[randomIndex];
+        const candidateHostId = candidateChannel.host_id!;
+
+        attemptedChannels.add(candidateHostId);
+
+        console.log(
+          `[Channel Hopping] 🎯 Intento ${attemptCount}/${maxAttempts}: Validando canal ${candidateHostId}`,
+        );
+
+        // 1. Validación local (previene race conditions)
+        const validationResult = await validateChannelAvailability(
+          candidateHostId,
+          String(state.localUser.user_id),
+          onlineFemalesList,
+        );
+
+        if (!validationResult.isValid) {
+          console.warn(
+            `[Channel Hopping] ❌ Canal ${candidateHostId} no válido: ${validationResult.reason}`,
+          );
+          continue;
+        }
+
+        // 2. Verificar estado actual de la female
+        const currentFemale = onlineFemalesList.find(
+          (female) => female.host_id === candidateHostId,
+        );
+
+        if (!currentFemale || currentFemale.status !== 'available_call') {
+          console.warn(
+            `[Channel Hopping] ❌ Canal ${candidateHostId} ya no está disponible`,
+          );
+          continue;
+        }
+
+        // 3. Reserva atómica en el backend (igual que la conexión inicial)
         try {
-          const availability =
-            await resources.agoraBackend.verifyChannelAvailability(
-              candidateChannel.host_id!,
+          const requestOptions = {
+            method: 'POST' as const,
+            body: {
+              user_id: state.localUser.user_id,
+              host_id: candidateHostId,
+            },
+          };
+
+          console.log(
+            `[Channel Hopping] 🔒 Intentando reservar canal ${candidateHostId} en el backend...`,
+          );
+
+          const backendJoinResponse = await deduplicateRequest(
+            '/api/agora/channels/enter-channel-male',
+            () =>
+              enterChannelMaleApi(
+                '/api/agora/channels/enter-channel-male',
+                requestOptions,
+              ),
+            requestOptions,
+          );
+
+          if (backendJoinResponse.success) {
+            console.log(
+              `[Channel Hopping] ✅ Canal ${candidateHostId} reservado exitosamente`,
             );
 
-          if (availability.available) {
+            connectionSuccessful = true;
             selectedChannel = candidateChannel;
+            newChannelName = candidateHostId;
+
+            // Actualizar room_id si está disponible
+            if (backendJoinResponse.data && backendJoinResponse.data.id) {
+              dispatch({
+                type: AgoraActionType.SET_CURRENT_ROOM_ID,
+                payload: String(backendJoinResponse.data.id),
+              });
+            }
 
             break;
           } else {
-            const channelIndex = availableChannels.findIndex(
-              (c) => c.host_id === candidateChannel.host_id,
-            );
-            if (channelIndex > -1) {
-              availableChannels.splice(channelIndex, 1);
-            }
-          }
-        } catch (verificationError) {
-          console.warn(
-            `[Channel Hopping] ⚠️ Error verificando ${candidateChannel.host_id}:`,
-            verificationError,
-          );
-        }
+            // Canal ocupado o no disponible
+            clearChannelAttempt(candidateHostId);
 
-        verificationAttempts++;
+            const message = backendJoinResponse.message?.toLowerCase() || '';
+            const errorType = backendJoinResponse.errorType;
+
+            if (
+              errorType === 'CHANNEL_BUSY' ||
+              message.includes('canal_ocupado') ||
+              message.includes('ocupado') ||
+              message.includes('otro usuario') ||
+              message.includes('simultánea detectada')
+            ) {
+              console.warn(
+                `[Channel Hopping] ⚠️ Canal ${candidateHostId} ocupado: ${backendJoinResponse.message}`,
+              );
+            } else {
+              console.warn(
+                `[Channel Hopping] ⚠️ Error en ${candidateHostId}: ${backendJoinResponse.message}`,
+              );
+            }
+            continue;
+          }
+        } catch (backendError: any) {
+          clearChannelAttempt(candidateHostId);
+          console.error(
+            `[Channel Hopping] ❌ Error en conexión a ${candidateHostId}:`,
+            backendError,
+          );
+          continue;
+        }
       }
 
-      if (!selectedChannel) {
+      if (!connectionSuccessful || !selectedChannel) {
         console.warn(
-          '[Channel Hopping] ❌ No se encontró ningún canal disponible después de verificaciones',
+          '[Channel Hopping] ❌ No se encontró ningún canal disponible después de validaciones',
         );
-        dispatch({
-          type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
-          payload: true,
-        });
-
         dispatch({
           type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
           payload: true,
@@ -396,84 +520,101 @@ export const useChannelHopping = (
         return;
       }
 
-      newChannelName = selectedChannel.host_id!;
+      // 🚀 ULTRA OPTIMIZADO: Paralelizar desconexión y obtención de token
+      console.log(
+        '[Channel Hopping] ⚡ Iniciando desconexión paralela y fetch de token...',
+      );
 
-      try {
-        if (state.isRtmChannelJoined) {
-          const summaryPayload = {
-            reason: 'Usuario finalizó la llamada',
-            duration: '00:00',
-            earnings: 0,
-            host_id: currentChannelName,
-          };
+      const disconnectionPromises: Promise<any>[] = [];
 
-          await sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload);
-
-          await sendCallSignal('MALE_DISCONNECTED_SIGNAL', {
-            maleUserId: String(state.localUser.user_id),
-            channelName: currentChannelName,
-            reason: 'channel_hopping',
-            timestamp: Date.now(),
-          });
-
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-      } catch (notifyError) {
-        console.warn(
-          '[Channel Hopping] ⚠️ Error notificando salida a female:',
-          notifyError,
-        );
-      }
-
-      if (state.isRtmChannelJoined) {
-        try {
-          await leaveCallChannel();
-        } catch (rtmError: any) {
-          console.warn(
-            '[Channel Hopping] ⚠️ Error al salir del canal RTM:',
-            rtmError?.message || rtmError,
-          );
-        }
-      }
-
-      dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
-
-      if (state.isRtcJoined && resources.rtcClient) {
-        try {
-          if (resources.localAudioTrack || resources.localVideoTrack) {
-            const tracksToUnpublish = [];
-            if (resources.localAudioTrack)
-              tracksToUnpublish.push(resources.localAudioTrack);
-            if (resources.localVideoTrack)
-              tracksToUnpublish.push(resources.localVideoTrack);
-
-            try {
-              await resources.rtcClient.unpublish(tracksToUnpublish);
-            } catch (unpublishError) {
-              console.warn(
-                '[Channel Hopping] ⚠️ Error despublicando tracks:',
-                unpublishError,
-              );
-            }
-          }
-
-          await resources.rtcClient.leave();
-
-          dispatch({ type: AgoraActionType.CHANNEL_HOPPING_RTC_LEAVE });
-        } catch (rtcError: any) {
-          console.warn(
-            '[Channel Hopping] ⚠️ Error al salir del canal RTC:',
-            rtcError?.message || rtcError,
-          );
-        }
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const newRtcToken = await resources.agoraBackend.fetchRtcToken(
+      // 1. Obtener token del nuevo canal EN PARALELO (no esperar desconexión)
+      const tokenPromise = resources.agoraBackend.fetchRtcToken(
         newChannelName,
         'publisher',
         String(state.localUser.rtcUid),
+      );
+
+      // 2. Enviar señales de salida (sin esperar)
+      if (state.isRtmChannelJoined && state.localUser) {
+        const signalsPromise = (async () => {
+          try {
+            const summaryPayload = {
+              reason: 'Usuario finalizó la llamada',
+              duration: '00:00',
+              earnings: 0,
+              host_id: currentChannelName,
+            };
+
+            // Enviar ambas señales en paralelo
+            await Promise.all([
+              sendCallSignal('MALE_CALL_SUMMARY_SIGNAL', summaryPayload).catch(
+                () => {},
+              ),
+              sendCallSignal('MALE_DISCONNECTED_SIGNAL', {
+                maleUserId: String(state.localUser!.user_id),
+                channelName: currentChannelName,
+                reason: 'channel_hopping',
+                timestamp: Date.now(),
+              }).catch(() => {}),
+            ]);
+          } catch (error) {
+            console.warn('[Channel Hopping] ⚠️ Error en señales:', error);
+          }
+        })();
+
+        disconnectionPromises.push(signalsPromise);
+      }
+
+      // 3. Salir de canales RTM y RTC en paralelo
+      const rtmLeavePromise = state.isRtmChannelJoined
+        ? leaveCallChannel().catch((error) => {
+            console.warn('[Channel Hopping] ⚠️ Error saliendo RTM:', error);
+          })
+        : Promise.resolve();
+
+      const rtcLeavePromise = (async () => {
+        if (state.isRtcJoined && resources.rtcClient) {
+          try {
+            // Despublicar y salir en paralelo
+            const unpublishPromise = (async () => {
+              if (resources.localAudioTrack || resources.localVideoTrack) {
+                const tracksToUnpublish = [];
+                if (resources.localAudioTrack)
+                  tracksToUnpublish.push(resources.localAudioTrack);
+                if (resources.localVideoTrack)
+                  tracksToUnpublish.push(resources.localVideoTrack);
+
+                try {
+                  await resources.rtcClient.unpublish(tracksToUnpublish);
+                } catch (error) {
+                  console.warn(
+                    '[Channel Hopping] ⚠️ Error despublicando:',
+                    error,
+                  );
+                }
+              }
+            })();
+
+            await Promise.all([unpublishPromise, resources.rtcClient.leave()]);
+            dispatch({ type: AgoraActionType.CHANNEL_HOPPING_RTC_LEAVE });
+          } catch (error) {
+            console.warn('[Channel Hopping] ⚠️ Error saliendo RTC:', error);
+          }
+        }
+      })();
+
+      disconnectionPromises.push(rtmLeavePromise, rtcLeavePromise);
+
+      // Esperar desconexiones en paralelo (pero no el token)
+      await Promise.allSettled(disconnectionPromises);
+
+      dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
+
+      // 🚀 ELIMINADO: Ya no necesitamos esperar 500ms, el token ya está listo
+      // Obtener el token (probablemente ya está listo)
+      const newRtcToken = await tokenPromise;
+      console.log(
+        '[Channel Hopping] ⚡ Token obtenido, conectando inmediatamente...',
       );
 
       let rtcJoinAttempts = 0;
@@ -510,21 +651,29 @@ export const useChannelHopping = (
             );
           }
 
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // 🚀 OPTIMIZADO: Reducido de 1000ms a 500ms
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
 
+      // 🚀 ULTRA OPTIMIZADO: Habilitar tracks y publicar en paralelo
       try {
+        const enablePromises: Promise<any>[] = [];
+
         if (resources.localAudioTrack && !resources.localAudioTrack.enabled) {
-          await resources.localAudioTrack.setEnabled(true);
+          enablePromises.push(resources.localAudioTrack.setEnabled(true));
         }
 
         if (resources.localVideoTrack && !resources.localVideoTrack.enabled) {
-          await resources.localVideoTrack.setEnabled(true);
+          enablePromises.push(resources.localVideoTrack.setEnabled(true));
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Esperar que se habiliten en paralelo
+        if (enablePromises.length > 0) {
+          await Promise.all(enablePromises);
+        }
 
+        // 🚀 ELIMINADO: Ya no necesitamos esperar 200ms
         const tracksToPublish = [];
         if (resources.localAudioTrack)
           tracksToPublish.push(resources.localAudioTrack);
@@ -559,142 +708,10 @@ export const useChannelHopping = (
         }
       }
 
-      try {
-        const backendJoinResponse =
-          await resources.agoraBackend.notifyMaleJoining(
-            newChannelName,
-            state.localUser.user_id,
-          );
-
-        if (backendJoinResponse.success && backendJoinResponse.data?.id) {
-          dispatch({
-            type: AgoraActionType.SET_CURRENT_ROOM_ID,
-            payload: String(backendJoinResponse.data.id),
-          });
-        } else {
-          const errorMessage = backendJoinResponse.message || '';
-          const isChannelBusy =
-            backendJoinResponse.errorType === 'CHANNEL_BUSY' ||
-            errorMessage.toLowerCase().includes('canal_ocupado') ||
-            errorMessage.toLowerCase().includes('ocupado') ||
-            errorMessage.toLowerCase().includes('otro usuario') ||
-            errorMessage.toLowerCase().includes('simultánea detectada');
-
-          if (isChannelBusy) {
-            console.warn(
-              `[Channel Hopping] ❌ Canal ${newChannelName} ocupado durante hopping, intentando otro canal...`,
-            );
-
-            dispatch({
-              type: AgoraActionType.CHANNEL_HOP_JOIN,
-              payload: { hostId: newChannelName, joinTime: Date.now() },
-            });
-
-            const remainingChannels = availableChannels.filter(
-              (channel) =>
-                channel.host_id !== newChannelName &&
-                !state.channelHopping.visitedChannelsInSession.has(
-                  channel.host_id!,
-                ),
-            );
-
-            if (remainingChannels.length > 0) {
-              dispatch({
-                type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
-                payload: false,
-              });
-
-              setTimeout(() => {
-                hopToRandomChannel();
-              }, 1000);
-
-              return;
-            } else {
-              dispatch({
-                type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
-                payload: true,
-              });
-
-              await handleNoChannelsAvailable(
-                currentChannelName,
-                state,
-                sendCallSignal,
-                handleLeaveCall,
-                dispatch,
-                router,
-                'No hay más canales disponibles después de conflicto',
-              );
-              return;
-            }
-          } else {
-            console.warn(
-              `[Channel Hopping] ⚠️ Respuesta inesperada del backend:`,
-              backendJoinResponse,
-            );
-          }
-        }
-      } catch (backendError: any) {
-        console.warn(
-          `[Channel Hopping] ⚠️ Error abriendo nuevo canal en backend:`,
-          backendError,
-        );
-
-        const errorMessage = backendError.message || '';
-        const isChannelBusy =
-          errorMessage.toLowerCase().includes('canal_ocupado') ||
-          errorMessage.toLowerCase().includes('ocupado') ||
-          errorMessage.toLowerCase().includes('otro usuario') ||
-          errorMessage.toLowerCase().includes('simultánea detectada') ||
-          errorMessage.includes('409');
-
-        if (isChannelBusy) {
-          console.warn(
-            `[Channel Hopping] ❌ Error de canal ocupado durante hopping, intentando otro canal...`,
-          );
-
-          dispatch({
-            type: AgoraActionType.CHANNEL_HOP_JOIN,
-            payload: { hostId: newChannelName, joinTime: Date.now() },
-          });
-
-          const remainingChannels = availableChannels.filter(
-            (channel) =>
-              channel.host_id !== newChannelName &&
-              !state.channelHopping.visitedChannelsInSession.has(
-                channel.host_id!,
-              ),
-          );
-
-          if (remainingChannels.length > 0) {
-            dispatch({
-              type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
-              payload: false,
-            });
-
-            setTimeout(() => {
-              hopToRandomChannel();
-            }, 1000);
-
-            return;
-          } else {
-            dispatch({
-              type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
-              payload: true,
-            });
-
-            await handleNoChannelsAvailable(
-              currentChannelName,
-              state,
-              sendCallSignal,
-              handleLeaveCall,
-              dispatch,
-              router,
-              'No hay más canales disponibles después de error de ocupado',
-            );
-            return;
-          }
-        }
-      }
+      // 🔥 Ya no necesitamos notifyMaleJoining porque la reserva ya se hizo con enter-channel-male
+      console.log(
+        `[Channel Hopping] ✅ Canal ${newChannelName} ya reservado, continuando con conexión RTC/RTM...`,
+      );
 
       const handleUserJoined = async (user: any) => {
         await processRemoteUser(user);
@@ -742,6 +759,7 @@ export const useChannelHopping = (
         },
       );
 
+      // 🚀 ULTRA OPTIMIZADO: Unirse a RTM con verificación más rápida
       let rtmJoinAttempts = 0;
       const maxRtmJoinAttempts = 3;
       let rtmJoinSuccessful = false;
@@ -750,9 +768,10 @@ export const useChannelHopping = (
         try {
           rtmJoinAttempts++;
 
-          await joinCallChannel(newChannelName);
+          await joinCallChannel(newChannelName!);
 
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+          // 🚀 ULTRA OPTIMIZADO: Reducido de 800ms a 400ms
+          await new Promise((resolve) => setTimeout(resolve, 400));
 
           if (state.isRtmChannelJoined) {
             rtmJoinSuccessful = true;
@@ -761,7 +780,8 @@ export const useChannelHopping = (
               `[Channel Hopping] ⚠️ RTM no confirmado en intento ${rtmJoinAttempts}`,
             );
             if (rtmJoinAttempts < maxRtmJoinAttempts) {
-              await new Promise((resolve) => setTimeout(resolve, 500));
+              // 🚀 ULTRA OPTIMIZADO: Reducido de 300ms a 200ms
+              await new Promise((resolve) => setTimeout(resolve, 200));
             }
           }
         } catch (rtmError: any) {
@@ -772,7 +792,8 @@ export const useChannelHopping = (
           if (rtmJoinAttempts >= maxRtmJoinAttempts) {
             throw rtmError;
           }
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // 🚀 ULTRA OPTIMIZADO: Reducido de 500ms a 300ms
+          await new Promise((resolve) => setTimeout(resolve, 300));
         }
       }
 
@@ -782,12 +803,14 @@ export const useChannelHopping = (
         );
       }
 
+      // 🚀 ULTRA OPTIMIZADO: Enviar señales en paralelo sin esperas innecesarias
       try {
         if (!state.isRtmChannelJoined) {
           console.warn(
             '[Channel Hopping] ⚠️ RTM no está unido según el estado, esperando...',
           );
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // 🚀 ULTRA OPTIMIZADO: Reducido de 500ms a 300ms
+          await new Promise((resolve) => setTimeout(resolve, 300));
 
           if (!state.isRtmChannelJoined) {
             throw new Error('RTM no está conectado para enviar señales');
@@ -796,12 +819,16 @@ export const useChannelHopping = (
 
         const rtmChannel = state.rtmChannel;
         if (rtmChannel && isRTMChannelConnected(rtmChannel)) {
-          const isReady = await waitForRTMChannelReady(rtmChannel, 2000);
+          // 🚀 ULTRA OPTIMIZADO: Reducido de 1000ms a 500ms
+          const isReady = await waitForRTMChannelReady(rtmChannel, 500);
           if (!isReady) {
-          } else {
+            console.warn(
+              '[Channel Hopping] ⚠️ RTM no confirmó ready, continuando de todos modos...',
+            );
           }
         } else {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // 🚀 ULTRA OPTIMIZADO: Reducido de 500ms a 200ms
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
 
         const sendSignalWithRetry = async (
@@ -812,11 +839,11 @@ export const useChannelHopping = (
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
               await sendCallSignal(signalType, payload);
-
               return true;
             } catch (signalError: any) {
               if (signalError.code === 5 && attempt < maxRetries) {
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                // 🚀 ULTRA OPTIMIZADO: Reducido de 300ms a 150ms
+                await new Promise((resolve) => setTimeout(resolve, 150));
                 continue;
               } else if (signalError.code === 5) {
                 return false;
@@ -828,48 +855,59 @@ export const useChannelHopping = (
           return false;
         };
 
-        await sendSignalWithRetry('MALE_JOINED_SIGNAL', {
-          maleUserId: String(state.localUser.user_id),
-          maleRtcUid: String(state.localUser.rtcUid),
-          maleRtmUid: String(state.localUser.rtmUid),
-          maleName: state.localUser.user_name || 'Usuario Male',
-          channelName: newChannelName,
-          hasAudio: true,
-          hasVideo: true,
-          timestamp: Date.now(),
-        });
+        // 🚀 ULTRA OPTIMIZADO: Enviar ambas señales EN PARALELO
+        await Promise.allSettled([
+          sendSignalWithRetry('MALE_JOINED_SIGNAL', {
+            maleUserId: String(state.localUser.user_id),
+            maleRtcUid: String(state.localUser.rtcUid),
+            maleRtmUid: String(state.localUser.rtmUid),
+            maleName: state.localUser.user_name || 'Usuario Male',
+            channelName: newChannelName,
+            hasAudio: true,
+            hasVideo: true,
+            timestamp: Date.now(),
+          }),
+          sendSignalWithRetry('CALL_STARTED_SIGNAL', {
+            maleUserId: String(state.localUser.user_id),
+            femaleChannelId: newChannelName,
+            timestamp: Date.now(),
+          }),
+        ]);
 
-        await sendSignalWithRetry('CALL_STARTED_SIGNAL', {
-          maleUserId: String(state.localUser.user_id),
-          femaleChannelId: newChannelName,
-          timestamp: Date.now(),
-        });
+        // 🚀 ULTRA OPTIMIZADO: Reducido de 300ms a 100ms
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
+        // 🚀 ULTRA OPTIMIZADO: Re-publicar tracks solo si es necesario
         if (resources.localAudioTrack && resources.localVideoTrack) {
           try {
             const audioEnabled = resources.localAudioTrack.enabled;
             const videoEnabled = resources.localVideoTrack.enabled;
 
-            await resources.rtcClient.unpublish([
-              resources.localAudioTrack,
-              resources.localVideoTrack,
-            ]);
+            // Solo re-publicar si los tracks estaban deshabilitados
+            if (!audioEnabled || !videoEnabled) {
+              await resources.rtcClient.unpublish([
+                resources.localAudioTrack,
+                resources.localVideoTrack,
+              ]);
 
-            await new Promise((resolve) => setTimeout(resolve, 500));
+              // 🚀 ULTRA OPTIMIZADO: Habilitar en paralelo
+              const enablePromises = [];
+              if (!audioEnabled) {
+                enablePromises.push(resources.localAudioTrack.setEnabled(true));
+              }
+              if (!videoEnabled) {
+                enablePromises.push(resources.localVideoTrack.setEnabled(true));
+              }
 
-            if (!audioEnabled) {
-              await resources.localAudioTrack.setEnabled(true);
+              if (enablePromises.length > 0) {
+                await Promise.all(enablePromises);
+              }
+
+              await resources.rtcClient.publish([
+                resources.localAudioTrack,
+                resources.localVideoTrack,
+              ]);
             }
-            if (!videoEnabled) {
-              await resources.localVideoTrack.setEnabled(true);
-            }
-
-            await resources.rtcClient.publish([
-              resources.localAudioTrack,
-              resources.localVideoTrack,
-            ]);
           } catch (republishError) {
             console.warn(
               '[Channel Hopping] ⚠️ Error re-republicando tracks:',
@@ -884,8 +922,7 @@ export const useChannelHopping = (
         );
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
+      // 🚀 ULTRA OPTIMIZADO: ELIMINADO - No necesitamos esperar antes de procesar usuarios
       const processRemoteUser = async (remoteUser: any) => {
         try {
           if (remoteUser.hasAudio) {
@@ -949,12 +986,13 @@ export const useChannelHopping = (
         }
 
         if (remoteUsers.length === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          // 🚀 ULTRA OPTIMIZADO: Reducido de 1000ms a 600ms
+          await new Promise((resolve) => setTimeout(resolve, 600));
           const remoteUsersAfterWait = resources.rtcClient.remoteUsers || [];
 
           if (remoteUsersAfterWait.length === 0) {
             console.warn(
-              '[Channel Hopping] ⚠️ Canal parece estar vacío después de 2.5 segundos',
+              '[Channel Hopping] ⚠️ Canal parece estar vacío después de 600ms',
             );
           } else {
             for (const lateUser of remoteUsersAfterWait) {
@@ -965,24 +1003,26 @@ export const useChannelHopping = (
           }
         }
 
+        // 🚀 ULTRA OPTIMIZADO: Reducido de 1500ms a 800ms
         setTimeout(() => {
           dispatch({
             type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
             payload: false,
           });
-        }, 3000);
+        }, 800);
       } catch (remoteUsersError) {
         console.warn(
           '[Channel Hopping] ⚠️ Error al procesar usuarios remotos:',
           remoteUsersError,
         );
 
+        // 🚀 ULTRA OPTIMIZADO: Reducido de 500ms a 300ms
         setTimeout(() => {
           dispatch({
             type: AgoraActionType.SET_CHANNEL_HOPPING_LOADING,
             payload: false,
           });
-        }, 1000);
+        }, 300);
       }
 
       state.remoteUsers.forEach((remoteUser) => {
@@ -1010,8 +1050,7 @@ export const useChannelHopping = (
         });
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      // 🚀 ULTRA OPTIMIZADO: ELIMINADO - Actualizar estado inmediatamente
       const previousFemale = onlineFemalesList.find(
         (f) => f.host_id === currentChannelName,
       );
@@ -1052,9 +1091,10 @@ export const useChannelHopping = (
 
       dispatch({ type: AgoraActionType.REMOTE_HOST_ENDED_CALL, payload: null });
 
+      // 🚀 ULTRA OPTIMIZADO: Reducido de 1000ms a 500ms
       setTimeout(() => {
         setChannelHoppingFlag(false, 'hopping exitoso');
-      }, 3000);
+      }, 500);
 
       clearTimeout(timeoutId);
     } catch (error: any) {
@@ -1095,7 +1135,9 @@ export const useChannelHopping = (
     handleLeaveCall,
     leaveCallChannel,
     joinCallChannel,
-
+    validateChannelAvailability,
+    clearChannelAttempt,
+    enterChannelMaleApi,
     resources,
   ]);
 

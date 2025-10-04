@@ -172,7 +172,7 @@ export const AgoraApiClient = {
     errorType?: string;
   }> {
     try {
-      const url = `/api/agora/channels/enter-channel-male-v2`;
+      const url = `/api/agora/channels/enter-channel-male`;
       const response = await createOptimizedFetch<{
         success: boolean;
         message?: string;

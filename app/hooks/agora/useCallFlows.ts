@@ -126,7 +126,7 @@ export const useCallFlows = (
     message?: string;
     data?: any;
   }>(
-    '/api/agora/channels/enter-channel-male-v2',
+    '/api/agora/channels/enter-channel-male',
     AGORA_API_CONFIGS.channelManagement,
     false,
   );
@@ -544,10 +544,10 @@ export const useCallFlows = (
               };
 
               const backendJoinResponse = await deduplicateRequest(
-                '/api/agora/channels/enter-channel-male-v2',
+                '/api/agora/channels/enter-channel-male',
                 () =>
                   enterChannelMaleApi(
-                    '/api/agora/channels/enter-channel-male-v2',
+                    '/api/agora/channels/enter-channel-male',
                     requestOptions,
                   ),
                 requestOptions,
@@ -720,10 +720,10 @@ export const useCallFlows = (
             };
 
             const backendJoinResponse = await deduplicateRequest(
-              '/api/agora/channels/enter-channel-male-v2',
+              '/api/agora/channels/enter-channel-male',
               () =>
                 enterChannelMaleApi(
-                  '/api/agora/channels/enter-channel-male-v2',
+                  '/api/agora/channels/enter-channel-male',
                   requestOptions,
                 ),
               requestOptions,

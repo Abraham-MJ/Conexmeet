@@ -9,9 +9,12 @@ interface RoomData {
 }
 
 export async function POST(request: NextRequest) {
+  let targetHostId: string | undefined;
+
   try {
     const body = await request.json();
-    const { user_id: maleUserId, host_id: targetHostId } = body;
+    const { user_id: maleUserId, host_id: hostId } = body;
+    targetHostId = hostId;
 
     const authToken = request.cookies.get('auth_token')?.value;
 
@@ -22,192 +25,228 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!maleUserId) {
+    if (!maleUserId || !targetHostId) {
       return NextResponse.json(
-        { success: false, message: 'El user_id (del male) es requerido.' },
+        {
+          success: false,
+          message: 'El user_id y host_id son requeridos.',
+        },
         { status: 400 },
       );
     }
 
-    if (!targetHostId) {
-      return NextResponse.json(
-        { success: false, message: 'El host_id (del canal) es requerido.' },
-        { status: 400 },
-      );
-    }
+    const now = Date.now();
 
-    const listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting`;
-    const roomsListResponse = await fetch(listRoomsApiUrl, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${authToken}`,
-      },
-    });
-
-    if (!roomsListResponse.ok) {
-      console.error(
-        `[API enter-channel-male] Error al obtener lista de salas (pre-check): ${roomsListResponse.status}`,
-      );
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            'Error al verificar la disponibilidad del canal (servicio externo de listas).',
-        },
-        { status: roomsListResponse.status || 502 },
-      );
-    }
-
-    const roomsListData = await roomsListResponse.json();
-
-    if (
-      roomsListData.status !== 'Success' ||
-      !Array.isArray(roomsListData.data)
-    ) {
-      console.error(
-        `[API enter-channel-male] Respuesta inesperada de la API de lista de salas (pre-check):`,
-        roomsListData,
-      );
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Error al procesar la disponibilidad del canal.',
-        },
-        { status: 500 },
-      );
-    }
-
-    const targetRoomPreCheck = roomsListData.data.find(
-      (room: RoomData) => room.host_id === targetHostId,
-    );
-
-    if (!targetRoomPreCheck) {
-     
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'El canal seleccionado ya no está disponible o no existe.',
-        },
-        { status: 404 },
-      );
-    }
-
-    if (targetRoomPreCheck.another_user_id !== null) {
-  
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'El canal ya está ocupado por otro usuario.',
-        },
-        { status: 409 },
-      );
-    }
- 
-    const formdata = new FormData();
-    formdata.append('user_id', String(maleUserId));
-    formdata.append('host_id', String(targetHostId));
-
-    const externalEnterRoomApiResponse = await fetch(
-      'https://app.conexmeet.live/api/v1/enter-room',
-      {
-        method: 'POST',
+    try {
+      let listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting`;
+      let roomsListResponse = await fetch(listRoomsApiUrl, {
+        method: 'GET',
         headers: {
           Accept: 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
-        body: formdata,
-      },
-    );
+      });
 
-    let enterRoomResponseData;
-    try {
-      enterRoomResponseData = await externalEnterRoomApiResponse.json();
-    } catch (jsonError) {
-      if (!externalEnterRoomApiResponse.ok) {
+      if (!roomsListResponse.ok) {
+        throw new Error(
+          `Error al verificar disponibilidad: ${roomsListResponse.status}`,
+        );
+      }
+
+      let roomsListData = await roomsListResponse.json();
+
+      if (
+        roomsListData.status !== 'Success' ||
+        !Array.isArray(roomsListData.data)
+      ) {
+        throw new Error('Respuesta inválida del servicio de verificación');
+      }
+
+      let targetRoom = roomsListData.data.find(
+        (room: RoomData) => room.host_id === targetHostId,
+      );
+
+      if (!targetRoom) {
+        listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms`;
+        roomsListResponse = await fetch(listRoomsApiUrl, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (roomsListResponse.ok) {
+          roomsListData = await roomsListResponse.json();
+          if (
+            roomsListData.status === 'Success' &&
+            Array.isArray(roomsListData.data)
+          ) {
+            targetRoom = roomsListData.data.find(
+              (room: RoomData) => room.host_id === targetHostId,
+            );
+
+            if (targetRoom && targetRoom.status !== 'waiting') {
+              if (
+                targetRoom.status === 'finished' ||
+                targetRoom.status === 'closed'
+              ) {
+                targetRoom = null;
+              } else if (
+                targetRoom.another_user_id &&
+                targetRoom.another_user_id !== maleUserId
+              ) {
+                targetRoom = null;
+              }
+            }
+          }
+        }
+      }
+
+      if (!targetRoom) {
         return NextResponse.json(
           {
             success: false,
-            message: `Error de la API externa de entrada (${externalEnterRoomApiResponse.status}): ${externalEnterRoomApiResponse.statusText}. La respuesta no fue un JSON válido.`,
+            message:
+              'CANAL_NO_DISPONIBLE: El canal seleccionado ya no está disponible.',
+            errorType: 'CHANNEL_NOT_AVAILABLE',
           },
-          { status: externalEnterRoomApiResponse.status || 502 },
+          { status: 404 },
         );
       }
-      console.warn(
-        '[API enter-channel-male] API /enter-room respondió OK pero no era JSON. Asumiendo éxito inicial con mensaje genérico.',
-      );
-      enterRoomResponseData = {
-        status: 'Success',
-        message: 'Operación de entrada exitosa (respuesta no JSON).',
-        data: {},
-      };
-    }
 
-    if (
-      enterRoomResponseData.status === 'Error' &&
-      enterRoomResponseData.data === 'Host no disponible'
-    ) {
-      console.warn(
-        `[API enter-channel-male] La API externa indicó que el Host no está disponible:`,
-        enterRoomResponseData,
-      );
-      return NextResponse.json(
+      if (targetRoom.another_user_id !== null) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              'CANAL_OCUPADO: El canal ya está ocupado por otro usuario.',
+            errorType: 'CHANNEL_BUSY',
+          },
+          { status: 409 },
+        );
+      }
+
+      const formdata = new FormData();
+      formdata.append('user_id', String(maleUserId));
+      formdata.append('host_id', String(targetHostId));
+      formdata.append('timestamp', String(now));
+
+      const externalEnterRoomApiResponse = await fetch(
+        'https://app.conexmeet.live/api/v1/enter-room',
         {
-          success: false,
-          message: 'El canal ya fue ocupado por otro usuario.',
-          details: enterRoomResponseData,
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: formdata,
         },
-        { status: 409 },
       );
-    }
 
-    if (
-      !externalEnterRoomApiResponse.ok ||
-      enterRoomResponseData.status !== 'Success'
-    ) {
-      console.error(
-        `[API enter-channel-male] Falló la llamada a /api/v1/enter-room o la API externa indicó un error:`,
-        enterRoomResponseData,
-      );
+      let enterRoomResponseData;
+      try {
+        enterRoomResponseData = await externalEnterRoomApiResponse.json();
+      } catch (jsonError) {
+        if (!externalEnterRoomApiResponse.ok) {
+          throw new Error(
+            `API externa falló: ${externalEnterRoomApiResponse.status}`,
+          );
+        }
+        enterRoomResponseData = {
+          status: 'Success',
+          message: 'Operación exitosa',
+          data: {},
+        };
+      }
+
+      if (
+        enterRoomResponseData.status === 'Error' ||
+        enterRoomResponseData.data === 'Host no disponible' ||
+        (enterRoomResponseData.message &&
+          enterRoomResponseData.message.toLowerCase().includes('ocupado')) ||
+        (enterRoomResponseData.message &&
+          enterRoomResponseData.message.toLowerCase().includes('no disponible'))
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              'CANAL_OCUPADO: El canal fue ocupado por otro usuario durante la conexión.',
+            errorType: 'CHANNEL_BUSY',
+          },
+          { status: 409 },
+        );
+      }
+
+      if (
+        !externalEnterRoomApiResponse.ok ||
+        enterRoomResponseData.status !== 'Success'
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              enterRoomResponseData.message || 'Error al conectar al canal.',
+          },
+          { status: externalEnterRoomApiResponse.status || 500 },
+        );
+      }
+
+      const finalVerificationResponse = await fetch(listRoomsApiUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (finalVerificationResponse.ok) {
+        const finalData = await finalVerificationResponse.json();
+        const finalRoom = finalData.data?.find(
+          (room: RoomData) => room.host_id === targetHostId,
+        );
+
+        if (
+          finalRoom &&
+          finalRoom.another_user_id &&
+          finalRoom.another_user_id !== maleUserId
+        ) {
+          console.warn(
+            `[API enter-channel-male] Conexión simultánea detectada para canal ${targetHostId}. Male ${maleUserId} vs ${finalRoom.another_user_id}`,
+          );
+
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                'CANAL_OCUPADO: Conexión simultánea detectada. Otro usuario se conectó primero.',
+              errorType: 'CHANNEL_BUSY',
+            },
+            { status: 409 },
+          );
+        }
+      }
+
       return NextResponse.json(
         {
-          success: false,
+          success: true,
           message:
-            enterRoomResponseData.message ||
-            'Error al intentar entrar a la sala en el servicio externo.',
-          details: enterRoomResponseData,
+            enterRoomResponseData.message || 'Conexión exitosa al canal.',
+          data: enterRoomResponseData.data,
         },
-        { status: externalEnterRoomApiResponse.status || 500 },
+        { status: 200 },
       );
+    } catch (error: any) {
+      throw error;
     }
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: enterRoomResponseData.message || 'Ingreso a la sala exitoso.',
-        data: enterRoomResponseData.data,
-      },
-      { status: 200 },
-    );
   } catch (error: any) {
-    console.error(
-      '[API enter-channel-male] Error general en API Route:',
-      error,
-    );
-    if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Error: El cuerpo de la solicitud no es un JSON válido.',
-        },
-        { status: 400 },
-      );
-    }
+    console.error('[API enter-channel-male] Error:', error);
+
     return NextResponse.json(
       {
         success: false,
-        message:
-          'Error interno del servidor al procesar la solicitud para entrar a la sala.',
+        message: 'Error interno al procesar la conexión al canal.',
         errorDetails: error.message,
       },
       { status: 500 },

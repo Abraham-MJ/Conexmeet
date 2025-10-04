@@ -35,6 +35,7 @@ import { useChannelHoppingCooldown } from '../hooks/agora/useChannelHoppingCoold
 import { useConnectionMonitor } from '../hooks/agora/useConnectionMonitor';
 import { useBeforeUnloadCleanup } from '../hooks/agora/useBeforeUnloadCleanup';
 import { useOptimizedHeartbeat } from '../hooks/agora/useOptimizedHeartbeat';
+import { useChannelValidation } from '../hooks/agora/useChannelValidation';
 
 const AgoraContext = createContext<{
   state: AgoraState;
@@ -410,6 +411,9 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     state.isChannelHoppingLoading,
   );
 
+  const { validateChannelAvailability, clearChannelAttempt } =
+    useChannelValidation();
+
   const { hopToRandomChannel } = useChannelHopping(
     dispatch,
     state,
@@ -421,6 +425,8 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       joinCallChannel,
       sendCallSignal,
       router,
+      validateChannelAvailability,
+      clearChannelAttempt,
     },
     {
       rtcClient,
