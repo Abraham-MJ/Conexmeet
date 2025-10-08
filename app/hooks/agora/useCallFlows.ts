@@ -34,6 +34,17 @@ import {
   shouldShowChannelNotAvailableModal,
 } from '@/app/utils/errorLogger';
 import { isUserBlockedFromChannelHopping } from '@/app/utils/channelHoppingValidation';
+import { retryChannelConnection } from '@/lib/retry-with-backoff';
+import {
+  connectionMonitor,
+  monitoredConnection,
+  measureConnectionTime,
+} from '@/lib/connection-monitor';
+import {
+  connectToChannelWithRetry,
+  findAvailableChannel,
+  detectRaceCondition,
+} from '@/app/hooks/agora/useConnectionHelpers';
 
 interface CallOrchestratorFunctions {
   requestMediaPermissions: () => Promise<{
@@ -366,8 +377,6 @@ export const useCallFlows = (
       const publishTracksFlag = localUserRole !== 'admin';
       let preCreatedTracks = null;
 
-      // 🔥 RACE CONDITION FIX: Solicitar permisos de medios PRIMERO
-      // Esto evita que dos males compitan por el mismo canal mientras uno espera permisos
       if (publishTracksFlag) {
         console.log(`[Race Condition Fix] Solicitando permisos de medios ANTES de validaciones de canal para usuario ${appUserId}`);
         try {
@@ -438,7 +447,6 @@ export const useCallFlows = (
         }
       }
 
-      // Ahora que tenemos los permisos, continuamos con la lógica de canal
       let determinedChannelName: string | undefined = undefined;
       let targetFemale: UserInformation | undefined = undefined;
 
@@ -468,148 +476,7 @@ export const useCallFlows = (
               female.is_active === 1,
           );
 
-          let attemptedChannels = new Set<string>();
-          let connectionSuccessful = false;
-          const maxAttempts = Math.min(availableFemales.length, 5);
-          let attemptCount = 0;
-
-          while (
-            attemptedChannels.size < maxAttempts &&
-            !connectionSuccessful &&
-            attemptCount < maxAttempts
-          ) {
-            attemptCount++;
-            const remainingFemales = availableFemales.filter(
-              (female) => !attemptedChannels.has(female.host_id!),
-            );
-
-            if (remainingFemales.length === 0) {
-              break;
-            }
-
-            const randomIndex = Math.floor(
-              Math.random() * remainingFemales.length,
-            );
-            const selectedFemale = remainingFemales[randomIndex];
-            determinedChannelName = selectedFemale.host_id!;
-            targetFemale = selectedFemale;
-
-            attemptedChannels.add(determinedChannelName);
-
-            if (
-              connectionMonitor?.hasActiveConnectionConflict(
-                determinedChannelName,
-                String(appUserId),
-              )
-            ) {
-              console.warn(
-                `[Channel Selection] Canal ${determinedChannelName} tiene conflicto de conexión activo`,
-              );
-              continue;
-            }
-
-            const validationResult = await validateChannelAvailability(
-              determinedChannelName,
-              String(appUserId),
-              onlineFemalesList,
-            );
-
-            if (!validationResult.isValid) {
-              console.warn(
-                `[Channel Selection] Canal ${determinedChannelName} no válido: ${validationResult.reason}`,
-              );
-              continue;
-            }
-
-            const currentFemale = onlineFemalesList.find(
-              (female) => female.host_id === determinedChannelName,
-            );
-
-            if (!currentFemale || currentFemale.status !== 'available_call') {
-              continue;
-            }
-
-            try {
-              connectionMonitor?.registerConnectionAttempt(
-                determinedChannelName,
-                String(appUserId),
-              );
-
-              const requestOptions = {
-                method: 'POST' as const,
-                body: {
-                  user_id: appUserId,
-                  host_id: determinedChannelName,
-                },
-              };
-
-              const backendJoinResponse = await deduplicateRequest(
-                '/api/agora/channels/enter-channel-male',
-                () =>
-                  enterChannelMaleApi(
-                    '/api/agora/channels/enter-channel-male',
-                    requestOptions,
-                  ),
-                requestOptions,
-              );
-
-              if (backendJoinResponse.success) {
-                connectionSuccessful = true;
-
-                connectionMonitor?.markConnectionSuccessful(
-                  determinedChannelName,
-                );
-
-                if (backendJoinResponse.data && backendJoinResponse.data.id) {
-                  dispatch({
-                    type: AgoraActionType.SET_CURRENT_ROOM_ID,
-                    payload: String(backendJoinResponse.data.id),
-                  });
-                }
-
-                dispatch({
-                  type: AgoraActionType.SET_MALE_INITIAL_MINUTES_IN_CALL,
-                  payload: minutesAvailable,
-                });
-
-                break;
-              } else {
-                connectionMonitor?.markConnectionFailed(determinedChannelName);
-                clearChannelAttempt(determinedChannelName);
-
-                const message =
-                  backendJoinResponse.message?.toLowerCase() || '';
-                const errorType = backendJoinResponse.errorType;
-
-                if (
-                  errorType === 'CHANNEL_BUSY' ||
-                  message.includes('canal_ocupado') ||
-                  message.includes('ocupado') ||
-                  message.includes('otro usuario') ||
-                  message.includes('simultánea detectada')
-                ) {
-                  console.warn(
-                    `[Channel Selection] Canal ${determinedChannelName} ocupado: ${backendJoinResponse.message}`,
-                  );
-                } else {
-                  console.warn(
-                    `[Channel Selection] Error en ${determinedChannelName}: ${backendJoinResponse.message}`,
-                  );
-                }
-                continue;
-              }
-            } catch (backendError) {
-              connectionMonitor?.markConnectionFailed(determinedChannelName);
-              clearChannelAttempt(determinedChannelName);
-              console.error(
-                `[Channel Selection] Error en conexión a ${determinedChannelName}:`,
-                backendError,
-              );
-              continue;
-            }
-          }
-
-          if (!connectionSuccessful) {
+          if (availableFemales.length === 0) {
             dispatch({
               type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
               payload: true,
@@ -617,6 +484,71 @@ export const useCallFlows = (
             throw new Error(
               'No hay modelos disponibles para llamar en este momento. ¡Intenta más tarde!',
             );
+          }
+
+          console.log(
+            `[Auto Connect] 🔍 Buscando canal disponible entre ${availableFemales.length} modelos...`,
+          );
+
+          const availableChannelIds = availableFemales.map((f) => f.host_id!);
+
+          try {
+            const channelSearchResult = await findAvailableChannel(
+              enterChannelMaleApi,
+              appUserId,
+              availableChannelIds,
+              Math.min(availableFemales.length, 5),
+            );
+
+            if (!channelSearchResult.success) {
+              console.warn(
+                '[Auto Connect] ❌ No se encontró ningún canal disponible',
+              );
+              dispatch({
+                type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+                payload: true,
+              });
+              throw new Error(
+                'No hay modelos disponibles para llamar en este momento. ¡Intenta más tarde!',
+              );
+            }
+
+            determinedChannelName = channelSearchResult.channelId!;
+            targetFemale = availableFemales.find(
+              (f) => f.host_id === determinedChannelName,
+            );
+
+            console.log(
+              `[Auto Connect] ✅ Conectado exitosamente a canal: ${determinedChannelName}`,
+            );
+
+            if (channelSearchResult.data && channelSearchResult.data.id) {
+              dispatch({
+                type: AgoraActionType.SET_CURRENT_ROOM_ID,
+                payload: String(channelSearchResult.data.id),
+              });
+            }
+
+            dispatch({
+              type: AgoraActionType.SET_MALE_INITIAL_MINUTES_IN_CALL,
+              payload: minutesAvailable,
+            });
+          } catch (searchError: any) {
+            console.error(
+              '[Auto Connect] ❌ Error en búsqueda de canal:',
+              searchError,
+            );
+
+            if (preCreatedTracks) {
+              try {
+                preCreatedTracks.audioTrack?.close();
+                preCreatedTracks.videoTrack?.close();
+              } catch (cleanupError) {
+                console.warn('[Cleanup] Error limpiando tracks:', cleanupError);
+              }
+            }
+
+            throw searchError;
           }
         }
 
@@ -1488,7 +1420,6 @@ export const useCallFlows = (
       payload: false,
     });
     
-    // 🔥 FIX: Redireccionar automáticamente cuando se cierra el modal de "no channels available"
     console.log('[No Channels Modal] 🔧 Redireccionando a video-roulette después de cerrar modal...');
     router.push('/main/video-roulette');
   }, [dispatch, router]);

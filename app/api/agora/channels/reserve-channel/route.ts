@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const channelLocks = new Map<string, {
-  userId: number;
-  timestamp: number;
-  expiresAt: number;
-}>();
+const channelLocks = new Map<
+  string,
+  {
+    userId: number;
+    timestamp: number;
+    expiresAt: number;
+  }
+>();
 
 const LOCK_DURATION = 10000; 
 const CLEANUP_INTERVAL = 15000; 
+
 
 setInterval(() => {
   const now = Date.now();
   for (const [channelId, lock] of channelLocks.entries()) {
     if (now > lock.expiresAt) {
       channelLocks.delete(channelId);
-      console.log(`[Lock Cleanup] Lock expirado removido para canal: ${channelId}`);
+      console.log(
+        `[Lock Cleanup] Lock expirado removido para canal: ${channelId}`,
+      );
     }
   }
 }, CLEANUP_INTERVAL);
@@ -26,6 +32,7 @@ interface RoomData {
   another_user_id: number | null;
   status: string;
 }
+
 
 export async function POST(request: NextRequest) {
   let targetHostId: string | undefined;
@@ -58,28 +65,32 @@ export async function POST(request: NextRequest) {
     const now = Date.now();
 
     const existingLock = channelLocks.get(targetHostId);
-    
+
     if (existingLock) {
       if (now < existingLock.expiresAt) {
         if (existingLock.userId !== maleUserId) {
           console.warn(
-            `[Enter Channel Male] ⚠️ Canal ${targetHostId} bloqueado por usuario ${existingLock.userId}. Solicitante: ${maleUserId}`
+            `[Reserve Channel] Canal ${targetHostId} bloqueado por usuario ${existingLock.userId}. Solicitante: ${maleUserId}`,
           );
           return NextResponse.json(
             {
               success: false,
-              message: 'CANAL_OCUPADO: Otro usuario está conectándose a este canal en este momento.',
+              message:
+                'CANAL_OCUPADO: Otro usuario está conectándose a este canal.',
               errorType: 'CHANNEL_BUSY',
               lockedBy: existingLock.userId,
-              retryAfter: Math.ceil((existingLock.expiresAt - now) / 1000),
             },
             { status: 409 },
           );
         }
-        console.log(`[Enter Channel Male] Usuario ${maleUserId} renovando lock en canal ${targetHostId}`);
+        console.log(
+          `[Reserve Channel] Usuario ${maleUserId} renovando lock en canal ${targetHostId}`,
+        );
       } else {
         channelLocks.delete(targetHostId);
-        console.log(`[Enter Channel Male] Lock expirado removido para canal ${targetHostId}`);
+        console.log(
+          `[Reserve Channel] Lock expirado removido para canal ${targetHostId}`,
+        );
       }
     }
 
@@ -89,11 +100,13 @@ export async function POST(request: NextRequest) {
       expiresAt: now + LOCK_DURATION,
     });
     lockAcquired = true;
-    console.log(`[Enter Channel Male] 🔒 Lock adquirido para canal ${targetHostId} por usuario ${maleUserId}`);
+    console.log(
+      `[Reserve Channel] Lock adquirido para canal ${targetHostId} por usuario ${maleUserId}`,
+    );
 
     try {
-      let listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting`;
-      let roomsListResponse = await fetch(listRoomsApiUrl, {
+      const listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting&filter[host_id]=${targetHostId}`;
+      const roomsListResponse = await fetch(listRoomsApiUrl, {
         method: 'GET',
         headers: {
           Accept: 'application/json',
@@ -107,7 +120,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      let roomsListData = await roomsListResponse.json();
+      const roomsListData = await roomsListResponse.json();
 
       if (
         roomsListData.status !== 'Success' ||
@@ -116,53 +129,14 @@ export async function POST(request: NextRequest) {
         throw new Error('Respuesta inválida del servicio de verificación');
       }
 
-      let targetRoom = roomsListData.data.find(
+      const targetRoom = roomsListData.data.find(
         (room: RoomData) => room.host_id === targetHostId,
       );
 
       if (!targetRoom) {
-        listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms`;
-        roomsListResponse = await fetch(listRoomsApiUrl, {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
+        channelLocks.delete(targetHostId);
+        lockAcquired = false;
 
-        if (roomsListResponse.ok) {
-          roomsListData = await roomsListResponse.json();
-          if (
-            roomsListData.status === 'Success' &&
-            Array.isArray(roomsListData.data)
-          ) {
-            targetRoom = roomsListData.data.find(
-              (room: RoomData) => room.host_id === targetHostId,
-            );
-
-            if (targetRoom && targetRoom.status !== 'waiting') {
-              if (
-                targetRoom.status === 'finished' ||
-                targetRoom.status === 'closed'
-              ) {
-                targetRoom = null;
-              } else if (
-                targetRoom.another_user_id &&
-                targetRoom.another_user_id !== maleUserId
-              ) {
-                targetRoom = null;
-              }
-            }
-          }
-        }
-      }
-
-      if (!targetRoom) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
-        }
-        
         return NextResponse.json(
           {
             success: false,
@@ -174,12 +148,27 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (targetRoom.another_user_id !== null && targetRoom.another_user_id !== maleUserId) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
-        }
-        
+      if (targetRoom.status !== 'waiting') {
+        channelLocks.delete(targetHostId);
+        lockAcquired = false;
+
+        return NextResponse.json(
+          {
+            success: false,
+            message: `CANAL_NO_DISPONIBLE: El canal está en estado ${targetRoom.status}.`,
+            errorType: 'CHANNEL_NOT_AVAILABLE',
+          },
+          { status: 409 },
+        );
+      }
+
+      if (
+        targetRoom.another_user_id !== null &&
+        targetRoom.another_user_id !== maleUserId
+      ) {
+        channelLocks.delete(targetHostId);
+        lockAcquired = false;
+
         return NextResponse.json(
           {
             success: false,
@@ -232,11 +221,9 @@ export async function POST(request: NextRequest) {
         (enterRoomResponseData.message &&
           enterRoomResponseData.message.toLowerCase().includes('no disponible'))
       ) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
-        }
-        
+        channelLocks.delete(targetHostId);
+        lockAcquired = false;
+
         return NextResponse.json(
           {
             success: false,
@@ -252,11 +239,9 @@ export async function POST(request: NextRequest) {
         !externalEnterRoomApiResponse.ok ||
         enterRoomResponseData.status !== 'Success'
       ) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
-        }
-        
+        channelLocks.delete(targetHostId);
+        lockAcquired = false;
+
         return NextResponse.json(
           {
             success: false,
@@ -287,7 +272,7 @@ export async function POST(request: NextRequest) {
           finalRoom.another_user_id !== maleUserId
         ) {
           console.error(
-            `[Enter Channel Male] ❌ RACE CONDITION DETECTADA: Canal ${targetHostId}. Male ${maleUserId} vs ${finalRoom.another_user_id}`,
+            `[Reserve Channel] ❌ RACE CONDITION DETECTADA: Canal ${targetHostId}. Male ${maleUserId} vs ${finalRoom.another_user_id}`,
           );
 
           try {
@@ -305,13 +290,11 @@ export async function POST(request: NextRequest) {
               body: cleanupFormData,
             });
           } catch (cleanupError) {
-            console.error('[Enter Channel Male] Error en cleanup:', cleanupError);
+            console.error('[Reserve Channel] Error en cleanup:', cleanupError);
           }
 
-          if (lockAcquired && targetHostId) {
-            channelLocks.delete(targetHostId);
-            lockAcquired = false;
-          }
+          channelLocks.delete(targetHostId);
+          lockAcquired = false;
 
           return NextResponse.json(
             {
@@ -325,13 +308,15 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      console.log(`[Enter Channel Male] ✅ Conexión exitosa para canal ${targetHostId} por usuario ${maleUserId}`);
+      console.log(
+        `[Reserve Channel] ✅ Reserva exitosa para canal ${targetHostId} por usuario ${maleUserId}`,
+      );
 
       return NextResponse.json(
         {
           success: true,
           message:
-            enterRoomResponseData.message || 'Conexión exitosa al canal.',
+            enterRoomResponseData.message || 'Canal reservado exitosamente.',
           data: enterRoomResponseData.data,
           lockExpiresAt: now + LOCK_DURATION,
         },
@@ -340,24 +325,74 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
       if (lockAcquired && targetHostId) {
         channelLocks.delete(targetHostId);
-        lockAcquired = false;
       }
       throw error;
     }
   } catch (error: any) {
-    console.error('[Enter Channel Male] Error:', error);
+    console.error('[Reserve Channel] Error:', error);
 
     if (lockAcquired && targetHostId) {
       channelLocks.delete(targetHostId);
-      lockAcquired = false;
     }
 
     return NextResponse.json(
       {
         success: false,
-        message: 'Error interno al procesar la conexión al canal.',
+        message: 'Error interno al procesar la reserva del canal.',
         errorDetails: error.message,
       },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * DELETE /api/agora/channels/reserve-channel
+ *
+ * Liberar un lock de canal manualmente
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const hostId = searchParams.get('host_id');
+    const userId = searchParams.get('user_id');
+
+    if (!hostId || !userId) {
+      return NextResponse.json(
+        { success: false, message: 'host_id y user_id son requeridos' },
+        { status: 400 },
+      );
+    }
+
+    const existingLock = channelLocks.get(hostId);
+
+    if (!existingLock) {
+      return NextResponse.json(
+        { success: true, message: 'No hay lock activo para este canal' },
+        { status: 200 },
+      );
+    }
+
+    if (existingLock.userId !== parseInt(userId)) {
+      return NextResponse.json(
+        { success: false, message: 'No tienes permiso para liberar este lock' },
+        { status: 403 },
+      );
+    }
+
+    channelLocks.delete(hostId);
+    console.log(
+      `[Reserve Channel] Lock liberado manualmente para canal ${hostId} por usuario ${userId}`,
+    );
+
+    return NextResponse.json(
+      { success: true, message: 'Lock liberado exitosamente' },
+      { status: 200 },
+    );
+  } catch (error: any) {
+    console.error('[Reserve Channel DELETE] Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Error al liberar lock' },
       { status: 500 },
     );
   }
