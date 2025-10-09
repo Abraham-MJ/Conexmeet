@@ -109,7 +109,7 @@ export async function findAvailableChannel(
   let lastError: any;
 
   console.log(
-    `[Find Available Channel] Buscando canal disponible entre ${candidateChannels.length} candidatos`,
+    `[Find Available Channel] Buscando canal disponible entre ${candidateChannels.length} candidatos para usuario ${userId}`,
   );
 
   for (
@@ -126,13 +126,19 @@ export async function findAvailableChannel(
       break;
     }
 
-    const randomIndex = Math.floor(Math.random() * remainingChannels.length);
-    const candidateChannelId = remainingChannels[randomIndex];
+    const userIdNum = typeof userId === 'string' ? parseInt(userId) : userId;
+    const now = Date.now();
+    
+    const timeSeed = now % 1000;
+    const seed = userIdNum + timeSeed;
+    
+    const deterministicIndex = (seed + attempt * 7) % remainingChannels.length;
+    const candidateChannelId = remainingChannels[deterministicIndex];
 
     attemptedChannels.add(candidateChannelId);
 
     console.log(
-      `[Find Available Channel] Intento ${attempt + 1}/${maxAttempts}: Probando canal ${candidateChannelId}`,
+      `[Find Available Channel] Usuario ${userId}, Intento ${attempt + 1}/${maxAttempts}: Selección determinística [${deterministicIndex}/${remainingChannels.length - 1}] → ${candidateChannelId}`,
     );
 
     try {
