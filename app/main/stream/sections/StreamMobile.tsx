@@ -113,43 +113,87 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
     const localPlayerDiv = localVideoPlayerRef.current;
     const remotePlayerDiv = remoteVideoPlayerRef.current;
 
+    // Debug logging para móvil
+    console.log('[Video Debug Mobile] Track state:', {
+      hasLocalTrack: !!localTrack,
+      hasRemoteTrack: !!remoteTrack,
+      hasRemoteUser: !!agora?.remoteUsers[0],
+      remoteUserHasVideo: agora?.remoteUsers[0]?.hasVideo,
+      remoteUserRtcUid: agora?.remoteUsers[0]?.rtcUid,
+      isLocalVideoMain
+    });
+
+    // Detener tracks anteriores de forma segura
     try {
-      localTrack?.stop();
+      if (localTrack && typeof localTrack.stop === 'function') {
+        localTrack.stop();
+      }
     } catch (e) {
-      console.warn('No se pudo detener la pista local:', e);
+      console.warn('[Video Debug Mobile] No se pudo detener la pista local:', e);
     }
     try {
-      remoteTrack?.stop();
+      if (remoteTrack && typeof remoteTrack.stop === 'function') {
+        remoteTrack.stop();
+      }
     } catch (e) {
-      console.warn('No se pudo detener la pista remota:', e);
+      console.warn('[Video Debug Mobile] No se pudo detener la pista remota:', e);
     }
+
+    // Función para reproducir track con reintentos (móvil)
+    const playTrackWithRetry = (track: any, playerDiv: HTMLDivElement, trackName: string, maxRetries: number = 3) => {
+      if (!track || !playerDiv) return;
+
+      const attemptPlay = (attempt: number) => {
+        try {
+          console.log(`[Video Debug Mobile] Intentando reproducir ${trackName} (intento ${attempt})`);
+          track.play(playerDiv);
+          console.log(`[Video Debug Mobile] ${trackName} reproducido exitosamente`);
+        } catch (error) {
+          console.error(`[Video Debug Mobile] Error reproduciendo ${trackName} (intento ${attempt}):`, error);
+          
+          if (attempt < maxRetries) {
+            setTimeout(() => {
+              attemptPlay(attempt + 1);
+            }, 500 * attempt);
+          } else {
+            console.error(`[Video Debug Mobile] Falló reproducir ${trackName} después de ${maxRetries} intentos`);
+          }
+        }
+      };
+
+      attemptPlay(1);
+    };
 
     if (isLocalVideoMain) {
       if (localTrack && remotePlayerDiv) {
-        localTrack.play(remotePlayerDiv);
+        playTrackWithRetry(localTrack, remotePlayerDiv, 'local track (main)');
       }
       if (remoteTrack && localPlayerDiv) {
-        remoteTrack.play(localPlayerDiv);
+        playTrackWithRetry(remoteTrack, localPlayerDiv, 'remote track (small)');
       }
     } else {
       if (remoteTrack && remotePlayerDiv) {
-        remoteTrack.play(remotePlayerDiv);
+        playTrackWithRetry(remoteTrack, remotePlayerDiv, 'remote track (main)');
       }
       if (localTrack && localPlayerDiv) {
-        localTrack.play(localPlayerDiv);
+        playTrackWithRetry(localTrack, localPlayerDiv, 'local track (small)');
       }
     }
 
     return () => {
       try {
-        localTrack?.stop();
+        if (localTrack && typeof localTrack.stop === 'function') {
+          localTrack.stop();
+        }
       } catch (e) {
-        console.warn('No se pudo detener la pista local en la limpieza:', e);
+        console.warn('[Video Debug Mobile] No se pudo detener la pista local en la limpieza:', e);
       }
       try {
-        remoteTrack?.stop();
+        if (remoteTrack && typeof remoteTrack.stop === 'function') {
+          remoteTrack.stop();
+        }
       } catch (e) {
-        console.warn('No se pudo detener la pista remota en la limpieza:', e);
+        console.warn('[Video Debug Mobile] No se pudo detener la pista remota en la limpieza:', e);
       }
     };
   }, [

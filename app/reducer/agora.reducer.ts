@@ -258,13 +258,14 @@ export function agoraReducer(
         payload: UserInformation;
       }
 
-      if (
-        !state.remoteUsers.find(
-          (user: UserInformation) =>
-            String(user.rtcUid) ===
-            String((action as AddRemoteUserAction).payload.rtcUid),
-        )
-      ) {
+      const existingUserIndex = state.remoteUsers.findIndex(
+        (user: UserInformation) =>
+          String(user.rtcUid) ===
+          String((action as AddRemoteUserAction).payload.rtcUid),
+      );
+
+      if (existingUserIndex === -1) {
+        console.log(`[Video Debug Reducer] Agregando nuevo usuario remoto: ${(action as AddRemoteUserAction).payload.rtcUid}`);
         return {
           ...state,
           remoteUsers: [
@@ -274,6 +275,7 @@ export function agoraReducer(
         };
       }
 
+      console.log(`[Video Debug Reducer] Actualizando usuario remoto existente: ${(action as AddRemoteUserAction).payload.rtcUid}`);
       interface UpdateRemoteUserAction {
         type: AgoraActionType.ADD_REMOTE_USER;
         payload: UserInformation;
@@ -313,28 +315,30 @@ export function agoraReducer(
         };
       }
 
+      const trackPayload = (action as UpdateRemoteUserTrackStateAction).payload;
+      console.log(`[Video Debug Reducer] Actualizando track state - UID: ${trackPayload.rtcUid}, mediaType: ${trackPayload.mediaType}, isPublishing: ${trackPayload.isPublishing}, hasTrack: ${!!trackPayload.track}`);
+
       return {
         ...state,
         remoteUsers: state.remoteUsers.map((user: UserInformation) => {
-          if (
-            String(user.rtcUid) ===
-            String((action as UpdateRemoteUserTrackStateAction).payload.rtcUid)
-          ) {
-            return {
+          if (String(user.rtcUid) === String(trackPayload.rtcUid)) {
+            const updatedUser = {
               ...user,
-              [(action as UpdateRemoteUserTrackStateAction).payload
-                .mediaType === 'video'
-                ? 'videoTrack'
-                : 'audioTrack']: (action as UpdateRemoteUserTrackStateAction)
-                .payload.isPublishing
-                ? (action as UpdateRemoteUserTrackStateAction).payload.track
-                : null,
-              [(action as UpdateRemoteUserTrackStateAction).payload
-                .mediaType === 'video'
-                ? 'hasVideo'
-                : 'hasAudio']: (action as UpdateRemoteUserTrackStateAction)
-                .payload.isPublishing,
+              [trackPayload.mediaType === 'video' ? 'videoTrack' : 'audioTrack']: 
+                trackPayload.isPublishing ? trackPayload.track : null,
+              [trackPayload.mediaType === 'video' ? 'hasVideo' : 'hasAudio']: 
+                trackPayload.isPublishing,
             };
+            
+            console.log(`[Video Debug Reducer] Usuario actualizado:`, {
+              rtcUid: updatedUser.rtcUid,
+              hasVideo: updatedUser.hasVideo,
+              hasAudio: updatedUser.hasAudio,
+              hasVideoTrack: !!updatedUser.videoTrack,
+              hasAudioTrack: !!updatedUser.audioTrack
+            });
+            
+            return updatedUser;
           }
           return user;
         }),

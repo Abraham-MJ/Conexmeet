@@ -51,14 +51,31 @@ export const useAgoraCallChannel = (
   const forceLeaveEventSentRef = useRef(false);
 
   const waitForUserProfile = useCallback(
-    (uidToWaitFor: string | number) => {
+    (uidToWaitFor: string | number, timeout: number = 5000) => {
       const stringUid = String(uidToWaitFor);
+      
+      // Si el usuario ya existe en remoteUsers, resolver inmediatamente
       if (state.remoteUsers?.find((u) => String(u.rtcUid) === stringUid)) {
+        console.log(`[Video Debug] Usuario ${stringUid} ya existe en remoteUsers, resolviendo inmediatamente`);
         return Promise.resolve();
       }
 
-      return new Promise<void>((resolve) => {
-        pendingProfilePromisesRef.current.set(stringUid, resolve);
+      console.log(`[Video Debug] Esperando perfil de usuario ${stringUid} con timeout de ${timeout}ms`);
+
+      return new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          pendingProfilePromisesRef.current.delete(stringUid);
+          console.warn(`[Video Debug] Timeout esperando perfil de usuario: ${stringUid}`);
+          reject(new Error(`Timeout waiting for user profile: ${stringUid}`));
+        }, timeout);
+
+        const resolveWithCleanup = () => {
+          clearTimeout(timeoutId);
+          console.log(`[Video Debug] Perfil de usuario ${stringUid} recibido exitosamente`);
+          resolve();
+        };
+
+        pendingProfilePromisesRef.current.set(stringUid, resolveWithCleanup);
       });
     },
     [state.remoteUsers],
@@ -146,6 +163,14 @@ export const useAgoraCallChannel = (
 
             if (receivedMsg.type === 'PROFILE_UPDATE') {
               const remoteUserProfile = receivedMsg.payload as UserInformation;
+              
+              console.log('[Video Debug] PROFILE_UPDATE recibido:', {
+                rtcUid: remoteUserProfile.rtcUid,
+                rtmUid: remoteUserProfile.rtmUid,
+                role: remoteUserProfile.role,
+                user_name: remoteUserProfile.user_name
+              });
+
               dispatch({
                 type: AgoraActionType.ADD_REMOTE_USER,
                 payload: {
@@ -160,12 +185,15 @@ export const useAgoraCallChannel = (
 
               const stringUid = String(remoteUserProfile.rtcUid);
               if (pendingProfilePromisesRef.current.has(stringUid)) {
+                console.log(`[Video Debug] Resolviendo promesa pendiente para UID: ${stringUid}`);
                 const resolve =
                   pendingProfilePromisesRef.current.get(stringUid);
                 if (resolve) {
                   resolve();
                 }
                 pendingProfilePromisesRef.current.delete(stringUid);
+              } else {
+                console.log(`[Video Debug] No hay promesa pendiente para UID: ${stringUid}`);
               }
 
               const currentState = stateRef.current;
@@ -682,6 +710,8 @@ export const useAgoraCallChannel = (
         await rtmChannel.leave();
       } catch (error: any) {
         if (error.code === 3) {
+          // Error Code 3: Canal ya cerrado o no existe - esto es normal en limpiezas múltiples
+          console.log(`${LOG_PREFIX_RTM_LISTEN} Canal RTM ya cerrado (Code 3) - continuando limpieza`);
         } else {
           console.error(
             `${LOG_PREFIX_RTM_LISTEN} Error inesperado al ejecutar rtmChannel.leave():`,

@@ -754,6 +754,51 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
   const lastHeartbeat = Date.now();
   const isHeartbeatActive = false;
 
+  // ✅ FAIL-SAFE: Detector global de estados problemáticos
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let problemStateTimeout: NodeJS.Timeout;
+
+    // Detectar estados problemáticos que requieren intervención
+    const hasProblemState =
+      // Canal activo sin RTC por mucho tiempo
+      (state.channelName && !state.isRtcJoined && !state.isLoadingRtc) ||
+      // Múltiples modales de error activos
+      (state.showUnexpectedErrorModal && state.showChannelIsBusyModal) ||
+      // Carga prolongada sin progreso
+      (state.isLoadingRtc &&
+        state.activeLoadingMessage &&
+        !state.isRequestingMediaPermissions);
+
+    if (hasProblemState) {
+      console.warn(
+        '[Global Problem Detector] ⚠️ Estado problemático detectado',
+      );
+
+      problemStateTimeout = setTimeout(() => {
+        console.error(
+          '[Global Problem Detector] 🚨 Estado problemático persistente - Activando limpieza automática',
+        );
+        emergencyExitToLobby();
+      }, 45000); // 45 segundos
+    }
+
+    return () => {
+      if (problemStateTimeout) {
+        clearTimeout(problemStateTimeout);
+      }
+    };
+  }, [
+    state.channelName,
+    state.isRtcJoined,
+    state.isLoadingRtc,
+    state.showUnexpectedErrorModal,
+    state.showChannelIsBusyModal,
+    state.activeLoadingMessage,
+    state.isRequestingMediaPermissions,
+  ]);
+
   const { forceCleanup, isCleaningUp } = useBeforeUnloadCleanup({
     localUser: state.localUser,
     isRtcJoined: state.isRtcJoined,
@@ -780,6 +825,58 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
       payload: { show: false, femaleInfo: null },
     });
   }, [dispatch]);
+
+  // ✅ FAIL-SAFE: Función de emergencia para salir al lobby (solo para uso interno)
+  const emergencyExitToLobby = useCallback(() => {
+    console.warn(
+      '[Emergency Exit] 🚨 Ejecutando salida de emergencia al lobby',
+    );
+
+    // Limpiar todo el estado
+    dispatch({ type: AgoraActionType.LEAVE_RTC_CHANNEL });
+    dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
+    dispatch({ type: AgoraActionType.CLEAR_CHAT_MESSAGES });
+
+    // Cerrar todos los modales
+    dispatch({
+      type: AgoraActionType.SET_SHOW_NO_CHANNELS_AVAILABLE_MODAL_FOR_MALE,
+      payload: false,
+    });
+    dispatch({
+      type: AgoraActionType.SET_SHOW_CHANNEL_IS_BUSY_MODAL,
+      payload: false,
+    });
+    dispatch({
+      type: AgoraActionType.SET_SHOW_UNEXPECTED_ERROR_MODAL,
+      payload: false,
+    });
+    dispatch({
+      type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL,
+      payload: false,
+    });
+    dispatch({
+      type: AgoraActionType.SET_SHOW_INSUFFICIENT_MINUTES_MODAL,
+      payload: false,
+    });
+    dispatch({
+      type: AgoraActionType.SET_SHOW_MINUTES_EXHAUSTED_MODAL,
+      payload: false,
+    });
+
+    // Limpiar localStorage relacionado
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('channelHopping_in_progress');
+      window.localStorage.removeItem('femaleCallSummary');
+    }
+
+    // Forzar redirección
+    router.push('/main/video-roulette');
+
+    // Recargar información del usuario
+    setTimeout(() => {
+      handleGetInformation().catch(console.error);
+    }, 1000);
+  }, [dispatch, router, handleGetInformation]);
 
   useEffect(() => {
     const handleFemaleDisconnected = async (event: Event) => {

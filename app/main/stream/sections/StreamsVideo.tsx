@@ -46,11 +46,26 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
 
       mainTrack = femaleUser?.videoTrack;
       smallTrack = maleUser?.videoTrack;
+
+      // Debug logging para admin
+      console.log('[Video Debug] Admin mode - Female track:', !!femaleUser?.videoTrack, 'Male track:', !!maleUser?.videoTrack);
     } else {
       const localTrack = localVideoTrack;
       const remoteTrack = Array.isArray(remoteUser)
         ? remoteUser[0]?.videoTrack
         : remoteUser?.videoTrack;
+
+      // Debug logging detallado
+      const remoteUserData = Array.isArray(remoteUser) ? remoteUser[0] : remoteUser;
+      console.log('[Video Debug] Remote user state:', {
+        hasRemoteUser: !!remoteUserData,
+        hasVideoTrack: !!remoteUserData?.videoTrack,
+        hasVideo: remoteUserData?.hasVideo,
+        rtcUid: remoteUserData?.rtcUid,
+        role: remoteUserData?.role,
+        trackType: remoteUserData?.videoTrack?.constructor?.name,
+        isLocalVideoMain
+      });
 
       if (isLocalVideoMain) {
         mainTrack = localTrack;
@@ -64,37 +79,70 @@ const StreamsVideo: React.FC<StreamsVideoProps> = ({
     const localPlayerDiv = localVideoPlayerRef.current;
     const remotePlayerDiv = remoteVideoPlayerRef.current;
 
+    // Detener tracks anteriores de forma segura
     try {
-      mainTrack?.stop();
+      if (mainTrack && typeof mainTrack.stop === 'function') {
+        mainTrack.stop();
+      }
     } catch (e) {
-      console.warn('No se pudo detener la pista principal:', e);
+      console.warn('[Video Debug] No se pudo detener la pista principal:', e);
     }
     try {
-      smallTrack?.stop();
+      if (smallTrack && typeof smallTrack.stop === 'function') {
+        smallTrack.stop();
+      }
     } catch (e) {
-      console.warn('No se pudo detener la pista pequeña:', e);
+      console.warn('[Video Debug] No se pudo detener la pista pequeña:', e);
     }
 
+    // Función para reproducir track con reintentos
+    const playTrackWithRetry = (track: any, playerDiv: HTMLDivElement, trackName: string, maxRetries: number = 3) => {
+      if (!track || !playerDiv) return;
+
+      const attemptPlay = (attempt: number) => {
+        try {
+          console.log(`[Video Debug] Intentando reproducir ${trackName} (intento ${attempt})`);
+          track.play(playerDiv);
+          console.log(`[Video Debug] ${trackName} reproducido exitosamente`);
+        } catch (error) {
+          console.error(`[Video Debug] Error reproduciendo ${trackName} (intento ${attempt}):`, error);
+          
+          if (attempt < maxRetries) {
+            // Reintentar después de un delay
+            setTimeout(() => {
+              attemptPlay(attempt + 1);
+            }, 500 * attempt); // Delay incremental: 500ms, 1000ms, 1500ms
+          } else {
+            console.error(`[Video Debug] Falló reproducir ${trackName} después de ${maxRetries} intentos`);
+          }
+        }
+      };
+
+      attemptPlay(1);
+    };
+
+    // Reproducir tracks con manejo robusto
     if (mainTrack && remotePlayerDiv) {
-      mainTrack.play(remotePlayerDiv);
+      playTrackWithRetry(mainTrack, remotePlayerDiv, 'main track');
     }
     if (smallTrack && localPlayerDiv) {
-      smallTrack.play(localPlayerDiv);
+      playTrackWithRetry(smallTrack, localPlayerDiv, 'small track');
     }
 
     return () => {
       try {
-        mainTrack?.stop();
+        if (mainTrack && typeof mainTrack.stop === 'function') {
+          mainTrack.stop();
+        }
       } catch (e) {
-        console.warn(
-          'No se pudo detener la pista principal en la limpieza:',
-          e,
-        );
+        console.warn('[Video Debug] No se pudo detener la pista principal en la limpieza:', e);
       }
       try {
-        smallTrack?.stop();
+        if (smallTrack && typeof smallTrack.stop === 'function') {
+          smallTrack.stop();
+        }
       } catch (e) {
-        console.warn('No se pudo detener la pista pequeña en la limpieza:', e);
+        console.warn('[Video Debug] No se pudo detener la pista pequeña en la limpieza:', e);
       }
     };
   }, [localUser, localVideoTrack, remoteUser, isLocalVideoMain]);

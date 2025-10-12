@@ -49,8 +49,20 @@ export const useAgoraRtc = (
       currentRtcClient.on('user-published', async (remoteUser, mediaType) => {
         if (mediaType !== 'audio' && mediaType !== 'video') return;
 
+        console.log(`[Video Debug] user-published event - UID: ${remoteUser.uid}, mediaType: ${mediaType}`);
+
         try {
           await currentRtcClient!.subscribe(remoteUser, mediaType);
+          console.log(`[Video Debug] Successfully subscribed to ${mediaType} from UID: ${remoteUser.uid}`);
+
+          const track = mediaType === 'audio' ? remoteUser.audioTrack : remoteUser.videoTrack;
+          
+          // Verificar que el track esté disponible
+          if (!track) {
+            console.warn(`[Video Debug] ${mediaType} track is null after subscription for UID: ${remoteUser.uid}`);
+          } else {
+            console.log(`[Video Debug] ${mediaType} track available for UID: ${remoteUser.uid}, track type: ${track.constructor.name}`);
+          }
 
           dispatch({
             type: AgoraActionType.UPDATE_REMOTE_USER_TRACK_STATE,
@@ -58,15 +70,21 @@ export const useAgoraRtc = (
               rtcUid: String(remoteUser.uid),
               mediaType,
               isPublishing: true,
-              track:
-                mediaType === 'audio'
-                  ? remoteUser.audioTrack
-                  : remoteUser.videoTrack,
+              track: track,
             },
           });
 
           if (mediaType === 'audio' && remoteUser.audioTrack) {
             remoteUser.audioTrack.play();
+          }
+
+          // Para video, agregar logging adicional
+          if (mediaType === 'video') {
+            console.log(`[Video Debug] Video track received from UID: ${remoteUser.uid}`, {
+              hasTrack: !!remoteUser.videoTrack,
+              trackState: remoteUser.videoTrack?.isPlaying,
+              localUserRole: localUser?.role
+            });
           }
 
           if (localUser?.role === 'female' && mediaType === 'video') {
@@ -88,7 +106,7 @@ export const useAgoraRtc = (
           }
         } catch (subError) {
           console.error(
-            `${LOG_PREFIX_PROVIDER} RTC Error al suscribir:`,
+            `${LOG_PREFIX_PROVIDER} RTC Error al suscribir ${mediaType} de UID ${remoteUser.uid}:`,
             subError,
           );
         }

@@ -65,14 +65,18 @@ export const useChannelValidation = () => {
         };
       }
 
-      if (targetFemale.status !== 'available_call') {
+      // Verificar que la female esté disponible
+      const isFemaleAvailable = targetFemale.status === 'available_call' || 
+                                (targetFemale.status === 'online' && targetFemale.in_call === 0);
+      
+      if (!isFemaleAvailable) {
         return {
           isValid: false,
           reason:
-            targetFemale.status === 'in_call'
+            targetFemale.status === 'in_call' || targetFemale.in_call === 1
               ? 'El canal ya está ocupado.'
               : 'La modelo no está disponible.',
-          shouldRetry: targetFemale.status === 'in_call',
+          shouldRetry: targetFemale.status === 'in_call' || targetFemale.in_call === 1,
         };
       }
 

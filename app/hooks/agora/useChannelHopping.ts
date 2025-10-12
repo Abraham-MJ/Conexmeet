@@ -259,12 +259,16 @@ export const useChannelHopping = (
 
     try {
       const availableChannels = onlineFemalesList.filter(
-        (female) =>
-          female.status === 'available_call' &&
-          female.host_id &&
-          female.host_id !== currentChannelName &&
-          female.is_active === 1 &&
-          !state.channelHopping.visitedChannelsInSession.has(female.host_id),
+        (female) => {
+          const isAvailable = female.status === 'available_call' || 
+                             (female.status === 'online' && female.in_call === 0);
+          
+          return isAvailable &&
+            female.host_id &&
+            female.host_id !== currentChannelName &&
+            female.is_active === 1 &&
+            !state.channelHopping.visitedChannelsInSession.has(female.host_id);
+        }
       );
 
       if (

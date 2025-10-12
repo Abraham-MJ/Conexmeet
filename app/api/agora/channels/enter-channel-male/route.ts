@@ -1,20 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const channelLocks = new Map<string, {
-  userId: number;
-  timestamp: number;
-  expiresAt: number;
-}>();
+// ✅ Sistema de reserva atómica mejorado
+const channelReservations = new Map<
+  string,
+  {
+    userId: number;
+    timestamp: number;
+    expiresAt: number;
+    status: 'pending' | 'confirmed' | 'failed';
+    attemptId: string; // ID único para cada intento
+  }
+>();
 
-const LOCK_DURATION = 10000; 
-const CLEANUP_INTERVAL = 15000; 
+const RESERVATION_DURATION = 15000; // 15 segundos para completar la conexión
+const CLEANUP_INTERVAL = 10000; // Limpieza cada 10 segundos
+const ATOMIC_LOCK_TIMEOUT = 5000; // Timeout para operaciones atómicas
 
+// ✅ Limpieza automática de reservas expiradas
 setInterval(() => {
   const now = Date.now();
-  for (const [channelId, lock] of channelLocks.entries()) {
-    if (now > lock.expiresAt) {
-      channelLocks.delete(channelId);
-      console.log(`[Lock Cleanup] Lock expirado removido para canal: ${channelId}`);
+  for (const [channelId, reservation] of channelReservations.entries()) {
+    if (now > reservation.expiresAt || reservation.status === 'failed') {
+      channelReservations.delete(channelId);
+      console.log(
+        `[Reservation Cleanup] Reserva expirada/fallida removida para canal: ${channelId}`,
+      );
     }
   }
 }, CLEANUP_INTERVAL);
@@ -29,12 +39,14 @@ interface RoomData {
 
 export async function POST(request: NextRequest) {
   let targetHostId: string | undefined;
-  let lockAcquired = false;
+  let reservationAcquired = false;
+  let attemptId: string | undefined;
 
   try {
     const body = await request.json();
     const { user_id: maleUserId, host_id: hostId } = body;
     targetHostId = hostId;
+    attemptId = `${maleUserId}-${hostId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const authToken = request.cookies.get('auth_token')?.value;
 
@@ -57,41 +69,55 @@ export async function POST(request: NextRequest) {
 
     const now = Date.now();
 
-    const existingLock = channelLocks.get(targetHostId);
-    
-    if (existingLock) {
-      if (now < existingLock.expiresAt) {
-        if (existingLock.userId !== maleUserId) {
+    // ✅ PASO 1: Verificar reserva existente (ATÓMICO)
+    const existingReservation = channelReservations.get(targetHostId);
+
+    if (existingReservation) {
+      if (now < existingReservation.expiresAt) {
+        if (existingReservation.userId !== maleUserId) {
           console.warn(
-            `[Enter Channel Male] ⚠️ Canal ${targetHostId} bloqueado por usuario ${existingLock.userId}. Solicitante: ${maleUserId}`
+            `[Enter Channel Male] ⚠️ Canal ${targetHostId} RESERVADO por usuario ${existingReservation.userId}. Solicitante: ${maleUserId}. Status: ${existingReservation.status}`,
           );
           return NextResponse.json(
             {
               success: false,
-              message: 'CANAL_OCUPADO: Otro usuario está conectándose a este canal en este momento.',
+              message:
+                'CANAL_OCUPADO: Otro usuario está conectándose a este canal en este momento.',
               errorType: 'CHANNEL_BUSY',
-              lockedBy: existingLock.userId,
-              retryAfter: Math.ceil((existingLock.expiresAt - now) / 1000),
+              reservedBy: existingReservation.userId,
+              retryAfter: Math.ceil(
+                (existingReservation.expiresAt - now) / 1000,
+              ),
             },
             { status: 409 },
           );
         }
-        console.log(`[Enter Channel Male] Usuario ${maleUserId} renovando lock en canal ${targetHostId}`);
+        console.log(
+          `[Enter Channel Male] Usuario ${maleUserId} renovando reserva en canal ${targetHostId}`,
+        );
       } else {
-        channelLocks.delete(targetHostId);
-        console.log(`[Enter Channel Male] Lock expirado removido para canal ${targetHostId}`);
+        channelReservations.delete(targetHostId);
+        console.log(
+          `[Enter Channel Male] Reserva expirada removida para canal ${targetHostId}`,
+        );
       }
     }
 
-    channelLocks.set(targetHostId, {
+    // ✅ PASO 2: Crear reserva ANTES de cualquier operación externa
+    channelReservations.set(targetHostId, {
       userId: maleUserId,
       timestamp: now,
-      expiresAt: now + LOCK_DURATION,
+      expiresAt: now + RESERVATION_DURATION,
+      status: 'pending',
+      attemptId: attemptId,
     });
-    lockAcquired = true;
-    console.log(`[Enter Channel Male] 🔒 Lock adquirido para canal ${targetHostId} por usuario ${maleUserId}`);
+    reservationAcquired = true;
+    console.log(
+      `[Enter Channel Male] 🔒 RESERVA ATÓMICA adquirida para canal ${targetHostId} por usuario ${maleUserId} (ID: ${attemptId})`,
+    );
 
     try {
+      // ✅ PASO 3: Verificar disponibilidad en backend externo
       let listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms?filter[status]=waiting`;
       let roomsListResponse = await fetch(listRoomsApiUrl, {
         method: 'GET',
@@ -119,6 +145,15 @@ export async function POST(request: NextRequest) {
       let targetRoom = roomsListData.data.find(
         (room: RoomData) => room.host_id === targetHostId,
       );
+
+      // ✅ PASO 4: Verificar que nuestra reserva sigue activa (puede haber expirado)
+      const currentReservation = channelReservations.get(targetHostId);
+      if (!currentReservation || currentReservation.attemptId !== attemptId) {
+        console.error(
+          `[Enter Channel Male] ❌ Reserva perdida durante verificación. Canal: ${targetHostId}, Usuario: ${maleUserId}`,
+        );
+        throw new Error('Reserva perdida durante verificación');
+      }
 
       if (!targetRoom) {
         listRoomsApiUrl = `https://app.conexmeet.live/api/v1/rooms`;
@@ -158,11 +193,15 @@ export async function POST(request: NextRequest) {
       }
 
       if (!targetRoom) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
+        if (reservationAcquired && targetHostId) {
+          const reservation = channelReservations.get(targetHostId);
+          if (reservation && reservation.attemptId === attemptId) {
+            reservation.status = 'failed';
+            channelReservations.delete(targetHostId);
+          }
+          reservationAcquired = false;
         }
-        
+
         return NextResponse.json(
           {
             success: false,
@@ -174,22 +213,48 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (targetRoom.another_user_id !== null && targetRoom.another_user_id !== maleUserId) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
+      // ✅ PASO 5: Verificación estricta de ocupación
+      if (
+        targetRoom.another_user_id !== null &&
+        targetRoom.another_user_id !== maleUserId
+      ) {
+        console.warn(
+          `[Enter Channel Male] ⚠️ Canal ${targetHostId} ya ocupado por usuario ${targetRoom.another_user_id}. Solicitante: ${maleUserId}`,
+        );
+
+        if (reservationAcquired && targetHostId) {
+          const reservation = channelReservations.get(targetHostId);
+          if (reservation && reservation.attemptId === attemptId) {
+            reservation.status = 'failed';
+            channelReservations.delete(targetHostId);
+          }
+          reservationAcquired = false;
         }
-        
+
         return NextResponse.json(
           {
             success: false,
             message:
               'CANAL_OCUPADO: El canal ya está ocupado por otro usuario.',
             errorType: 'CHANNEL_BUSY',
+            occupiedBy: targetRoom.another_user_id,
           },
           { status: 409 },
         );
       }
+
+      // ✅ PASO 6: Verificar reserva una vez más ANTES de enter-room
+      const preEnterReservation = channelReservations.get(targetHostId);
+      if (!preEnterReservation || preEnterReservation.attemptId !== attemptId) {
+        console.error(
+          `[Enter Channel Male] ❌ RACE CONDITION: Reserva perdida antes de enter-room. Canal: ${targetHostId}, Usuario: ${maleUserId}`,
+        );
+        throw new Error('Reserva perdida antes de enter-room');
+      }
+
+      console.log(
+        `[Enter Channel Male] 🚀 Ejecutando enter-room para canal ${targetHostId} por usuario ${maleUserId}`,
+      );
 
       const formdata = new FormData();
       formdata.append('user_id', String(maleUserId));
@@ -232,11 +297,15 @@ export async function POST(request: NextRequest) {
         (enterRoomResponseData.message &&
           enterRoomResponseData.message.toLowerCase().includes('no disponible'))
       ) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
+        if (reservationAcquired && targetHostId) {
+          const reservation = channelReservations.get(targetHostId);
+          if (reservation && reservation.attemptId === attemptId) {
+            reservation.status = 'failed';
+            channelReservations.delete(targetHostId);
+          }
+          reservationAcquired = false;
         }
-        
+
         return NextResponse.json(
           {
             success: false,
@@ -252,11 +321,15 @@ export async function POST(request: NextRequest) {
         !externalEnterRoomApiResponse.ok ||
         enterRoomResponseData.status !== 'Success'
       ) {
-        if (lockAcquired && targetHostId) {
-          channelLocks.delete(targetHostId);
-          lockAcquired = false;
+        if (reservationAcquired && targetHostId) {
+          const reservation = channelReservations.get(targetHostId);
+          if (reservation && reservation.attemptId === attemptId) {
+            reservation.status = 'failed';
+            channelReservations.delete(targetHostId);
+          }
+          reservationAcquired = false;
         }
-        
+
         return NextResponse.json(
           {
             success: false,
@@ -266,6 +339,14 @@ export async function POST(request: NextRequest) {
           { status: externalEnterRoomApiResponse.status || 500 },
         );
       }
+
+      // ✅ PASO 7: Verificación FINAL post-enter-room (CRÍTICO)
+      console.log(
+        `[Enter Channel Male] 🔍 Verificación final post-enter-room para canal ${targetHostId}`,
+      );
+
+      // Pequeño delay para asegurar que el backend externo se actualizó
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       const finalVerificationResponse = await fetch(listRoomsApiUrl, {
         method: 'GET',
@@ -290,6 +371,7 @@ export async function POST(request: NextRequest) {
             `[Enter Channel Male] ❌ RACE CONDITION DETECTADA: Canal ${targetHostId}. Male ${maleUserId} vs ${finalRoom.another_user_id}`,
           );
 
+          // ✅ Rollback: Limpiar nuestra conexión
           try {
             const cleanupFormData = new FormData();
             cleanupFormData.append('user_id', String(maleUserId));
@@ -304,13 +386,24 @@ export async function POST(request: NextRequest) {
               },
               body: cleanupFormData,
             });
+
+            console.log(
+              `[Enter Channel Male] 🧹 Rollback ejecutado para usuario ${maleUserId} en canal ${targetHostId}`,
+            );
           } catch (cleanupError) {
-            console.error('[Enter Channel Male] Error en cleanup:', cleanupError);
+            console.error(
+              '[Enter Channel Male] Error en cleanup:',
+              cleanupError,
+            );
           }
 
-          if (lockAcquired && targetHostId) {
-            channelLocks.delete(targetHostId);
-            lockAcquired = false;
+          if (reservationAcquired && targetHostId) {
+            const reservation = channelReservations.get(targetHostId);
+            if (reservation && reservation.attemptId === attemptId) {
+              reservation.status = 'failed';
+              channelReservations.delete(targetHostId);
+            }
+            reservationAcquired = false;
           }
 
           return NextResponse.json(
@@ -319,13 +412,25 @@ export async function POST(request: NextRequest) {
               message:
                 'CANAL_OCUPADO: Conexión simultánea detectada. Otro usuario se conectó primero.',
               errorType: 'CHANNEL_BUSY',
+              raceConditionDetected: true,
             },
             { status: 409 },
           );
         }
       }
 
-      console.log(`[Enter Channel Male] ✅ Conexión exitosa para canal ${targetHostId} por usuario ${maleUserId}`);
+      // ✅ PASO 8: Confirmar reserva exitosa
+      const finalReservation = channelReservations.get(targetHostId);
+      if (finalReservation && finalReservation.attemptId === attemptId) {
+        finalReservation.status = 'confirmed';
+        console.log(
+          `[Enter Channel Male] ✅ Reserva CONFIRMADA para canal ${targetHostId} por usuario ${maleUserId}`,
+        );
+      }
+
+      console.log(
+        `[Enter Channel Male] ✅ Conexión exitosa para canal ${targetHostId} por usuario ${maleUserId}`,
+      );
 
       return NextResponse.json(
         {
@@ -333,23 +438,32 @@ export async function POST(request: NextRequest) {
           message:
             enterRoomResponseData.message || 'Conexión exitosa al canal.',
           data: enterRoomResponseData.data,
-          lockExpiresAt: now + LOCK_DURATION,
+          reservationExpiresAt: now + RESERVATION_DURATION,
+          attemptId: attemptId,
         },
         { status: 200 },
       );
     } catch (error: any) {
-      if (lockAcquired && targetHostId) {
-        channelLocks.delete(targetHostId);
-        lockAcquired = false;
+      if (reservationAcquired && targetHostId) {
+        const reservation = channelReservations.get(targetHostId);
+        if (reservation && reservation.attemptId === attemptId) {
+          reservation.status = 'failed';
+          channelReservations.delete(targetHostId);
+        }
+        reservationAcquired = false;
       }
       throw error;
     }
   } catch (error: any) {
     console.error('[Enter Channel Male] Error:', error);
 
-    if (lockAcquired && targetHostId) {
-      channelLocks.delete(targetHostId);
-      lockAcquired = false;
+    if (reservationAcquired && targetHostId) {
+      const reservation = channelReservations.get(targetHostId);
+      if (reservation && reservation.attemptId === attemptId) {
+        reservation.status = 'failed';
+        channelReservations.delete(targetHostId);
+      }
+      reservationAcquired = false;
     }
 
     return NextResponse.json(
