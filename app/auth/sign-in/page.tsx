@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useTranslation } from '@/app/hooks/useTranslation';
@@ -25,6 +25,7 @@ export default function SignInScreen() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { t } = useTranslation();
+  const hasProcessedGoogleLogin = useRef(false);
 
   const { login, isLoading, setIsLoading } = useLogin();
   const { credentials, errors, changeField, clearError, setFieldError } =
@@ -34,30 +35,37 @@ export default function SignInScreen() {
     });
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.email && !isLoading) {
+    if (status === 'authenticated' && session?.user?.email && !hasProcessedGoogleLogin.current) {
+      hasProcessedGoogleLogin.current = true;
       setIsLoading(true);
 
       const performConexMeetLogin = async () => {
         try {
-          const response = await fetch('/api/auth/google-login', {
+          const response = await fetch('/api/auth/conexmeet-login', {
             method: 'POST',
           });
 
           const data = await response.json();
+          console.log('Respuesta de conexmeet-login:', data);
 
           if (response.ok && data.success) {
+            console.log('Login exitoso con ConexMeet, redirigiendo...');
             router.push('/main/video-roulette');
           } else {
+            console.error('Error en conexmeet-login:', data.message);
+            setFieldError('password', data.message || 'Error al conectar con ConexMeet');
           }
-          setIsLoading(false);
         } catch (error) {
-          console.error('Error llamando a /api/auth/google-login:', error);
+          console.error('Error llamando a /api/auth/conexmeet-login:', error);
+          setFieldError('password', 'Error de conexión. Intenta nuevamente.');
+        } finally {
+          setIsLoading(false);
         }
       };
 
       performConexMeetLogin();
     }
-  }, [status, session, isLoading, router]);
+  }, [status, session, router, setIsLoading]);
 
   const handleRetryLogin = async () => {
     try {
