@@ -121,13 +121,17 @@ function usePayments(): UseFetchPackagesReturn {
       });
 
       if (result?.success && result.data) {
-        setIntentPayment(result.data);
-        return { data: result.data };
+        const paymentData = result.data.data || result.data;
+        setIntentPayment(paymentData);
+        return { data: paymentData };
       } else if (result?.error) {
         console.error('Error al crear el pago:', result.error.message);
         throw new Error(
           result.error.message || 'Error desconocido al crear el pago.',
         );
+      } else {
+        console.error('Respuesta inesperada:', result);
+        throw new Error('Respuesta inesperada del servidor');
       }
     } catch (error) {
       console.error('Error en la solicitud de creación de pago:', error);
