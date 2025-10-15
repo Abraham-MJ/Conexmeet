@@ -9,7 +9,7 @@ const StyledBottomGoogle = () => {
   const handleGoogleSignIn = async () => {
     try {
       await signIn('google', { 
-        callbackUrl: '/auth/sign-in',
+        callbackUrl: '/main/video-roulette',
         redirect: true 
       });
     } catch (error) {
