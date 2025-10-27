@@ -20,8 +20,7 @@ const ModalPackage = ({
   const { t } = useTranslation();
   const {
     data: packages,
-    error: errorPackage,
-    loading: loadingPackage,
+    loading: isLoadingPackages,
     steps,
     handlePayment,
     selectedPackage,
@@ -30,14 +29,18 @@ const ModalPackage = ({
     isLoadingPaymentIntent,
     setSteps,
     handlePaymentRegistration,
+    refreshPackages,
   } = usePayments();
 
   const { state: user } = useUser();
 
   useEffect(() => {
-    setSelectedPackage(null);
-    setSteps('package');
-  }, [isOpen]);
+    if (isOpen) {
+      setSelectedPackage(null);
+      setSteps('package');
+      refreshPackages();
+    }
+  }, [isOpen, setSelectedPackage, setSteps, refreshPackages]);
 
   return (
     <StyledModal
@@ -80,6 +83,7 @@ const ModalPackage = ({
               selectedPackage={selectedPackage as Package}
               setSelectedPackage={setSelectedPackage}
               handlePayment={handlePayment}
+              isLoading={isLoadingPackages}
             />
           )}
           {steps === 'payment' && selectedPackage && (

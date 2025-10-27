@@ -2,11 +2,7 @@ import { Package } from '@/app/types/package';
 import { useState, useEffect, useCallback } from 'react';
 import useApi from '../useAPi';
 
-interface ApiResponse {
-  success: boolean;
-  data?: Package[];
-  message?: string;
-}
+
 
 interface UseFetchPackagesReturn {
   data: Package[] | null;
@@ -22,6 +18,7 @@ interface UseFetchPackagesReturn {
   handlePaymentRegistration: (
     payload: PaymentRegistrationPayload,
   ) => Promise<{ success: boolean; data?: Package[]; message?: string }>;
+  refreshPackages: () => void;
 }
 
 export interface IntentPayment {
@@ -47,7 +44,8 @@ function usePayments(): UseFetchPackagesReturn {
   const [steps, setSteps] = useState<'package' | 'payment'>('package');
   const [data, setData] = useState<Package[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+
+  const [isLoadingPackages, setIsLoadingPackages] = useState<boolean>(false);
 
   const [intentPayment, setIntentPayment] = useState<IntentPayment>({
     customer: '',
@@ -65,9 +63,6 @@ function usePayments(): UseFetchPackagesReturn {
     useState<boolean>(false);
 
   const {
-    data: packagesData,
-    loading: packagesLoading,
-    error: packagesError,
     execute: fetchPackages,
   } = useApi<Package[]>(
     '/api/get-package',
@@ -80,14 +75,24 @@ function usePayments(): UseFetchPackagesReturn {
   );
 
   const getListPackage = useCallback(async () => {
-    const result = await fetchPackages();
+    setIsLoadingPackages(true);
+    setError(null);
+    
+    try {
+      const result = await fetchPackages();
 
-    if (result?.success && result.data) {
-      setData(result.data);
-      setError(null);
-    } else if (result?.error) {
-      setError(result.error.message);
-      setData(null);
+      if (result?.success && result.data) {
+        setData(result.data);
+        setError(null);
+      } else if (result?.error) {
+        setError(result.error.message);
+        setData([]);
+      }
+    } catch (err) {
+      setError('Error loading packages');
+      setData([]);
+    } finally {
+      setIsLoadingPackages(false);
     }
   }, [fetchPackages]);
 
@@ -201,10 +206,15 @@ function usePayments(): UseFetchPackagesReturn {
     [registerPayment],
   );
 
+  const refreshPackages = useCallback(() => {
+    setData(null); 
+    getListPackage(); 
+  }, [getListPackage]);
+
   return {
     data,
     error,
-    loading,
+    loading: isLoadingPackages,
     steps,
     isLoadingPaymentIntent,
     handlePayment,
@@ -213,6 +223,7 @@ function usePayments(): UseFetchPackagesReturn {
     intentPayment,
     setSteps,
     handlePaymentRegistration,
+    refreshPackages,
   };
 }
 
