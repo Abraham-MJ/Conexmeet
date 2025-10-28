@@ -102,7 +102,7 @@ const SectionCongrats = ({ credentials, setCurrentStep }: any) => {
       gender: credentials.gender,
       terms: credentials.privacity,
       phone: credentials.number_phone,
-      referral_code: '',
+      referral_code: credentials.referral_code || '',
       country_id: credentials.country_id,
       otp: credentials.code_otp,
       birthdate: credentials.date_of_birth,

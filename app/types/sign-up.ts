@@ -11,4 +11,5 @@ export interface Credentials {
   date_of_birth: string;
   privacity: boolean;
   code_otp: string;
+  referral_code?: string;
 }

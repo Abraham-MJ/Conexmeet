@@ -112,7 +112,7 @@ const ProfileScreen = () => {
                     isMobile ? 'text-xs' : 'text-sm',
                   )}
                 >
-                  http://localhost:3000/sign-up/{user.user.referral_code}
+                  https://conexmeet.com/auth/sign-up/{user.user.referral_code}
                 </p>
               </div>
 
@@ -120,7 +120,7 @@ const ProfileScreen = () => {
                 <button
                   onClick={() => {
                     copyToClipboard(
-                      `http://localhost:3000/sign-up/${user.user.referral_code}`,
+                      `https://conexmeet.com/auth/sign-up/${user.user.referral_code}`,
                     );
                   }}
                   className="flex flex-1 items-center justify-center space-x-2 rounded-xl bg-[linear-gradient(308.52deg,#f711ba_4.3%,#ff465d_95.27%)] px-4 py-3 font-medium text-white transition-colors duration-200 hover:bg-[#e8356a]"
