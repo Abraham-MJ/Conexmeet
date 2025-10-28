@@ -8,19 +8,32 @@ import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { useLikeStory } from '@/app/hooks/api/useLikeStories';
 import { useAddContacts } from '@/app/hooks/api/useAddContacts';
 import { useTranslation } from '../../../hooks/useTranslation';
-import useFeatures from '@/app/hooks/api/useFeatures';
+import { cn } from '@/lib/utils';
+import { useMobile } from '@/app/hooks/useMobile';
+import { getChatMessages } from '@/app/public/stories/messages';
+import ModalNotStories from '@/app/public/stories/ModalNotStories';
 
 const ModalStories = ({
   isOpen,
   onClose,
   stories,
   active_stories,
+  lockToStory = false,
+  messages = false,
+  onStoryChange
 }: {
   isOpen: boolean;
   onClose: () => void;
   stories: HistoryData[];
   active_stories: HistoryData;
+  lockToStory?: boolean;
+  messages?: boolean;
+  onStoryChange?: () => boolean;
 }) => {
+
+  const isMobile = useMobile(1024);
+
+
   const { t } = useTranslation();
   const {
     error: errorLike,
@@ -44,6 +57,13 @@ const ModalStories = ({
   const [showContactPulse, setShowContactPulse] = useState(false);
   const [showHearts, setShowHearts] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+
+  // Estados para el sistema de mensajes aleatorios
+  const [currentMessage, setCurrentMessage] = useState<any>(null);
+  const [usedMessageIds, setUsedMessageIds] = useState<Set<string>>(new Set());
+  const [showMessage, setShowMessage] = useState(false);
+
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (stories && stories.length > 0) {
@@ -77,8 +97,49 @@ const ModalStories = ({
     }
   }, [currentStory]);
 
+  // Separate useEffect for message logic to avoid dependency issues
+  useEffect(() => {
+    if (currentStory && messages) {
+      // Reset message state for new story
+      setCurrentMessage(null);
+      setShowMessage(false);
+
+      const timer = setTimeout(() => {
+        const allMessages = getChatMessages(currentStory);
+
+        const availableMessages = allMessages.filter(msg => !usedMessageIds.has(msg.rtmUid));
+
+        let selectedMessage: any;
+
+        if (availableMessages.length === 0) {
+          setUsedMessageIds(new Set());
+          const randomIndex = Math.floor(Math.random() * allMessages.length);
+          selectedMessage = allMessages[randomIndex];
+          setUsedMessageIds(new Set([selectedMessage.rtmUid]));
+        } else {
+          const randomIndex = Math.floor(Math.random() * availableMessages.length);
+          selectedMessage = availableMessages[randomIndex];
+          setUsedMessageIds(prev => new Set([...prev, selectedMessage.rtmUid]));
+        }
+
+        setCurrentMessage(selectedMessage);
+        setShowMessage(true);
+      }, 3000);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [currentStory, messages]);
+
   const handleNextStory = () => {
     if (!stories || stories.length === 0) return;
+
+    // Verificar límite de historias si hay callback
+    if (onStoryChange && !onStoryChange()) {
+      return; // No cambiar historia si se alcanzó el límite
+    }
+
     setCurrentIndex((prevIndex) => {
       const nextIndex = (prevIndex + 1) % stories.length;
       setCurrentStory(stories[nextIndex]);
@@ -88,6 +149,12 @@ const ModalStories = ({
 
   const handlePrevStory = () => {
     if (!stories || stories.length === 0) return;
+
+    // Verificar límite de historias si hay callback
+    if (onStoryChange && !onStoryChange()) {
+      return; // No cambiar historia si se alcanzó el límite
+    }
+
     setCurrentIndex((prevIndex) => {
       const prevStoryIndex = (prevIndex - 1 + stories.length) % stories.length;
       setCurrentStory(stories[prevStoryIndex]);
@@ -96,7 +163,9 @@ const ModalStories = ({
   };
 
   const handleVideoEnded = () => {
-    handleNextStory();
+    if (!lockToStory) {
+      handleNextStory();
+    }
   };
 
   const toggleMute = () => {
@@ -173,6 +242,8 @@ const ModalStories = ({
     return null;
   }
 
+
+
   return (
     <StyledModal
       isOpen={isOpen}
@@ -244,11 +315,10 @@ const ModalStories = ({
                     <span className="absolute inset-0 animate-ping rounded-full bg-blue-400 opacity-75"></span>
                   )}
                   <button
-                    className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 sm:h-14 sm:w-14 ${
-                      isContactAddedLocal
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'border border-blue-500 bg-black/30 text-blue-500 backdrop-blur-sm hover:bg-black/40'
-                    } ${isContactLoading ? 'cursor-not-allowed opacity-50' : ''}`}
+                    className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 sm:h-14 sm:w-14 ${isContactAddedLocal
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'border border-blue-500 bg-black/30 text-blue-500 backdrop-blur-sm hover:bg-black/40'
+                      } ${isContactLoading ? 'cursor-not-allowed opacity-50' : ''}`}
                     onClick={handleToggleContact}
                     disabled={isContactLoading}
                     aria-label={
@@ -281,11 +351,10 @@ const ModalStories = ({
                     </>
                   )}
                   <button
-                    className={`flex h-full w-full items-center justify-center rounded-full transition-all duration-300 ${
-                      isLikedLocal
-                        ? 'bg-red-600 text-white shadow-lg'
-                        : 'border border-red-500 bg-black/30 text-red-500 backdrop-blur-sm hover:bg-black/40'
-                    } ${isLikeLoading ? 'cursor-not-allowed opacity-50' : ''}`}
+                    className={`flex h-full w-full items-center justify-center rounded-full transition-all duration-300 ${isLikedLocal
+                      ? 'bg-red-600 text-white shadow-lg'
+                      : 'border border-red-500 bg-black/30 text-red-500 backdrop-blur-sm hover:bg-black/40'
+                      } ${isLikeLoading ? 'cursor-not-allowed opacity-50' : ''}`}
                     onClick={handleToggleLike}
                     disabled={isLikeLoading}
                     aria-label={
@@ -295,11 +364,10 @@ const ModalStories = ({
                     }
                   >
                     <Heart
-                      className={`transition-all duration-500 ${
-                        isLikedLocal
-                          ? 'animate-[heartBeat_0.6s_ease-in-out] fill-white'
-                          : ''
-                      }`}
+                      className={`transition-all duration-500 ${isLikedLocal
+                        ? 'animate-[heartBeat_0.6s_ease-in-out] fill-white'
+                        : ''
+                        }`}
                       style={{
                         height: isLikedLocal ? '22px' : '24px',
                         width: isLikedLocal ? '22px' : '24px',
@@ -323,6 +391,44 @@ const ModalStories = ({
                 </button>
               </div>
             </div>
+
+
+            {!!messages && (
+              <div className="absolute bottom-6 left-4 right-4  flex h-80 flex-col sm:bottom-10">
+                <div className="hide-scrollbar-on-hover mask-gradient-bottom flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain">
+                  <div className="box-border flex min-h-full flex-col justify-end pb-2">
+                    {showMessage && currentMessage ? (
+                      <div
+                        className={cn(
+                          'my-1 animate-fade-in-right bg-[#0000007a] rounded-lg p-2',
+                          isMobile && 'mr-4',
+                        )}
+                        key={`${currentMessage.rtmUid}-${currentMessage.timestamp}`}
+                      >
+                        <div className="text-white text-sm">
+                          <span className="font-medium">{currentMessage.user_name}:</span>
+                          <span className="ml-1">{currentMessage.display_text}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      false
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-2 z-20 box-border flex min-h-12 max-w-[300px] flex-row items-end rounded-3xl bg-[#ffffff29] p-2 ps-1 backdrop-blur-[12px] transition-colors duration-300 ease-in-out">
+                  <input
+                    className="m-0 mx-3 box-border h-[20px] w-full flex-1 resize-none self-center border-none bg-transparent pr-3 text-sm leading-tight text-white outline-none placeholder:text-white"
+                    placeholder={t('video.saySomething')}
+                    data-testid="textarea"
+                    value={''}
+                    onClick={() => {
+                      setShowModal(true)
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {stories && stories.length > 1 && (
@@ -345,6 +451,10 @@ const ModalStories = ({
           )}
         </div>
       </div>
+
+      <ModalNotStories isOpen={showModal} onClose={() => {
+        setShowModal(false)
+      }} />
     </StyledModal>
   );
 };

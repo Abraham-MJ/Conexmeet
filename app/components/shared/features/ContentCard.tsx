@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useMobile } from '@/app/hooks/useMobile';
 import { useTranslation } from '../../../hooks/useTranslation';
 
-interface ContentStoriesProps {
+export interface ContentStoriesProps {
   user: HistoryData;
   activeVideoUrl: string | null;
   onSetPlayingVideoUrl: (url: string | null) => void;

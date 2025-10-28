@@ -2,20 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const authToken = request.cookies.get('auth_token')?.value;
-
-    if (!authToken) {
-      return NextResponse.json(
-        { success: false, message: 'No autorizado - Token no encontrado' },
-        { status: 401 },
-      );
-    }
-
-    const apiUrl = 'https://app.conexmeet.live/api/v1/histories';
+ 
+    const apiUrl = 'https://app.conexmeet.live/api/v1/public/histories';
 
     const headers = new Headers();
     headers.append('Accept', 'application/json');
-    headers.append('Authorization', `Bearer ${authToken}`);
 
     const response = await fetch(apiUrl, {
       method: 'GET',
