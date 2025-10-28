@@ -330,6 +330,8 @@ const translations: LanguageTranslations = {
         'auth.recovery.email': 'Correo electrónico:',
         'auth.recovery.emailPlaceholder': 'Correo electrónico',
         'auth.recovery.send': 'Enviar',
+        'auth.recovery.resend': 'Reenviar código',
+        'auth.recovery.resendIn': 'Reenviar en',
         'auth.recovery.signIn': 'Iniciar sesión',
         'auth.recovery.emailNotExists': 'El email no existe',
 
@@ -828,6 +830,8 @@ const translations: LanguageTranslations = {
         'auth.recovery.email': 'Email:',
         'auth.recovery.emailPlaceholder': 'Email',
         'auth.recovery.send': 'Send',
+        'auth.recovery.resend': 'Resend code',
+        'auth.recovery.resendIn': 'Resend in',
         'auth.recovery.signIn': 'Sign In',
         'auth.recovery.emailNotExists': 'The email does not exist',
 

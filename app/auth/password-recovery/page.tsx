@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
 import { useTranslation } from '@/app/hooks/useTranslation';
+import { useState, useEffect } from 'react';
 
 import { useForm } from '@/app/hooks/useForm';
 import ImageBrand from '@/public/images/conexmeet.png';
@@ -22,6 +23,19 @@ export default function RecoveryPasswordScreen() {
       email: '',
     });
   const { t } = useTranslation();
+  const [countdown, setCountdown] = useState(0);
+  const [canResend, setCanResend] = useState(true);
+
+  // Contador de 60 segundos
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else if (countdown === 0 && !canResend) {
+      setCanResend(true);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown, canResend]);
 
   const sendEmailVerification = async (e: any) => {
     e.preventDefault();
@@ -45,6 +59,10 @@ export default function RecoveryPasswordScreen() {
 
     if (forgot_data === undefined) {
       setFieldError('email', t('auth.recovery.emailNotExists'));
+    } else {
+      // Iniciar contador de 60 segundos
+      setCountdown(60);
+      setCanResend(false);
     }
   };
 
@@ -97,25 +115,43 @@ export default function RecoveryPasswordScreen() {
             onSubmit={sendEmailVerification}
             className="mt-8 space-y-8"
           >
-            <StyledInputs
-              name="email"
-              type="email"
-              value={credentials.email}
-              handleChange={changeField}
-              error={errors.email}
-              label={t('auth.recovery.email')}
-              placeholder={t('auth.recovery.emailPlaceholder')}
-              onFocus={() => clearError('email')}
-            />
+            {!successEmail && (
+              <StyledInputs
+                name="email"
+                type="email"
+                value={credentials.email}
+                handleChange={changeField}
+                error={errors.email}
+                label={t('auth.recovery.email')}
+                placeholder={t('auth.recovery.emailPlaceholder')}
+                onFocus={() => clearError('email')}
+              />
+            )}
 
-            <StyledButton
-              text={t('auth.recovery.send')}
-              isLoading={sendIsLoading}
-              onPress={sendEmailVerification}
-              type="submit"
-              variant="primary"
-              size="lg"
-            />
+            {!successEmail ? (
+              <StyledButton
+                text={t('auth.recovery.send')}
+                isLoading={sendIsLoading}
+                onPress={sendEmailVerification}
+                type="submit"
+                variant="primary"
+                size="lg"
+              />
+            ) : (
+              <StyledButton
+                text={
+                  canResend
+                    ? t('auth.recovery.resend') || 'Reenviar código'
+                    : `${t('auth.recovery.resendIn') || 'Reenviar en'} ${countdown}s`
+                }
+                isLoading={sendIsLoading}
+                onPress={canResend ? sendEmailVerification : () => { }}
+                type="submit"
+                variant={canResend ? "primary" : "outline"}
+                size="lg"
+                disabled={!canResend || sendIsLoading}
+              />
+            )}
 
             <motion.div
               variants={itemVariants}

@@ -4,14 +4,7 @@ import { motion } from 'framer-motion';
 import React from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 
-const StyledButton = ({
-  text,
-  isLoading,
-  onPress,
-  variant = 'default',
-  type = 'button',
-  size = 'default',
-}: {
+interface StyledButtonProps {
   text: string;
   isLoading: boolean;
   onPress: (...arg: any) => void;
@@ -25,6 +18,17 @@ const StyledButton = ({
     | 'link';
   type?: 'button' | 'submit' | 'reset';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  disabled?: boolean;
+}
+
+const StyledButton: React.FC<StyledButtonProps> = ({
+  text,
+  isLoading,
+  onPress,
+  variant = 'default',
+  type = 'button',
+  size = 'default',
+  disabled = false,
 }) => {
   const { t } = useTranslation();
   return (
@@ -34,7 +38,7 @@ const StyledButton = ({
         type={type}
         size={size}
         onClick={onPress}
-        disabled={isLoading}
+        disabled={isLoading || disabled}
       >
         <span>{isLoading ? t('common.loading') : text}</span>
       </Button>
