@@ -8,6 +8,12 @@ interface Country {
   phonecode: number;
 }
 
+interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+}
+
 export const useCountries = () => {
   const [countries, setCountries] = useState<Country[]>([]);
 
@@ -15,17 +21,22 @@ export const useCountries = () => {
     data: countriesData,
     loading: isLoading,
     error: apiError,
-  } = useApi<Country[]>('/api/auth/countris', {
-    cacheTime: 30 * 60 * 1000, 
-    staleTime: 15 * 60 * 1000, 
-    retryAttempts: 3,
-  }, true); 
+  } = useApi<ApiResponse<Country[]>>(
+    '/api/auth/countris',
+    {
+      cacheTime: 30 * 60 * 1000,
+      staleTime: 15 * 60 * 1000,
+      retryAttempts: 3,
+    },
+    true,
+  );
 
   const error = apiError ? apiError.message : null;
 
   useEffect(() => {
     if (countriesData) {
-      setCountries(Array.isArray(countriesData) ? countriesData : []);
+      const dataArray = countriesData.data;
+      setCountries(Array.isArray(dataArray) ? dataArray : []);
     }
   }, [countriesData]);
 

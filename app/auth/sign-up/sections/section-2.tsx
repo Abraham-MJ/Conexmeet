@@ -26,7 +26,8 @@ const SectionTwoStep: React.FC<Props> = ({
 }) => {
   const { countries } = useCountries();
   const { t } = useTranslation();
-  
+
+
   return (
     <>
       <StyledDate
@@ -79,11 +80,10 @@ const SectionTwoStep: React.FC<Props> = ({
         handleChange={changeField}
         placeholder={t('auth.signUp.step2.phonePlaceholder')}
         error={errors.number_phone}
-        code_value={`+${
-          countries?.filter(
-            (item) => item?.id.toString() === credentials?.country_id,
-          )?.[0]?.phonecode ?? '57'
-        }`}
+        code_value={`+${countries?.filter(
+          (item) => item?.id.toString() === credentials?.country_id,
+        )?.[0]?.phonecode ?? '57'
+          }`}
         label={t('auth.signUp.step2.phone')}
         value={credentials.number_phone}
         onFocus={() => clearError('number_phone')}

@@ -23,7 +23,7 @@ import { formVariants, itemVariants } from '@/app/utils/animations';
 
 export default function SignUpScreen() {
   const { verifyOTP, requestOTP } = useOTP();
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
   const { t } = useTranslation();
 
   const { credentials, errors, changeField, clearError, setFieldError } =
