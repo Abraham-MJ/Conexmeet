@@ -91,6 +91,19 @@ export default function StyledModal({
 
   const getModalStyles = () => {
     if (isMobile) {
+      if (height === '100vh') {
+        return {
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
+          borderRadius: 0,
+        };
+      }
+      
       return {
         position: 'fixed',
         bottom: 0,
@@ -142,14 +155,16 @@ export default function StyledModal({
           />
 
           <motion.div
-            className={`z-50 flex flex-col overflow-hidden rounded-3xl ${
-              isMobile
-                ? 'fixed bottom-0 left-0 right-0 rounded-b-none rounded-t-2xl'
-                : position === 'left'
-                  ? 'fixed left-4 top-4 h-full'
-                  : position === 'right'
-                    ? 'fixed right-4 top-4 h-full'
-                    : 'relative'
+            className={`z-50 flex flex-col overflow-hidden ${
+              isMobile && height === '100vh'
+                ? 'fixed inset-0 rounded-none'
+                : isMobile
+                  ? 'fixed bottom-0 left-0 right-0 rounded-b-none rounded-t-2xl'
+                  : position === 'left'
+                    ? 'fixed left-4 top-4 h-full rounded-3xl'
+                    : position === 'right'
+                      ? 'fixed right-4 top-4 h-full rounded-3xl'
+                      : 'relative rounded-3xl'
             }`}
             style={getModalStyles() as React.CSSProperties}
             initial={animations.initial}

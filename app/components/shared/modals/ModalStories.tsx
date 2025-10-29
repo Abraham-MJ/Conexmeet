@@ -250,12 +250,12 @@ const ModalStories = ({
       onClose={onClose}
       title=""
       position="center"
-      width="900px"
-      height="640px"
+      width={isMobile ? "100vw" : "900px"}
+      height={isMobile ? "100vh" : "640px"}
       noClose
       noPadding
     >
-      <div className="relative h-full w-full overflow-hidden bg-black">
+      <div className={`relative h-full w-full overflow-hidden bg-black ${isMobile ? 'min-h-screen' : ''}`}>
         <div
           className="absolute inset-0 scale-110 bg-center blur-md"
           style={{
@@ -267,13 +267,13 @@ const ModalStories = ({
 
         <div className="relative flex h-full w-full items-center justify-center">
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative mx-auto h-full w-full max-w-md">
+            <div className={`relative mx-auto h-full w-full ${isMobile ? '' : 'max-w-md'}`}>
               {currentStory.type === 'video' ? (
                 <video
                   ref={videoRef}
                   key={currentStory.id + '_' + currentStory.url}
                   src={currentStory.url}
-                  className={`h-full w-full object-cover transition-opacity duration-300`}
+                  className={`h-full w-full transition-opacity duration-300 ${isMobile ? 'object-cover' : 'object-cover'}`}
                   playsInline
                   autoPlay
                   loop={false}
@@ -286,7 +286,7 @@ const ModalStories = ({
                 <img
                   src={currentStory.url}
                   alt={t('video.storyContent')}
-                  className="h-full w-full object-contain"
+                  className={`h-full w-full ${isMobile ? 'object-cover' : 'object-contain'}`}
                 />
               )}
 
@@ -307,6 +307,8 @@ const ModalStories = ({
                     </div>
                   </div>
                 </div>
+
+
               </div>
 
               <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-center gap-4 sm:bottom-10 sm:gap-6">
@@ -394,7 +396,7 @@ const ModalStories = ({
 
 
             {!!messages && (
-              <div className="absolute bottom-6 left-4 right-4  flex h-80 flex-col sm:bottom-10">
+              <div className={`absolute bottom-6 left-4 right-4 flex h-80 flex-col sm:bottom-10 ${isMobile ? 'bottom-20' : ''}`}>
                 <div className="hide-scrollbar-on-hover mask-gradient-bottom flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain">
                   <div className="box-border flex min-h-full flex-col justify-end pb-2">
                     {showMessage && currentMessage ? (
@@ -416,7 +418,7 @@ const ModalStories = ({
                   </div>
                 </div>
 
-                <div className="mt-2 z-20 box-border flex min-h-12 max-w-[300px] flex-row items-end rounded-3xl bg-[#ffffff29] p-2 ps-1 backdrop-blur-[12px] transition-colors duration-300 ease-in-out">
+                <div className={`mt-2 z-20 box-border flex min-h-12 flex-row items-end rounded-3xl bg-[#ffffff29] p-2 ps-1 backdrop-blur-[12px] transition-colors duration-300 ease-in-out ${isMobile ? 'max-w-full' : 'max-w-[300px]'}`}>
                   <input
                     className="m-0 mx-3 box-border h-[20px] w-full flex-1 resize-none self-center border-none bg-transparent pr-3 text-sm leading-tight text-white outline-none placeholder:text-white"
                     placeholder={t('video.saySomething')}
