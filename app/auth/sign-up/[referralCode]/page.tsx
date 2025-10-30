@@ -103,7 +103,7 @@ export default function SignUpWithReferralScreen() {
 
   const validCodeEmail = async () => {
     const response = await verifyOTP(credentials.email, credentials.code_otp);
-    if (response.data.status !== 200) {
+    if (response.status !== 200) {
       setFieldError(
         'code_otp',
         t('auth.signUp.congrats.errorMessage'),
