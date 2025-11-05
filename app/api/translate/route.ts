@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const DEEPL_API_URL =
-  process.env.DEEPL_API_URL || 'https://api-free.deepl.com/v2/translate';
-const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
+const DEEPL_API_URL = 'https://api-free.deepl.com/v2/translate';
+const DEEPL_API_KEY = '2d9421c7-6aef-25e5-96ac-86e601c07928:fx';
 
 export async function POST(request: NextRequest) {
   try {
