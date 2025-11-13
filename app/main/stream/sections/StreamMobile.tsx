@@ -14,6 +14,7 @@ import { useTranslation } from '@/app/hooks/useTranslation';
 import { ToggleContactApiResponse } from '@/app/hooks/api/useAddContacts';
 import { cn } from '@/lib/utils';
 import { RiContactsLine } from 'react-icons/ri';
+import { MdCameraswitch } from 'react-icons/md';
 import useFeatures from '@/app/hooks/api/useFeatures';
 
 interface StreamMobileProps {
@@ -21,6 +22,7 @@ interface StreamMobileProps {
   callTimer: string;
   handleLeaveCall: () => Promise<void>;
   toggleLocalAudio: () => Promise<void>;
+  switchCamera: () => Promise<void>;
   sendMessage: (messageText: string) => Promise<void>;
   sendGift: (
     gifId: string | number,
@@ -52,6 +54,7 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
   callTimer,
   handleLeaveCall,
   toggleLocalAudio,
+  switchCamera,
   sendMessage,
   sendGift,
   hopToRandomChannel,
@@ -113,7 +116,6 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
     const localPlayerDiv = localVideoPlayerRef.current;
     const remotePlayerDiv = remoteVideoPlayerRef.current;
 
-    // Debug logging para móvil
     console.log('[Video Debug Mobile] Track state:', {
       hasLocalTrack: !!localTrack,
       hasRemoteTrack: !!remoteTrack,
@@ -123,7 +125,6 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
       isLocalVideoMain
     });
 
-    // Detener tracks anteriores de forma segura
     try {
       if (localTrack && typeof localTrack.stop === 'function') {
         localTrack.stop();
@@ -139,7 +140,6 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
       console.warn('[Video Debug Mobile] No se pudo detener la pista remota:', e);
     }
 
-    // Función para reproducir track con reintentos (móvil)
     const playTrackWithRetry = (track: any, playerDiv: HTMLDivElement, trackName: string, maxRetries: number = 3) => {
       if (!track || !playerDiv) return;
 
@@ -429,6 +429,16 @@ const StreamMobile: React.FC<StreamMobileProps> = ({
                         ) : (
                           <IoMicOutline className="h-6 w-6" />
                         )}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={switchCamera}
+                      className="transition-border pointer-events-auto m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none bg-[#0000007a] text-white no-underline opacity-100 shadow-none backdrop-blur-3xl transition-colors duration-300 ease-in-out"
+                      title="Cambiar cámara"
+                    >
+                      <span className="translate-z-0 relative flex max-w-full flex-1 transform items-center justify-center">
+                        <MdCameraswitch className="h-6 w-6" />
                       </span>
                     </button>
                   </div>

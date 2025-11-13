@@ -34,6 +34,7 @@ const PageStreamVideo = () => {
     state: agora,
     sendRtmChannelMessage,
     toggleLocalAudio,
+    switchCamera,
     handleLeaveCall,
     callTimer,
     sendGift,
@@ -50,6 +51,7 @@ const PageStreamVideo = () => {
         callTimer={callTimer}
         handleLeaveCall={handleLeaveCall}
         toggleLocalAudio={toggleLocalAudio}
+        switchCamera={switchCamera}
         sendMessage={sendRtmChannelMessage}
         sendGift={sendGift}
         hopToRandomChannel={hopToRandomChannel}
@@ -158,6 +160,7 @@ const PageStreamVideo = () => {
                 <ControlsStream
                   isLocalAudioMuted={agora.isLocalAudioMuted}
                   toggleLocalAudio={toggleLocalAudio}
+                  switchCamera={switchCamera}
                   toggleContact={toggleContact}
                   isLoading={isLoading}
                   remoteUser={

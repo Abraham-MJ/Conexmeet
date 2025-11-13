@@ -53,6 +53,7 @@ const AgoraContext = createContext<{
   ) => Promise<void>;
   toggleLocalAudio: () => Promise<void>;
   toggleLocalVideo: () => Promise<void>;
+  switchCamera: () => Promise<void>;
   closeMediaPermissionsDeniedModal: () => void;
   closeNoChannelsAvailableModal: () => void;
   closeChannelIsBusyModal: () => void;
@@ -116,6 +117,7 @@ const AgoraContext = createContext<{
   broadcastLocalFemaleStatusUpdate: async () => {},
   toggleLocalAudio: async () => {},
   toggleLocalVideo: async () => {},
+  switchCamera: async () => {},
   closeMediaPermissionsDeniedModal: () => {},
   closeNoChannelsAvailableModal: () => {},
   closeChannelIsBusyModal: () => {},
@@ -303,6 +305,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
     leaveRtcChannel,
     toggleLocalAudio,
     toggleLocalVideo,
+    switchCamera,
     closeMediaPermissionsDeniedModal,
   } = useAgoraRtc(
     dispatch,
@@ -1028,6 +1031,7 @@ export function AgoraProvider({ children }: { children: ReactNode }) {
         loadingStatus,
         toggleLocalAudio,
         toggleLocalVideo,
+        switchCamera,
         handleLeaveCall,
         closeMediaPermissionsDeniedModal,
         closeNoChannelsAvailableModal,

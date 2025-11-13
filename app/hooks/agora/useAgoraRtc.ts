@@ -57,7 +57,6 @@ export const useAgoraRtc = (
 
           const track = mediaType === 'audio' ? remoteUser.audioTrack : remoteUser.videoTrack;
           
-          // Verificar que el track esté disponible
           if (!track) {
             console.warn(`[Video Debug] ${mediaType} track is null after subscription for UID: ${remoteUser.uid}`);
           } else {
@@ -78,7 +77,6 @@ export const useAgoraRtc = (
             remoteUser.audioTrack.play();
           }
 
-          // Para video, agregar logging adicional
           if (mediaType === 'video') {
             console.log(`[Video Debug] Video track received from UID: ${remoteUser.uid}`, {
               hasTrack: !!remoteUser.videoTrack,
@@ -484,6 +482,47 @@ export const useAgoraRtc = (
     }
   }, [localVideoTrack, isLocalVideoMuted, dispatch]);
 
+  const switchCamera = useCallback(async () => {
+    if (!localVideoTrack) {
+      console.warn(
+        `${LOG_PREFIX_PROVIDER} No hay track de video local disponible para cambiar cámara.`,
+      );
+      return;
+    }
+
+    try {
+      const currentDeviceId = localVideoTrack.getTrackLabel();
+      
+      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+      const devices = await AgoraRTC.getCameras();
+      
+      if (devices.length < 2) {
+        console.warn(
+          `${LOG_PREFIX_PROVIDER} Solo hay una cámara disponible, no se puede cambiar.`,
+        );
+        return;
+      }
+
+      const currentIndex = devices.findIndex(
+        (device) => device.label === currentDeviceId
+      );
+      
+      const nextIndex = (currentIndex + 1) % devices.length;
+      const nextDevice = devices[nextIndex];
+
+      await localVideoTrack.setDevice(nextDevice.deviceId);
+      
+      console.log(
+        `${LOG_PREFIX_PROVIDER} Cámara cambiada exitosamente a: ${nextDevice.label}`,
+      );
+    } catch (error) {
+      console.error(
+        `${LOG_PREFIX_PROVIDER} Error al cambiar de cámara:`,
+        error,
+      );
+    }
+  }, [localVideoTrack]);
+
   const closeMediaPermissionsDeniedModal = useCallback(() => {
     dispatch({
       type: AgoraActionType.SET_SHOW_MEDIA_PERMISSIONS_DENIED_MODAL,
@@ -505,6 +544,7 @@ export const useAgoraRtc = (
     leaveRtcChannel,
     toggleLocalAudio,
     toggleLocalVideo,
+    switchCamera,
     closeMediaPermissionsDeniedModal,
   };
 };

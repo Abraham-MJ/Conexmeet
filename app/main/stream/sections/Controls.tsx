@@ -4,10 +4,12 @@ import useFeatures from '@/app/hooks/api/useFeatures';
 import { cn } from '@/lib/utils';
 import { IoMicOffOutline, IoMicOutline } from 'react-icons/io5';
 import { RiContactsLine } from 'react-icons/ri';
+import { MdCameraswitch } from 'react-icons/md';
 
 interface ControlsStreamProps {
   isLocalAudioMuted: boolean;
   toggleLocalAudio: () => Promise<void>;
+  switchCamera: () => Promise<void>;
   toggleContact: (userId: number | string) => Promise<ToggleContactApiResponse | null>;
   isLoading: boolean;
   remoteUser: any;
@@ -16,6 +18,7 @@ interface ControlsStreamProps {
 const ControlsStream: React.FC<ControlsStreamProps> = ({
   isLocalAudioMuted,
   toggleLocalAudio,
+  switchCamera,
   toggleContact,
   isLoading,
   remoteUser
@@ -37,6 +40,13 @@ const ControlsStream: React.FC<ControlsStreamProps> = ({
         ) : (
           <IoMicOutline className="h-8 w-8" />
         )}
+      </button>
+      <button
+        onClick={switchCamera}
+        className="pointer-events-auto relative m-0 box-border flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-none bg-[#ffffff29] text-base text-white no-underline opacity-100 outline-none backdrop-blur-[12px] transition duration-300 ease-in-out hover:scale-105 hover:cursor-pointer hover:bg-[#ffffff3d]"
+        title="Cambiar cámara"
+      >
+        <MdCameraswitch className="h-8 w-8" />
       </button>
       {remoteUser.length !== 0 && <button
         onClick={() => {
