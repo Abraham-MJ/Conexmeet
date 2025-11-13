@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const DEEPL_API_URL = 'https://api-free.deepl.com/v2/translate';
+const DEEPL_TRANSLATE_URL = 'https://api-free.deepl.com/v2/translate';
 const DEEPL_API_KEY = '2d9421c7-6aef-25e5-96ac-86e601c07928:fx';
 
 export async function POST(request: NextRequest) {
@@ -29,31 +29,35 @@ export async function POST(request: NextRequest) {
       'Content-Type': 'application/json',
     };
 
-    const detectResponse = await fetch(DEEPL_API_URL, {
+
+    const toSpanishResponse = await fetch(DEEPL_TRANSLATE_URL, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         text: [text],
-        target_lang: 'EN',
+        target_lang: 'ES',
       }),
     });
 
-    if (!detectResponse.ok) {
-      const errorData = await detectResponse
+    if (!toSpanishResponse.ok) {
+      const errorData = await toSpanishResponse
         .json()
-        .catch(() => ({ message: 'Error desconocido de DeepL (detección).' }));
-      console.error('Error de DeepL (detección):', errorData);
+        .catch(() => ({ message: 'Error desconocido de DeepL.' }));
+      console.error('[Translate API] ❌ Error de DeepL:', errorData);
       return NextResponse.json(
         {
-          error: 'Error al detectar idioma con DeepL',
+          error: 'Error al procesar con DeepL',
           details: errorData.message || 'Respuesta no exitosa',
         },
-        { status: detectResponse.status || 500 },
+        { status: toSpanishResponse.status || 500 },
       );
     }
 
-    const detectResult = await detectResponse.json();
-    const detectedLang = detectResult.translations[0]?.detected_source_language;
+    const toSpanishResult = await toSpanishResponse.json();
+    const detectedLang =
+      toSpanishResult.translations[0]?.detected_source_language;
+    const spanishTranslation = toSpanishResult.translations[0]?.text;
+
 
     if (!detectedLang) {
       return NextResponse.json(
@@ -62,47 +66,83 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const targetLang = detectedLang === 'ES' ? 'EN' : 'ES';
+    let targetLang: string;
+    let translatedText: string;
+    let finalDetectedLang: string;
 
-    const translateResponse = await fetch(DEEPL_API_URL, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({
-        text: [text],
-        target_lang: targetLang,
-      }),
-    });
+    const normalizeText = (str: string) =>
+      str.toLowerCase().replace(/[.,!?¿¡\s]+/g, '');
 
-    if (!translateResponse.ok) {
-      const errorData = await translateResponse
-        .json()
-        .catch(() => ({ message: 'Error desconocido de DeepL (traducción).' }));
-      return NextResponse.json(
-        {
-          error: 'Error al traducir el texto con DeepL',
-          details: errorData.message || 'Respuesta no exitosa',
-        },
-        { status: translateResponse.status || 500 },
-      );
+    const isTextUnchanged =
+      normalizeText(text) === normalizeText(spanishTranslation);
+
+  
+
+    if (isTextUnchanged) {
+      targetLang = 'EN-US';
+      finalDetectedLang = 'ES';
+
+   
+
+      const toEnglishResponse = await fetch(DEEPL_TRANSLATE_URL, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          text: [text],
+          target_lang: targetLang,
+        }),
+      });
+
+      if (!toEnglishResponse.ok) {
+        const errorData = await toEnglishResponse.json().catch(() => ({
+          message: 'Error desconocido de DeepL (traducción).',
+        }));
+        console.error(
+          '[Translate API] ❌ Error de DeepL (traducción):',
+          errorData,
+        );
+        return NextResponse.json(
+          {
+            error: 'Error al traducir el texto con DeepL',
+            details: errorData.message || 'Respuesta no exitosa',
+          },
+          { status: toEnglishResponse.status || 500 },
+        );
+      }
+
+      const toEnglishResult = await toEnglishResponse.json();
+
+    
+      translatedText = toEnglishResult.translations[0]?.text;
+
+
+    } else {
+      targetLang = 'ES';
+      translatedText = spanishTranslation;
+      finalDetectedLang = detectedLang;
+
+    
+    
     }
 
-    const translateResult = await translateResponse.json();
-    const translatedText = translateResult.translations[0]?.text;
-
     if (!translatedText) {
+      console.error('[Translate API] ❌ La traducción está vacía');
       return NextResponse.json(
         { error: 'La traducción no fue recibida o está vacía.' },
         { status: 500 },
       );
     }
 
+  
+
     return NextResponse.json({
       originalText: text,
       translatedText: translatedText,
-      detectedSourceLanguage: detectedLang,
+      detectedSourceLanguage: finalDetectedLang,
       targetLanguage: targetLang,
     });
   } catch (error: any) {
+    console.error('[Translate API] Error:', error);
     return NextResponse.json(
       {
         error:

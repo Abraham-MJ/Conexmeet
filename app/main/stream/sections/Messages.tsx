@@ -73,17 +73,17 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
         }, 5000);
       }
 
-     if (messages?.[messages?.length - 1]?.type === 'channel' || messages?.[messages?.length - 1]?.type === 'self') {
-       audioRef.current.play().catch((error) => {
-        console.warn('Error al reproducir el audio:', error);
-      });
-     } else {
-      if (audioGiftRef.current) {
-        audioGiftRef.current.play().catch((error) => {
+      if (messages?.[messages?.length - 1]?.type === 'channel' || messages?.[messages?.length - 1]?.type === 'self') {
+        audioRef.current.play().catch((error) => {
           console.warn('Error al reproducir el audio:', error);
         });
+      } else {
+        if (audioGiftRef.current) {
+          audioGiftRef.current.play().catch((error) => {
+            console.warn('Error al reproducir el audio:', error);
+          });
+        }
       }
-     }
     }
     if (messagesEndRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -94,12 +94,14 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
     clickedMessage: TranslatedChatMessage,
     originalIndex: number,
   ) => {
+
     if (
       clickedMessage.type !== 'self' &&
       !clickedMessage.isTranslating &&
       !clickedMessage.isTranslated &&
       clickedMessage.translatedText
     ) {
+
       setChatMessages((prevMessages) =>
         prevMessages.map((msg, i) =>
           i === originalIndex
@@ -113,16 +115,17 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
           prevMessages.map((msg, i) =>
             i === originalIndex
               ? {
-                  ...msg,
-                  isTranslating: false,
-                  isTranslated: true,
-                  display_text: msg.translatedText,
-                }
+                ...msg,
+                isTranslating: false,
+                isTranslated: true,
+                display_text: msg.translatedText,
+              }
               : msg,
           ),
         );
       }, 800);
     } else if (clickedMessage.isTranslated) {
+
       setChatMessages((prevMessages) =>
         prevMessages.map((msg, i) =>
           i === originalIndex
@@ -130,6 +133,13 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
             : msg,
         ),
       );
+    } else {
+      console.warn('[Video Chat Translation] No se puede traducir:', {
+        isSelf: clickedMessage.type === 'self',
+        isTranslating: clickedMessage.isTranslating,
+        isTranslated: clickedMessage.isTranslated,
+        hasTranslation: !!clickedMessage.translatedText,
+      });
     }
   };
 
@@ -177,8 +187,8 @@ const MessagesHistory: React.FC<MessagesProps> = ({ messages, avatar }) => {
                       </span>
                     </span>
                     {items.type === 'self' ||
-                    items.type === 'channel' ||
-                    items.type === 'self-gift' ? (
+                      items.type === 'channel' ||
+                      items.type === 'self-gift' ? (
                       <>
                         <span className="cursor-pointer font-normal">
                           {items.isTranslating ? (

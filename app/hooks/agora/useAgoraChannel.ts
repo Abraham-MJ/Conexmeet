@@ -59,15 +59,8 @@ export const useAgoraCallChannel = (
       const stringUid = String(uidToWaitFor);
 
       if (state.remoteUsers?.find((u) => String(u.rtcUid) === stringUid)) {
-        console.log(
-          `[Video Debug] Usuario ${stringUid} ya existe en remoteUsers, resolviendo inmediatamente`,
-        );
         return Promise.resolve();
       }
-
-      console.log(
-        `[Video Debug] Esperando perfil de usuario ${stringUid} con timeout de ${timeout}ms`,
-      );
 
       return new Promise<void>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -80,9 +73,7 @@ export const useAgoraCallChannel = (
 
         const resolveWithCleanup = () => {
           clearTimeout(timeoutId);
-          console.log(
-            `[Video Debug] Perfil de usuario ${stringUid} recibido exitosamente`,
-          );
+
           resolve();
         };
 
@@ -105,7 +96,6 @@ export const useAgoraCallChannel = (
           throw new Error('Token de autenticación no encontrado en userState');
         }
 
-        // Llamar API para obtener/crear conversación
         const response = await fetch(
           `https://app.conexmeet.live/api/v1/chats/${remoteUserId}`,
           {
@@ -114,7 +104,7 @@ export const useAgoraCallChannel = (
               Accept: 'application/json',
               Authorization: `Bearer ${authToken}`,
             },
-            body: new FormData(), // FormData vacío como en el ejemplo
+            body: new FormData(), 
           },
         );
 
@@ -124,7 +114,6 @@ export const useAgoraCallChannel = (
           throw new Error(data.message || 'Error obteniendo room_id');
         }
 
-        // Extraer room_id de la respuesta
         let roomId: string;
         if (data.data && data.data.chat_id) {
           roomId = String(data.data.chat_id);
@@ -234,13 +223,6 @@ export const useAgoraCallChannel = (
             if (receivedMsg.type === 'PROFILE_UPDATE') {
               const remoteUserProfile = receivedMsg.payload as UserInformation;
 
-              console.log('[Video Debug] PROFILE_UPDATE recibido:', {
-                rtcUid: remoteUserProfile.rtcUid,
-                rtmUid: remoteUserProfile.rtmUid,
-                role: remoteUserProfile.role,
-                user_name: remoteUserProfile.user_name,
-              });
-
               dispatch({
                 type: AgoraActionType.ADD_REMOTE_USER,
                 payload: {
@@ -255,9 +237,6 @@ export const useAgoraCallChannel = (
 
               const stringUid = String(remoteUserProfile.rtcUid);
               if (pendingProfilePromisesRef.current.has(stringUid)) {
-                console.log(
-                  `[Video Debug] Resolviendo promesa pendiente para UID: ${stringUid}`,
-                );
                 const resolve =
                   pendingProfilePromisesRef.current.get(stringUid);
                 if (resolve) {
@@ -265,7 +244,7 @@ export const useAgoraCallChannel = (
                 }
                 pendingProfilePromisesRef.current.delete(stringUid);
               } else {
-                console.log(
+                console.warn(
                   `[Video Debug] No hay promesa pendiente para UID: ${stringUid}`,
                 );
               }
@@ -305,6 +284,7 @@ export const useAgoraCallChannel = (
                 type: 'channel',
                 translatedText: receivedMsg.payload.translatedText,
               };
+
               setChatMessages((prevMessages) => [
                 ...prevMessages,
                 newChatMessage,
@@ -707,7 +687,6 @@ export const useAgoraCallChannel = (
         localUser &&
         localUser.role !== 'admin'
       ) {
-        // Obtener el destinatario (la otra persona en el video chat)
         const remoteUser = state.remoteUsers.find(
           (user) => user.role !== localUser.role && user.user_id,
         );
@@ -717,16 +696,18 @@ export const useAgoraCallChannel = (
         }
 
         try {
-          // 1. Traducir el mensaje
           let translatedText: string | undefined;
           try {
             const data = await translateApi('/api/translate', {
               method: 'POST',
-              body: { text: messageText },
+              body: {
+                text: messageText,
+                _timestamp: Date.now(),
+              },
             });
 
-            if (data?.translatedText) {
-              translatedText = data.translatedText;
+            if (data?.data.translatedText) {
+              translatedText = data.data.translatedText;
             } else {
               console.warn(
                 `${AGORA_LOG_PREFIXES.TRANSLATION} No translation received, using original text`,
@@ -743,7 +724,6 @@ export const useAgoraCallChannel = (
 
           const videoRoomId = await getOrCreateRoomId(remoteUser.user_id);
 
-          // 3. Enviar mensaje a la API externa (como en useChatContext)
           const formData = new FormData();
           formData.append('user_id', String(remoteUser.user_id));
           formData.append('body', messageText);
@@ -779,7 +759,6 @@ export const useAgoraCallChannel = (
             );
           }
 
-          // Enviar via RTM
           const chatMsgPayload = {
             text: messageText,
             rtmUid: String(localUser.rtmUid),
@@ -796,7 +775,6 @@ export const useAgoraCallChannel = (
 
           await rtmChannel.sendMessage({ text: JSON.stringify(chatMsg) });
 
-          // Agregar mensaje localmente
           const selfMessage: ChatMessage = {
             rtmUid: String(localUser.rtmUid),
             user_name: localUser.user_name,
@@ -817,12 +795,14 @@ export const useAgoraCallChannel = (
             error,
           );
 
-          // Fallback: solo enviar via RTM si la API falla
           try {
             let translatedText: string | undefined;
             const data = await translateApi('/api/translate', {
               method: 'POST',
-              body: { text: messageText },
+              body: {
+                text: messageText,
+                _timestamp: Date.now(), 
+              },
             });
             translatedText = data?.translatedText || messageText;
 
@@ -886,8 +866,7 @@ export const useAgoraCallChannel = (
         await rtmChannel.leave();
       } catch (error: any) {
         if (error.code === 3) {
-          // Error Code 3: Canal ya cerrado o no existe - esto es normal en limpiezas múltiples
-          console.log(
+          console.warn(
             `${LOG_PREFIX_RTM_LISTEN} Canal RTM ya cerrado (Code 3) - continuando limpieza`,
           );
         } else {
@@ -900,7 +879,7 @@ export const useAgoraCallChannel = (
         setRtmChannel(null);
         setIsRtmChannelJoined(false);
         setChatMessages([]);
-        setCachedRoomId(null); // Limpiar cache del room_id
+        setCachedRoomId(null); 
         dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
 
         forceLeaveEventSentRef.current = false;
@@ -909,7 +888,7 @@ export const useAgoraCallChannel = (
       setRtmChannel(null);
       setIsRtmChannelJoined(false);
       setChatMessages([]);
-      setCachedRoomId(null); // Limpiar cache del room_id
+      setCachedRoomId(null); 
       dispatch({ type: AgoraActionType.LEAVE_RTM_CALL_CHANNEL });
 
       forceLeaveEventSentRef.current = false;

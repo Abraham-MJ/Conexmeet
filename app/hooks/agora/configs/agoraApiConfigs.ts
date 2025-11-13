@@ -47,12 +47,12 @@ export const AGORA_API_CONFIGS: AgoraApiConfigs = {
   },
 
   translation: {
-    cacheTime: 2 * 60 * 1000,
-    staleTime: 1 * 60 * 1000,
+    cacheTime: 0,
+    staleTime: 0,
     retryAttempts: 2,
     retryDelay: 800,
     method: 'POST',
-    enableDeduplication: true,
+    enableDeduplication: false,
   },
 
   gifts: {
