@@ -93,9 +93,9 @@ const ModalUpdateProfile: React.FC<UpdateProfileUser> = ({
         <div className="py-4">
           <div className="space-y-6">
             <div className="flex w-full flex-col items-center justify-center text-center">
-              <div className="relative h-36 w-36">
+              <div className="relative h-36 w-36 bg-[#181a21] rounded-full">
                 <img
-                  src={photoPreview || '/path/to/default/avatar.png'}
+                  src={photoPreview || '/images/not-found.svg'}
                   alt={t('profile.photo')}
                   className="h-full w-full rounded-full border object-cover"
                 />

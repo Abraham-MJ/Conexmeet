@@ -112,7 +112,7 @@ const SectionCongrats = ({ credentials, setCurrentStep }: any) => {
   const handleLogin = async () => {
     const login_result = await login(credentials.email, credentials.password);
     if (login_result.success) {
-      redirect('/video-roulette');
+      redirect('/main/video-roulette');
     }
   };
 

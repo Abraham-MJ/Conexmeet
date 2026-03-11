@@ -29,6 +29,7 @@ const ProfileScreen = () => {
       console.error('Error al copiar:', err);
     }
   };
+  console.log(user);
 
   return (
     <ContainerGlobal classNames={cn('w-full h-full')}>
@@ -44,11 +45,15 @@ const ProfileScreen = () => {
 
         <div className="relative px-4 pb-8">
           <div className="-mt-16 mb-6 flex justify-center">
-            <div className="relative">
+            <div className="relative bg-[#181a21] rounded-full">
               <img
-                src={user.user.profile_photo_path}
+                src={
+                  user?.user?.profile_photo_path
+                    ? user?.user?.profile_photo_path
+                    : '/images/not-found.svg'
+                }
                 alt={t('profile.photo')}
-                className="h-32 w-32 rounded-full border-4 border-white object-cover shadow-lg"
+                className="h-32 w-32 rounded-full  object-cover shadow-lg "
               />
             </div>
           </div>

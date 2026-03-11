@@ -4,19 +4,17 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { User, LogOut, CircleUserRound, Menu } from 'lucide-react';
 import { useUser } from '@/app/context/useClientContext';
-import useLogin from '@/app/hooks/api/useLogin';
 import { cn } from '@/lib/utils';
 import { MdGTranslate } from 'react-icons/md';
 import ModalTranslate from './modals/ModalTranslate';
 import { useTranslation } from '../../hooks/useTranslation';
-import { LiaUserAstronautSolid } from "react-icons/lia";
+import { LiaUserAstronautSolid } from 'react-icons/lia';
 
 export default function UserDropdown() {
   const [isOpenTranslate, setIsOpenTranslate] = useState(false);
   const { t } = useTranslation();
 
   const { state } = useUser();
-  const { logout } = useLogin();
 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -42,9 +40,9 @@ export default function UserDropdown() {
   }, []);
 
   return (
-    <div className="relative " ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef}>
       <button
-        className="flex absolute -left-14 h-10 cursor-pointer items-center px-3 py-1 backdrop-blur-sm transition-all duration-300 hover:scale-105"
+        className="absolute -left-14 flex h-10 cursor-pointer items-center px-3 py-1 backdrop-blur-sm transition-all duration-300 hover:scale-105"
         onClick={() => {
           setIsOpenTranslate(true);
         }}
@@ -76,7 +74,7 @@ export default function UserDropdown() {
         <div className="absolute right-0 z-50 mt-6 w-72 overflow-hidden rounded-lg border bg-white shadow-lg duration-200 animate-in fade-in slide-in-from-top-5">
           <div className="p-4 text-white">
             <div className="flex flex-col items-center gap-3">
-              <div className="relative rounded-full">
+              <div className="relative rounded-full bg-[#181a21]">
                 <img
                   src={
                     state?.user?.profile_photo_path
@@ -89,7 +87,7 @@ export default function UserDropdown() {
               </div>
               <div className="flex flex-col text-center">
                 <span className="text-sm font-medium text-gray-700">
-                  {state?.user?.name} 
+                  {state?.user?.name}
                 </span>
                 <span className="text-sm font-medium text-gray-700">
                   {state?.user?.email}
@@ -127,7 +125,6 @@ export default function UserDropdown() {
                   <div
                     className={cn(
                       'flex h-8 w-8 items-center justify-center rounded-full',
-
                     )}
                   >
                     <LiaUserAstronautSolid className="h-7 w-7" />
@@ -154,14 +151,13 @@ export default function UserDropdown() {
             </ul>
           </nav>
         </div>
-      )
-      }
+      )}
       <ModalTranslate
         isOpen={isOpenTranslate}
         onClose={() => {
           setIsOpenTranslate(false);
         }}
       />
-    </div >
+    </div>
   );
 }
